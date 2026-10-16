@@ -81,9 +81,8 @@ class VerifyDetaileScreen extends StatelessWidget {
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: 16, left: 5, right: 5),
                 child: SizedBox(
-                  width: 364,
                   height: 54,
                   child: const _ContinueButton(),
                 ),
@@ -636,7 +635,6 @@ class _ContinueButton extends StatelessWidget {
         MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
       ),
       child: Container(
-        width: 364,
         height: 54,
         alignment: Alignment.center,
         decoration: BoxDecoration(
