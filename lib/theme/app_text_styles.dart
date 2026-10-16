@@ -46,7 +46,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle stepLabel = TextStyle(
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: FontWeight.w700,
     height: 1.0,
     letterSpacing: -0.2,
@@ -54,7 +54,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle heading = TextStyle(
-    fontSize: 32,
+    fontSize: 35,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
@@ -152,7 +152,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle headingAccent = TextStyle(
-    fontSize: 32,
+    fontSize: 35,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.primary,
@@ -170,5 +170,77 @@ abstract final class AppTextStyles {
     fontWeight: FontWeight.w400,
     height: 1.2,
     color: AppColors.pillLabel,
+  );
+
+  // STEP 03 — Business details.
+  static const TextStyle stepSubtitleAlt = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.stepSubtitleAlt,
+  );
+
+  static const TextStyle sectionTitle = TextStyle(
+    fontSize: 17.5,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.sectionTitle,
+  );
+
+  static const TextStyle pillNote = TextStyle(
+    fontSize: 11.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.pillNoteText,
+  );
+
+  static const TextStyle fieldLabel = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.fieldLabel,
+  );
+
+  static const TextStyle fieldLabelMuted = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.fieldPlaceholderAlt,
+  );
+
+  static const TextStyle fieldPlaceholder = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.fieldPlaceholder,
+  );
+
+  static const TextStyle fieldValue = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.fieldValue,
+  );
+
+  static const TextStyle changeLink = TextStyle(
+    fontSize: 11.5,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.changeText,
+  );
+
+  static const TextStyle verifiedText = TextStyle(
+    fontSize: 11.5,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.verifiedText,
+  );
+
+  static const TextStyle stepLabelMuted = TextStyle(
+    fontSize: 15.5,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    letterSpacing: -0.2,
+    color: AppColors.stepLabelMuted,
   );
 }

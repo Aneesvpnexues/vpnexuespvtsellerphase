@@ -29,4 +29,42 @@ abstract final class AppColors {
   static const Color stepSubtitle = Color(0xFF9D9D9D);
   static const Color pillBorder = Color(0xFF7FC486);
   static const Color pillLabel = Color(0xFF292929);
+
+  // STEP 03 — Business details (Zeplin "Android Compact - 88").
+  static const Color stepPageBg = Color(0xFFFCFAF5);
+  static const Color stepPageHeadingEnd = Color(0xFF035A0D);
+  static const Color stepPageAccent = Color(0xFF00AF13);
+  static const Color stepSubtitleAlt = Color(0xFF848482);
+  static const Color sectionTitle = Color(0xFF2A2A29);
+  static const Color pillNoteText = Color(0xFF6D6C6A);
+  static const Color pillNoteGradientStart = Color(0xFF3ABB8D);
+  static const Color pillNoteGradientEnd = Color(0xFFD2FEED);
+  static const Color stepLabelMuted = Color(0xFF908989);
+  static const Color progressActive = Color(0xFF00B313);
+  static const Color progressTrack = Color(0xFFC4C4C4);
+  static const Color fieldLabel = Color(0xFF242323);
+  static const Color fieldPlaceholder = Color(0xFF949390);
+  static const Color fieldPlaceholderAlt = Color(0xFF807F7D);
+  static const Color fieldValue = Color(0xFF0D0D0C);
+  static const Color fieldDivider = Color(0xFFE0DFDA);
+  static const Color fieldTileName = Color(0xFFDCE8F8);
+  static const Color fieldTileBusiness = Color(0xFFD9F8DF);
+  static const Color fieldTilePhone = Color(0xFFE3DEF5);
+  static const Color fieldTileLocation = Color(0xFFF1E9CF);
+  static const Color fieldTileAddress = Color(0xFFD3EEEB);
+  static const Color fieldIconName = Color(0xFF588DDB);
+  static const Color fieldIconBusiness = Color(0xFF3D9275);
+  static const Color fieldIconPhone = Color(0xFF7F48AE);
+  static const Color fieldIconLocation = Color(0xFFDD9D43);
+  static const Color fieldIconAddress = Color(0xFF519996);
+  static const Color connectorActive = Color(0xFF75CA83);
+  static const Color connectorPending = Color(0xFFD4EBD8);
+  static const Color connectorIdle = Color(0xFFEBEBEB);
+  static const Color verifiedBg = Color(0xFFD9F8DF);
+  static const Color verifiedBorder = Color(0xFFCAE6CF);
+  static const Color verifiedText = Color(0xFF42A84D);
+  static const Color changeText = Color(0xFF42A84D);
+  static const Color continueGradientStart = Color(0xFF57C663);
+  static const Color continueGradientEnd = Color(0xFF088F16);
+  static const Color continueGlow = Color(0x2E57C663);
 }

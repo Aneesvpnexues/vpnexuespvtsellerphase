@@ -62,6 +62,7 @@ flutter:
     - assets/otp/bottom_deco.png
     - assets/step01/illustration.png
     - assets/step02/illustration.png
+    - assets/step03/leaves.png
     - assets/welcome/leaf.png
     - assets/welcome/hero.png
     - assets/welcome/flag.png

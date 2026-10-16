@@ -77,7 +77,7 @@ void main() {
     expect(step.style?.fontWeight, FontWeight.w700);
 
     final title = tester.widget<Text>(find.text('Choose your location'));
-    expect(title.style?.fontSize, 32);
+    expect(title.style?.fontSize, 35);
     expect(title.style?.color, AppColors.textPrimary);
 
     final link = tester.widget<Text>(find.text('Select it Manually'));

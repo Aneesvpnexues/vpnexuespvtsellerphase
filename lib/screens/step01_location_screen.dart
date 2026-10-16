@@ -35,8 +35,8 @@ class Step01LocationScreen extends StatelessWidget {
                 children: const [
                   Positioned(left: -94.2, top: -159.5, child: _PaleCircle()),
                   Positioned(left: 0, top: 151, child: _Illustration()),
-                  Positioned(right: 28, top: 76.4, child: _StepLabel()),
-                  Positioned(left: 0, right: 8, top: 488.4, child: _Title()),
+                  Positioned(right: 28, top: 75.62, child: _StepLabel()),
+                  Positioned(left: 0, right: 8, top: 488.33, child: _Title()),
                   Positioned(left: 0, right: 8, top: 541.5, child: _Description()),
                   Positioned(left: 24, top: 731, child: _LocationButton()),
                   Positioned(left: 0, right: 10, top: 818.5, child: _ManualLink()),
