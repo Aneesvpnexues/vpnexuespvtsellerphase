@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
-/// Pumps the verify screen on the 412x917 artboard the design was drawn for.
+/// Pumps the verify screen on the 412x873 artboard (top headroom removed).
 Future<void> pumpScreen(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(412, 917);
+  tester.view.physicalSize = const Size(412, 873);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -70,10 +70,10 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    // Illustration: x 200..412, y 44..362.
+    // Illustration: x 200..412, y 0..318.
     final illustration = rectOf(find.byType(Image).first);
     expect(illustration.left, closeTo(200, 1));
-    expect(illustration.top, closeTo(44, 1));
+    expect(illustration.top, closeTo(0, 1));
     expect(illustration.width, closeTo(212, 1));
     expect(illustration.height, closeTo(318, 1));
 
@@ -81,18 +81,18 @@ void main() {
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     final back = rectOf(find.byIcon(Icons.arrow_back));
     expect(back.left, closeTo(21, 2));
-    expect(back.top, closeTo(74, 2));
+    expect(back.top, closeTo(30, 2));
 
-    // Heading: left 24, design glyph tops 146 / 182.
+    // Heading: left 24, design glyph tops 102 / 138.
     expect(rectOf(find.text('Verify your')).left, closeTo(24, 1));
-    expect(rectOf(find.text('Verify your')).top, closeTo(143.15, 1));
-    expect(rectOf(find.text('details')).top, closeTo(178.79, 1));
+    expect(rectOf(find.text('Verify your')).top, closeTo(99.15, 1));
+    expect(rectOf(find.text('details')).top, closeTo(134.79, 1));
 
     // Subtitle.
     expect(rectOf(find.text('A quick verification')).left, closeTo(24, 1));
-    expect(rectOf(find.text('A quick verification')).top, closeTo(224.74, 1));
+    expect(rectOf(find.text('A quick verification')).top, closeTo(180.74, 1));
 
-    // Profile completion card: x 24..386, y 411..472.
+    // Profile completion card: x 24..386, y 367..428.
     final pcCard = rectOf(find.byWidgetPredicate(
       (w) =>
           w is Container &&
@@ -100,15 +100,15 @@ void main() {
           (w.decoration as BoxDecoration).color == AppColors.pcCardBg,
     ));
     expect(pcCard.left, closeTo(24, 1));
-    expect(pcCard.top, closeTo(411, 1));
+    expect(pcCard.top, closeTo(367, 1));
     expect(pcCard.width, closeTo(362, 1));
     expect(pcCard.height, closeTo(61, 1));
 
     expect(rectOf(find.text('Profile Completion')).left, closeTo(34.5, 1));
-    expect(rectOf(find.text('Profile Completion')).top, closeTo(425.4, 1));
-    expect(rectOf(find.text('75%')).top, closeTo(428.37, 1));
+    expect(rectOf(find.text('Profile Completion')).top, closeTo(381.4, 1));
+    expect(rectOf(find.text('75%')).top, closeTo(384.37, 1));
 
-    // Progress track: left 23, top 253.75; active segment second (w 43).
+    // Progress track: left 23, top 209.75; active segment second (w 43).
     final segments = find.byWidgetPredicate(
       (w) =>
           w is Container &&
@@ -125,7 +125,7 @@ void main() {
 
     final segRects = segments.evaluate().map(rectOfElement).toList();
     expect(segRects.first.left, closeTo(23, 1));
-    expect(segRects.first.top, closeTo(253.75, 1));
+    expect(segRects.first.top, closeTo(209.75, 1));
     final segColors = segments
         .evaluate()
         .map((e) => ((e.widget as Container).decoration! as BoxDecoration).color)
@@ -139,15 +139,15 @@ void main() {
 
     // Section tick + title + pill + divider.
     expect(rectOf(find.text('Verification Details')).left, closeTo(40.5, 1));
-    expect(rectOf(find.text('Verification Details')).top, closeTo(496.07, 1));
+    expect(rectOf(find.text('Verification Details')).top, closeTo(452.07, 1));
     final pill = rectOf(find.text('All fiedls are required'));
     expect(pill.center.dx, closeTo((260 + 387) / 2, 2));
-    expect(pill.top, greaterThanOrEqualTo(491));
-    expect(pill.bottom, lessThanOrEqualTo(518));
+    expect(pill.top, greaterThanOrEqualTo(447));
+    expect(pill.bottom, lessThanOrEqualTo(474));
 
-    // Three document cards: x 23..387, tops 541 / 617 / 694, radius 14.
+    // Three document cards: x 23..387, tops 497 / 573 / 650, radius 14.
     expect(_docCards(), findsNWidgets(3));
-    const cardTops = [541, 617, 694];
+    const cardTops = [497, 573, 650];
     for (var i = 0; i < cardTops.length; i++) {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(23, 1), reason: 'card $i left');
@@ -158,7 +158,7 @@ void main() {
 
     // Three tiles: 40x40, radius 10, left 34, measured tops.
     expect(_tiles(), findsNWidgets(3));
-    const tileTops = [552, 629, 705];
+    const tileTops = [508, 585, 661];
     for (var i = 0; i < tileTops.length; i++) {
       final rect = rectOf(_tiles().at(i));
       expect(rect.left, closeTo(34, 1), reason: 'tile $i left');
@@ -167,10 +167,10 @@ void main() {
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 23..387, y 847..901, radius 18, gradient fill.
+    // Continue button: x 23..387, y 803..857, radius 18, gradient fill.
     final button = rectOf(_continueButton());
     expect(button.left, closeTo(23, 1));
-    expect(button.top, closeTo(847, 1));
+    expect(button.top, closeTo(803, 1));
     expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -260,7 +260,7 @@ void main() {
   });
 
   testWidgets('back arrow pops the route', (tester) async {
-    tester.view.physicalSize = const Size(412, 917);
+    tester.view.physicalSize = const Size(412, 873);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(

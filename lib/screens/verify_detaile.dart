@@ -7,7 +7,8 @@ import 'bank_detaile.dart';
 /// "Verify your details" — static replica of Zeplin "Android Compact - 84"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb13fd164a524fed4e6).
 ///
-/// Built against a 412x917 artboard. Every offset below is taken straight from
+/// Built against a 412x873 artboard (the design's 44px top headroom removed).
+/// Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
 /// sizes it scales down uniformly instead of overflowing. The back arrow pops
 /// the route; cards are visual only; Continue opens [BankDetaileScreen].
@@ -16,7 +17,7 @@ class VerifyDetaileScreen extends StatelessWidget {
 
   static const String illustrationAsset = 'assets/verify/illustration.png';
   static const double designWidth = 412;
-  static const double designHeight = 917;
+  static const double designHeight = 873;
 
   @override
   Widget build(BuildContext context) {
@@ -32,41 +33,41 @@ class VerifyDetaileScreen extends StatelessWidget {
               height: designHeight,
               child: Stack(
                 children: const [
-                  Positioned(left: 200, top: 44, child: _Illustration()),
-                  Positioned(left: 21, top: 74, child: _BackButton()),
-                  Positioned(right: 22.5, top: 78.63, child: _StepLabel()),
-                  Positioned(left: 24, top: 143.15, child: _TitleLead()),
-                  Positioned(left: 24, top: 178.79, child: _TitleAccent()),
-                  Positioned(left: 24, top: 224.74, child: _Subtitle()),
-                  Positioned(left: 23, top: 253.75, child: _ProgressTrack()),
-                  Positioned(left: 0, top: 386, child: _Sheet()),
+                  Positioned(left: 200, top: 0, child: _Illustration()),
+                  Positioned(left: 21, top: 30, child: _BackButton()),
+                  Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
+                  Positioned(left: 24, top: 99.15, child: _TitleLead()),
+                  Positioned(left: 24, top: 134.79, child: _TitleAccent()),
+                  Positioned(left: 24, top: 180.74, child: _Subtitle()),
+                  Positioned(left: 23, top: 209.75, child: _ProgressTrack()),
+                  Positioned(left: 0, top: 342, child: _Sheet()),
                   // Profile completion card.
-                  Positioned(left: 24, top: 411, child: _PcCard()),
-                  Positioned(left: 34.5, top: 425.4, child: _PcLabel()),
-                  Positioned(right: 40, top: 428.37, child: _PcPercent()),
-                  Positioned(left: 34, top: 450, child: _PcBar()),
+                  Positioned(left: 24, top: 367, child: _PcCard()),
+                  Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
+                  Positioned(right: 40, top: 384.37, child: _PcPercent()),
+                  Positioned(left: 34, top: 406, child: _PcBar()),
                   // Verification details section.
-                  Positioned(left: 26, top: 496, child: _SectionTick()),
-                  Positioned(left: 40.5, top: 496.07, child: _SectionTitle()),
-                  Positioned(left: 260, top: 491, child: _PillNote()),
-                  Positioned(left: 25, top: 527, child: _Divider()),
+                  Positioned(left: 26, top: 452, child: _SectionTick()),
+                  Positioned(left: 40.5, top: 452.07, child: _SectionTitle()),
+                  Positioned(left: 260, top: 447, child: _PillNote()),
+                  Positioned(left: 25, top: 483, child: _Divider()),
                   // Document cards.
-                  Positioned(left: 23, top: 541, child: _CardAadhaar()),
-                  Positioned(left: 34, top: 552, child: _TileAadhaar()),
-                  Positioned(left: 89, top: 554.62, child: _TitleAadhaar()),
-                  Positioned(left: 89, top: 576.94, child: _SubAadhaar()),
-                  Positioned(right: 41, top: 563, child: _Chevron()),
-                  Positioned(left: 23, top: 617, child: _CardPan()),
-                  Positioned(left: 34, top: 629, child: _TilePan()),
-                  Positioned(left: 89, top: 631.12, child: _TitlePan()),
-                  Positioned(left: 89, top: 653.81, child: _SubPan()),
-                  Positioned(right: 41, top: 639, child: _Chevron()),
-                  Positioned(left: 23, top: 694, child: _CardBusiness()),
-                  Positioned(left: 34, top: 705, child: _TileBusiness()),
-                  Positioned(left: 89, top: 707.43, child: _TitleBusiness()),
-                  Positioned(left: 89, top: 730.49, child: _SubBusiness()),
-                  Positioned(right: 41, top: 716, child: _Chevron()),
-                  Positioned(left: 23, top: 847, child: _ContinueButton()),
+                  Positioned(left: 23, top: 497, child: _CardAadhaar()),
+                  Positioned(left: 34, top: 508, child: _TileAadhaar()),
+                  Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
+                  Positioned(left: 89, top: 532.94, child: _SubAadhaar()),
+                  Positioned(right: 41, top: 519, child: _Chevron()),
+                  Positioned(left: 23, top: 573, child: _CardPan()),
+                  Positioned(left: 34, top: 585, child: _TilePan()),
+                  Positioned(left: 89, top: 587.12, child: _TitlePan()),
+                  Positioned(left: 89, top: 609.81, child: _SubPan()),
+                  Positioned(right: 41, top: 595, child: _Chevron()),
+                  Positioned(left: 23, top: 650, child: _CardBusiness()),
+                  Positioned(left: 34, top: 661, child: _TileBusiness()),
+                  Positioned(left: 89, top: 663.43, child: _TitleBusiness()),
+                  Positioned(left: 89, top: 686.49, child: _SubBusiness()),
+                  Positioned(right: 41, top: 672, child: _Chevron()),
+                  Positioned(left: 23, top: 803, child: _ContinueButton()),
                 ],
               ),
             ),
@@ -185,7 +186,7 @@ class _Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: VerifyDetaileScreen.designWidth,
-      height: VerifyDetaileScreen.designHeight - 386,
+      height: VerifyDetaileScreen.designHeight - 342,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(38)),
