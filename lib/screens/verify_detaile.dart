@@ -22,7 +22,7 @@ class VerifyDetaileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.verifyPageBg,
+      backgroundColor: AppColors.surface,
       body: LayoutBuilder(
         builder: (context, constraints) => Align(
           alignment: Alignment.topCenter,
@@ -33,6 +33,7 @@ class VerifyDetaileScreen extends StatelessWidget {
               height: designHeight,
               child: Stack(
                 children: const [
+                  Positioned(left: 0, top: 0, child: _HeaderBackground()),
                   Positioned(left: 200, top: 0, child: _Illustration()),
                   Positioned(left: 21, top: 30, child: _BackButton()),
                   Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
@@ -74,6 +75,19 @@ class VerifyDetaileScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HeaderBackground extends StatelessWidget {
+  const _HeaderBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: VerifyDetaileScreen.designWidth,
+      height: 386,
+      color: AppColors.verifyPageBg,
     );
   }
 }
