@@ -167,11 +167,11 @@ void main() {
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 5..407, y 803..857 (5px side padding), radius 18.
+    // Continue button: x 10..402, y 803..857 (10px side padding), radius 18.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(5, 1));
+    expect(button.left, closeTo(10, 1));
     expect(button.top, closeTo(803, 1));
-    expect(button.width, closeTo(402, 1));
+    expect(button.width, closeTo(392, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration! as BoxDecoration;

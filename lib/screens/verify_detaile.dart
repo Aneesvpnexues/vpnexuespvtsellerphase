@@ -81,7 +81,7 @@ class VerifyDetaileScreen extends StatelessWidget {
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 5, right: 5),
+                padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
                 child: SizedBox(
                   height: 54,
                   child: const _ContinueButton(),
