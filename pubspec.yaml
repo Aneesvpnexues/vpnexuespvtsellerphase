@@ -63,6 +63,7 @@ flutter:
     - assets/step01/illustration.png
     - assets/step02/illustration.png
     - assets/step03/leaves.png
+    - assets/verify/illustration.png
     - assets/welcome/leaf.png
     - assets/welcome/hero.png
     - assets/welcome/flag.png

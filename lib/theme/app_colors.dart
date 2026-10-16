@@ -67,4 +67,24 @@ abstract final class AppColors {
   static const Color continueGradientStart = Color(0xFF57C663);
   static const Color continueGradientEnd = Color(0xFF088F16);
   static const Color continueGlow = Color(0x2E57C663);
+
+  // Verify your details (Zeplin "Android Compact - 84").
+  static const Color verifyPageBg = Color(0xFFF3F0E9);
+  static const Color verifyAccent = Color(0xFF83F38F);
+  static const Color verifySubtitle = Color(0xFF8D8C8A);
+  static const Color progressInactive = Color(0xFFB8B8B8);
+  static const Color pcCardBg = Color(0xFFEFFAF4);
+  static const Color pcLabel = Color(0xFF6E7370);
+  static const Color pcPercent = Color(0xFF319F7C);
+  static const Color pcTrack = Color(0xFFCDEDE0);
+  static const Color pcFillStart = Color(0xFF21A22E);
+  static const Color pcFillEnd = Color(0xFFA3DAB4);
+  static const Color verifyTickStart = Color(0xFF29AE81);
+  static const Color verifyTickEnd = Color(0xFFA9E4CD);
+  static const Color verifyInk = Color(0xFF242424);
+  static const Color verifyPillText = Color(0xFF909292);
+  static const Color verifyPillBorder = Color(0xFFBABDBD);
+  static const Color docDivider = Color(0xFFE3E3E3);
+  static const Color docCardBorder = Color(0xFFE0E0E0);
+  static const Color docCardSubtitle = Color(0xFF969696);
 }

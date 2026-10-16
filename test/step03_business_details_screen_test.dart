@@ -214,4 +214,20 @@ void main() {
     expect(Step03BusinessDetailsScreen.leavesAsset,
         'assets/step03/leaves.png');
   });
+
+  testWidgets('Continue opens the verify details screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Verify your'), findsOneWidget);
+    expect(find.text('Verification Details'), findsOneWidget);
+
+    // Back arrow returns to STEP 03.
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Business Details'), findsOneWidget);
+    expect(find.text('Verify your'), findsNothing);
+  });
 }

@@ -243,4 +243,61 @@ abstract final class AppTextStyles {
     letterSpacing: -0.2,
     color: AppColors.stepLabelMuted,
   );
+
+  // Verify your details.
+  static const TextStyle headingMint = TextStyle(
+    fontSize: 35,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifyAccent,
+  );
+
+  static const TextStyle verifySubtitle = TextStyle(
+    fontSize: 15.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.verifySubtitle,
+  );
+
+  static const TextStyle pcLabel = TextStyle(
+    fontSize: 13.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.pcLabel,
+  );
+
+  static const TextStyle pcPercent = TextStyle(
+    fontSize: 13.5,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.pcPercent,
+  );
+
+  static const TextStyle verifySectionTitle = TextStyle(
+    fontSize: 17.5,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifyInk,
+  );
+
+  static const TextStyle verifyPillNote = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.verifyPillText,
+  );
+
+  static const TextStyle docCardTitle = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifyInk,
+  );
+
+  static const TextStyle docCardSubtitle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.docCardSubtitle,
+  );
 }
