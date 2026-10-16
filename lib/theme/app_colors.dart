@@ -87,4 +87,20 @@ abstract final class AppColors {
   static const Color docDivider = Color(0xFFE3E3E3);
   static const Color docCardBorder = Color(0xFFE0E0E0);
   static const Color docCardSubtitle = Color(0xFF969696);
+
+  // Add your bank details (Zeplin "Android Compact - 106").
+  static const Color bankPageBg = Color(0xFFFBF8EF);
+  static const Color bankHeadingGreenStart = Color(0xFF00B013);
+  static const Color bankHeadingGreenEnd = Color(0xFF02590B);
+  static const Color bankSubtitle = Color(0xFF8F8E8C);
+  static const Color bankSectionTitle = Color(0xFF2B2B2B);
+  static const Color bankTickStart = Color(0xFF28AE81);
+  static const Color bankTickMid = Color(0xFF5CD2A6);
+  static const Color bankTickEnd = Color(0xFFC2EADA);
+  static const Color bankInputText = Color(0xFF606260);
+  static const Color bankBannerBg = Color(0xFFE7F8EC);
+  static const Color bankBannerBorder = Color(0xFFCBDACF);
+  static const Color bankShieldCircle = Color(0xFFBDFDC9);
+  static const Color bankShield = Color(0xFF20BF55);
+  static const Color bankBannerSub = Color(0xFF828B84);
 }

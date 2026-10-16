@@ -58,6 +58,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/bank/illustration.png
     - assets/otp/illustration.png
     - assets/otp/bottom_deco.png
     - assets/step01/illustration.png

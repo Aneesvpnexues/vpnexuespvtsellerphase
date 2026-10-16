@@ -249,6 +249,16 @@ void main() {
     ]);
   });
 
+  testWidgets('Continue opens the bank-details screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fill Your Bank Details'), findsOneWidget);
+    expect(find.text('Account Holder Name'), findsOneWidget);
+  });
+
   testWidgets('back arrow pops the route', (tester) async {
     tester.view.physicalSize = const Size(412, 917);
     tester.view.devicePixelRatio = 1;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'bank_detaile.dart';
 
 /// "Verify your details" — static replica of Zeplin "Android Compact - 84"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb13fd164a524fed4e6).
@@ -9,7 +10,7 @@ import '../theme/app_text_styles.dart';
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
 /// sizes it scales down uniformly instead of overflowing. The back arrow pops
-/// the route; cards and the Continue button are visual only.
+/// the route; cards are visual only; Continue opens [BankDetaileScreen].
 class VerifyDetaileScreen extends StatelessWidget {
   const VerifyDetaileScreen({super.key});
 
@@ -598,27 +599,32 @@ class _ContinueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 54,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.continueGradientStart,
-            AppColors.continueGradientEnd,
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      ),
+      child: Container(
+        width: 364,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              AppColors.continueGradientStart,
+              AppColors.continueGradientEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.continueGlow,
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.continueGlow,
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
+        child: const Text('Continue', style: AppTextStyles.button),
       ),
-      child: const Text('Continue', style: AppTextStyles.button),
     );
   }
 }

@@ -300,4 +300,54 @@ abstract final class AppTextStyles {
     height: 1.0,
     color: AppColors.docCardSubtitle,
   );
+
+  // Add your bank details.
+  static const TextStyle bankSubtitle = TextStyle(
+    fontSize: 15.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.bankSubtitle,
+  );
+
+  static const TextStyle bankSectionTitle = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.bankSectionTitle,
+  );
+
+  static const TextStyle bankFieldLabel = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifyInk,
+  );
+
+  static const TextStyle bankInputText = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.bankInputText,
+  );
+
+  static const TextStyle bankVerifyText = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifiedText,
+  );
+
+  static const TextStyle bankBannerTitle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.verifiedText,
+  );
+
+  static const TextStyle bankBannerBody = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.bankBannerSub,
+  );
 }
