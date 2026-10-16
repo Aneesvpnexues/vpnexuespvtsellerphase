@@ -24,55 +24,72 @@ class VerifyDetaileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: designWidth,
-              height: designHeight,
-              child: Stack(
-                children: const [
-                  Positioned(left: 0, top: 0, child: _HeaderBackground()),
-                  Positioned(left: 200, top: 0, child: _Illustration()),
-                  Positioned(left: 21, top: 30, child: _BackButton()),
-                  Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
-                  Positioned(left: 24, top: 99.15, child: _TitleLead()),
-                  Positioned(left: 24, top: 134.79, child: _TitleAccent()),
-                  Positioned(left: 24, top: 180.74, child: _Subtitle()),
-                  Positioned(left: 23, top: 209.75, child: _ProgressTrack()),
-                  Positioned(left: 0, top: 342, child: _Sheet()),
-                  // Profile completion card.
-                  Positioned(left: 24, top: 367, child: _PcCard()),
-                  Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
-                  Positioned(right: 40, top: 384.37, child: _PcPercent()),
-                  Positioned(left: 34, top: 406, child: _PcBar()),
-                  // Verification details section.
-                  Positioned(left: 26, top: 452, child: _SectionTick()),
-                  Positioned(left: 40.5, top: 452.07, child: _SectionTitle()),
-                  Positioned(left: 260, top: 447, child: _PillNote()),
-                  Positioned(left: 25, top: 483, child: _Divider()),
-                  // Document cards.
-                  Positioned(left: 23, top: 497, child: _CardAadhaar()),
-                  Positioned(left: 34, top: 508, child: _TileAadhaar()),
-                  Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
-                  Positioned(left: 89, top: 532.94, child: _SubAadhaar()),
-                  Positioned(right: 41, top: 519, child: _Chevron()),
-                  Positioned(left: 23, top: 573, child: _CardPan()),
-                  Positioned(left: 34, top: 585, child: _TilePan()),
-                  Positioned(left: 89, top: 587.12, child: _TitlePan()),
-                  Positioned(left: 89, top: 609.81, child: _SubPan()),
-                  Positioned(right: 41, top: 595, child: _Chevron()),
-                  Positioned(left: 23, top: 650, child: _CardBusiness()),
-                  Positioned(left: 34, top: 661, child: _TileBusiness()),
-                  Positioned(left: 89, top: 663.43, child: _TitleBusiness()),
-                  Positioned(left: 89, top: 686.49, child: _SubBusiness()),
-                  Positioned(right: 41, top: 672, child: _Chevron()),
-                  Positioned(left: 23, top: 803, child: _ContinueButton()),
-                ],
+        builder: (context, constraints) => Stack(
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: designWidth,
+                  height: designHeight,
+                  child: Stack(
+                    children: const [
+                      Positioned(left: 0, top: 0, child: _HeaderBackground()),
+                      Positioned(left: 200, top: 0, child: _Illustration()),
+                      Positioned(left: 21, top: 30, child: _BackButton()),
+                      Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
+                      Positioned(left: 24, top: 99.15, child: _TitleLead()),
+                      Positioned(left: 24, top: 134.79, child: _TitleAccent()),
+                      Positioned(left: 24, top: 180.74, child: _Subtitle()),
+                      Positioned(left: 23, top: 209.75, child: _ProgressTrack()),
+                      Positioned(left: 0, top: 342, child: _Sheet()),
+                      // Profile completion card.
+                      Positioned(left: 24, top: 367, child: _PcCard()),
+                      Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
+                      Positioned(right: 40, top: 384.37, child: _PcPercent()),
+                      Positioned(left: 34, top: 406, child: _PcBar()),
+                      // Verification details section.
+                      Positioned(left: 26, top: 452, child: _SectionTick()),
+                      Positioned(left: 40.5, top: 452.07, child: _SectionTitle()),
+                      Positioned(left: 260, top: 447, child: _PillNote()),
+                      Positioned(left: 25, top: 483, child: _Divider()),
+                      // Document cards.
+                      Positioned(left: 23, top: 497, child: _CardAadhaar()),
+                      Positioned(left: 34, top: 508, child: _TileAadhaar()),
+                      Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
+                      Positioned(left: 89, top: 532.94, child: _SubAadhaar()),
+                      Positioned(right: 41, top: 519, child: _Chevron()),
+                      Positioned(left: 23, top: 573, child: _CardPan()),
+                      Positioned(left: 34, top: 585, child: _TilePan()),
+                      Positioned(left: 89, top: 587.12, child: _TitlePan()),
+                      Positioned(left: 89, top: 609.81, child: _SubPan()),
+                      Positioned(right: 41, top: 595, child: _Chevron()),
+                      Positioned(left: 23, top: 650, child: _CardBusiness()),
+                      Positioned(left: 34, top: 661, child: _TileBusiness()),
+                      Positioned(left: 89, top: 663.43, child: _TitleBusiness()),
+                      Positioned(left: 89, top: 686.49, child: _SubBusiness()),
+                      Positioned(right: 41, top: 672, child: _Chevron()),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+            // Anchored to the physical screen bottom so it stays there on
+            // taller devices; on the 873-tall artboard this matches the
+            // design offset (873 - 54 - 16 = 803).
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: SizedBox(
+                  width: 364,
+                  height: 54,
+                  child: const _ContinueButton(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
