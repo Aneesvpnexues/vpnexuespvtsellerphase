@@ -282,11 +282,12 @@ void main() {
             .top,
         closeTo(871.99, 1));
 
-    // Continue button: x 24..388, y 910..964, radius 18, gradient fill.
+    // Continue button: bottom-anchored, x 10..402, y 910..964 on the 980
+    // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(10, 1));
     expect(button.top, closeTo(910, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(392, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration! as BoxDecoration;

@@ -20,17 +20,21 @@ class BankDetaileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bankPageBg,
+      backgroundColor: AppColors.surface,
       body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: designWidth,
-              height: designHeight,
-              child: Stack(
-                children: const [
+        builder: (context, constraints) => Stack(
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: designWidth,
+                  height: designHeight,
+                  child: Stack(
+                    children: const [
+                      Positioned(
+                          left: 0, top: 0, child: _HeaderBackground()),
                   // Sheet first: the illustration is drawn above it and carries
                   // its own baked shadow along the y332 seam, so the sheet's
                   // BoxShadow is only visible left of the image (no doubling).
@@ -79,13 +83,40 @@ class BankDetaileScreen extends StatelessWidget {
                   Positioned(left: 36, top: 851, child: _Shield()),
                   Positioned(left: 80.5, top: 852.94, child: _BannerTitle()),
                   Positioned(left: 80.5, top: 871.99, child: _BannerBody()),
-                  Positioned(left: 24, top: 910, child: _ContinueButton()),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+            // Anchored to the physical screen bottom so it stays there on
+            // taller devices; on the 980-tall artboard this matches the
+            // design offset (980 - 54 - 16 = 910).
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
+                child: SizedBox(
+                  height: 54,
+                  child: const _ContinueButton(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _HeaderBackground extends StatelessWidget {
+  const _HeaderBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: BankDetaileScreen.designWidth,
+      height: 386,
+      color: AppColors.bankPageBg,
     );
   }
 }
@@ -874,7 +905,6 @@ class _ContinueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
       height: 54,
       alignment: Alignment.center,
       decoration: BoxDecoration(
