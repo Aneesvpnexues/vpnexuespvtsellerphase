@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
-/// Pumps the bank-details screen on the 412x980 artboard the design was drawn
-/// for.
+/// Pumps the bank-details screen on the 412x936 artboard the design was drawn
+/// for (the design's 44px top headroom removed).
 Future<void> pumpScreen(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(412, 980);
+  tester.view.physicalSize = const Size(412, 936);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -118,10 +118,10 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    // Illustration: x 190..412, y 70..332 (STEP 04 is baked into the crop).
+    // Illustration: x 190..412, y 26..288 (STEP 04 is baked into the crop).
     final illustration = rectOf(find.byType(Image).first);
     expect(illustration.left, closeTo(190, 1));
-    expect(illustration.top, closeTo(70, 1));
+    expect(illustration.top, closeTo(26, 1));
     expect(illustration.width, closeTo(222, 1));
     expect(illustration.height, closeTo(262, 1));
 
@@ -129,20 +129,20 @@ void main() {
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     final back = rectOf(find.byIcon(Icons.arrow_back));
     expect(back.left, closeTo(21, 2));
-    expect(back.top, closeTo(74, 2));
+    expect(back.top, closeTo(30, 2));
 
     // Step label + headings + subtitle.
     expect(rectOf(find.text('STEP 02')).left, closeTo(25, 1));
-    expect(rectOf(find.text('STEP 02')).top, closeTo(133.13, 1));
+    expect(rectOf(find.text('STEP 02')).top, closeTo(89.13, 1));
     expect(rectOf(find.text('Add your')).left, closeTo(24, 1));
-    expect(rectOf(find.text('Add your')).top, closeTo(185.79, 1));
+    expect(rectOf(find.text('Add your')).top, closeTo(141.79, 1));
     expect(rectOf(find.text('bank details')).left, closeTo(24, 1));
-    expect(rectOf(find.text('bank details')).top, closeTo(219.80, 1));
+    expect(rectOf(find.text('bank details')).top, closeTo(175.80, 1));
     expect(rectOf(find.text('To receive your earnings')).left, closeTo(25, 1));
     expect(rectOf(find.text('To receive your earnings')).top,
-        closeTo(262.12, 1));
+        closeTo(218.12, 1));
 
-    // Progress track: left 25, top 162.75; three segments, middle active.
+    // Progress track: left 25, top 118.75; three segments, middle active.
     final segments = find.byWidgetPredicate(
       (w) =>
           w is Container &&
@@ -159,7 +159,7 @@ void main() {
 
     final segRects = segments.evaluate().map(rectOfElement).toList();
     expect(segRects.first.left, closeTo(25, 1));
-    expect(segRects.first.top, closeTo(162.75, 1));
+    expect(segRects.first.top, closeTo(118.75, 1));
     expect(segRects.first.width, closeTo(29.5, 1));
     expect(segRects[1].width, closeTo(42.5, 1));
     expect(segRects[2].width, closeTo(29.5, 1));
@@ -173,18 +173,18 @@ void main() {
       AppColors.progressTrack,
     ]);
 
-    // Sheet: top 331.5, full width, radius 40.
+    // Sheet: top 287.5, full width, radius 40.
     final sheet = rectOf(_sheet());
     expect(sheet.left, closeTo(0, 1));
-    expect(sheet.top, closeTo(331.5, 1));
+    expect(sheet.top, closeTo(287.5, 1));
     expect(sheet.height, closeTo(648.5, 1));
 
     // Section row: tick, title, pill, divider.
     expect(rectOf(find.text('Fill Your Bank Details')).left, closeTo(41, 1));
-    expect(rectOf(find.text('Fill Your Bank Details')).top, closeTo(363.45, 1));
+    expect(rectOf(find.text('Fill Your Bank Details')).top, closeTo(319.45, 1));
     final pill = rectOf(_pill());
     expect(pill.left, closeTo(261, 1));
-    expect(pill.top, closeTo(357, 1));
+    expect(pill.top, closeTo(313, 1));
     expect(pill.width, closeTo(126.5, 1));
     expect(pill.height, closeTo(27.5, 1));
     final divider = rectOf(find.byWidgetPredicate(
@@ -193,11 +193,11 @@ void main() {
           w.color == AppColors.docDivider,
     ));
     expect(divider.left, closeTo(26, 1));
-    expect(divider.top, closeTo(394, 1));
+    expect(divider.top, closeTo(350, 1));
 
-    // Four cards: x 25..389, tops 407 / 511 / 615 / 719, radius 12.
+    // Four cards: x 25..389, tops 363 / 467 / 571 / 675, radius 12.
     expect(_docCards(), findsNWidgets(4));
-    const cardTops = [407, 511, 615, 719];
+    const cardTops = [363, 467, 571, 675];
     for (var i = 0; i < cardTops.length; i++) {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(25, 1), reason: 'card $i left');
@@ -208,7 +208,7 @@ void main() {
 
     // Four tiles: 32x32, radius 10, left 36, measured tops.
     expect(_tiles(), findsNWidgets(4));
-    const tileTops = [422, 526, 630, 734];
+    const tileTops = [378, 482, 586, 690];
     for (var i = 0; i < tileTops.length; i++) {
       final rect = rectOf(_tiles().at(i));
       expect(rect.left, closeTo(36, 1), reason: 'tile $i left');
@@ -218,7 +218,7 @@ void main() {
     }
 
     // Labels.
-    const labelTops = [425.81, 529.81, 633.81, 736.81];
+    const labelTops = [381.81, 485.81, 589.81, 692.81];
     const labelTexts = [
       'Account Holder Name',
       'Bank Name',
@@ -232,10 +232,10 @@ void main() {
           reason: '${labelTexts[i]} top');
     }
 
-    // Inputs: left 81, tops 446 / 550 / 654 / 758; first three full width,
+    // Inputs: left 81, tops 402 / 506 / 610 / 714; first three full width,
     // IFSC input narrower.
     expect(_inputs(), findsNWidgets(4));
-    const inputTops = [446, 550, 654, 758];
+    const inputTops = [402, 506, 610, 714];
     const inputWidths = [291.5, 291.5, 291.5, 212.5];
     for (var i = 0; i < inputTops.length; i++) {
       final rect = rectOf(_inputs().at(i));
@@ -246,7 +246,7 @@ void main() {
     }
 
     // Input texts.
-    const inputTopTexts = [459.99, 564.10, 667.67, 771.99];
+    const inputTopTexts = [415.99, 520.10, 623.67, 727.99];
     const inputLabels = [
       'Name should match your bank account',
       'State Bank of India',
@@ -260,33 +260,33 @@ void main() {
           reason: '${inputLabels[i]} top');
     }
 
-    // Verify button: x 301..374.5, y 757.5..794.5.
+    // Verify button: x 301..374.5, y 713.5..750.5.
     final verify = rectOf(_verifyButton());
     expect(verify.left, closeTo(301, 1));
-    expect(verify.top, closeTo(757.5, 1));
+    expect(verify.top, closeTo(713.5, 1));
     expect(verify.width, closeTo(73.5, 1));
     expect(verify.height, closeTo(37, 1));
 
-    // Security banner: x 25..389, y 837..898.
+    // Security banner: x 25..389, y 793..854.
     final banner = rectOf(_banner());
     expect(banner.left, closeTo(25, 1));
-    expect(banner.top, closeTo(837, 1));
+    expect(banner.top, closeTo(793, 1));
     expect(banner.width, closeTo(364, 1));
     expect(banner.height, closeTo(61, 1));
     expect(rectOf(find.text('Your information is safe with us.')).left,
         closeTo(80.5, 1));
     expect(rectOf(find.text('Your information is safe with us.')).top,
-        closeTo(852.94, 1));
+        closeTo(808.94, 1));
     expect(
         rectOf(find.text('We use bank-grade security to protect your details.'))
             .top,
-        closeTo(871.99, 1));
+        closeTo(827.99, 1));
 
-    // Continue button: bottom-anchored, x 10..402, y 910..964 on the 980
+    // Continue button: bottom-anchored, x 10..402, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
     expect(button.left, closeTo(10, 1));
-    expect(button.top, closeTo(910, 1));
+    expect(button.top, closeTo(866, 1));
     expect(button.width, closeTo(392, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -383,7 +383,7 @@ void main() {
   });
 
   testWidgets('back arrow pops the route', (tester) async {
-    tester.view.physicalSize = const Size(412, 980);
+    tester.view.physicalSize = const Size(412, 936);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(

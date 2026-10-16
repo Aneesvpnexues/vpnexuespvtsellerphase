@@ -6,16 +6,17 @@ import '../theme/app_text_styles.dart';
 /// "Add your bank details" — static replica of Zeplin "Android Compact - 106"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb1cc78003f7066066b).
 ///
-/// Built against a 412x980 artboard. The vegetable-basket illustration is the
-/// design PNG cropped to x190..412 / y70..332; the white "STEP 04" label sits
-/// over foliage inside that crop and is therefore baked into the asset (only
-/// "STEP 02" is rendered here). The back arrow pops; Continue is visual only.
+/// Built against a 412x936 artboard (the design's 44px top headroom removed).
+/// The vegetable-basket illustration is the design PNG cropped to
+/// x190..412 / y70..332; the white "STEP 04" label sits over foliage inside
+/// that crop and is therefore baked into the asset (only "STEP 02" is rendered
+/// here). The back arrow pops; Continue is visual only.
 class BankDetaileScreen extends StatelessWidget {
   const BankDetaileScreen({super.key});
 
   static const String illustrationAsset = 'assets/bank/illustration.png';
   static const double designWidth = 412;
-  static const double designHeight = 980;
+  static const double designHeight = 936;
 
   @override
   Widget build(BuildContext context) {
@@ -35,62 +36,66 @@ class BankDetaileScreen extends StatelessWidget {
                     children: const [
                       Positioned(
                           left: 0, top: 0, child: _HeaderBackground()),
-                  // Sheet first: the illustration is drawn above it and carries
-                  // its own baked shadow along the y332 seam, so the sheet's
-                  // BoxShadow is only visible left of the image (no doubling).
-                  Positioned(left: 0, top: 331.5, child: _Sheet()),
-                  Positioned(left: 190, top: 70, child: _Illustration()),
-                  Positioned(left: 21, top: 74, child: _BackButton()),
-                  Positioned(left: 25, top: 133.13, child: _StepLabel()),
-                  Positioned(left: 25, top: 162.75, child: _ProgressTrack()),
-                  Positioned(left: 24, top: 185.79, child: _TitleLead()),
-                  Positioned(left: 24, top: 219.80, child: _TitleAccent()),
-                  Positioned(left: 25, top: 262.12, child: _Subtitle()),
-                  // Bank details section row.
-                  Positioned(left: 27, top: 363, child: _SectionTick()),
-                  Positioned(left: 41, top: 363.45, child: _SectionTitle()),
-                  Positioned(left: 261, top: 357, child: _PillNote()),
-                  Positioned(left: 26, top: 394, child: _Divider()),
-                  // Card 1 — Account Holder Name (active: soft shadow).
-                  Positioned(left: 25, top: 407, child: _CardActive()),
-                  Positioned(left: 36, top: 422, child: _TilePerson()),
-                  Positioned(left: 81, top: 425.81, child: _LabelName()),
-                  Positioned(left: 81, top: 446, child: _InputName()),
-                  Positioned(left: 90.5, top: 459.99, child: _InputTextName()),
-                  // Card 2 — Bank Name (dropdown).
-                  Positioned(left: 25, top: 511, child: _CardBank()),
-                  Positioned(left: 36, top: 526, child: _TileBank()),
-                  Positioned(left: 81, top: 529.81, child: _LabelBank()),
-                  Positioned(left: 81, top: 550, child: _InputBank()),
-                  Positioned(left: 90.5, top: 564.10, child: _InputTextBank()),
-                  Positioned(left: 348, top: 565, child: _ChevronDown()),
-                  // Card 3 — Account Number.
-                  Positioned(left: 25, top: 615, child: _CardAccount()),
-                  Positioned(left: 36, top: 630, child: _TileAccount()),
-                  Positioned(left: 81, top: 633.81, child: _LabelAccount()),
-                  Positioned(left: 81, top: 654, child: _InputAccount()),
-                  Positioned(
-                      left: 90.5, top: 667.67, child: _InputTextAccount()),
-                  // Card 4 — IFSC Code + Verify button.
-                  Positioned(left: 25, top: 719, child: _CardIfsc()),
-                  Positioned(left: 36, top: 734, child: _TileIfsc()),
-                  Positioned(left: 81, top: 736.81, child: _LabelIfsc()),
-                  Positioned(left: 81, top: 758, child: _InputIfsc()),
-                  Positioned(left: 90.5, top: 771.99, child: _InputTextIfsc()),
-                  Positioned(left: 301, top: 757.5, child: _VerifyButton()),
-                  // Security banner.
-                  Positioned(left: 25, top: 837, child: _Banner()),
-                  Positioned(left: 36, top: 851, child: _Shield()),
-                  Positioned(left: 80.5, top: 852.94, child: _BannerTitle()),
-                  Positioned(left: 80.5, top: 871.99, child: _BannerBody()),
+                      // Sheet first: the illustration is drawn above it and
+                      // carries its own baked shadow along the seam, so the
+                      // sheet's BoxShadow is only visible left of the image
+                      // (no doubling).
+                      Positioned(left: 0, top: 287.5, child: _Sheet()),
+                      Positioned(left: 190, top: 26, child: _Illustration()),
+                      Positioned(left: 21, top: 30, child: _BackButton()),
+                      Positioned(left: 25, top: 89.13, child: _StepLabel()),
+                      Positioned(left: 25, top: 118.75, child: _ProgressTrack()),
+                      Positioned(left: 24, top: 141.79, child: _TitleLead()),
+                      Positioned(left: 24, top: 175.80, child: _TitleAccent()),
+                      Positioned(left: 25, top: 218.12, child: _Subtitle()),
+                      // Bank details section row.
+                      Positioned(left: 27, top: 319, child: _SectionTick()),
+                      Positioned(left: 41, top: 319.45, child: _SectionTitle()),
+                      Positioned(left: 261, top: 313, child: _PillNote()),
+                      Positioned(left: 26, top: 350, child: _Divider()),
+                      // Card 1 — Account Holder Name (active: soft shadow).
+                      Positioned(left: 25, top: 363, child: _CardActive()),
+                      Positioned(left: 36, top: 378, child: _TilePerson()),
+                      Positioned(left: 81, top: 381.81, child: _LabelName()),
+                      Positioned(left: 81, top: 402, child: _InputName()),
+                      Positioned(
+                          left: 90.5, top: 415.99, child: _InputTextName()),
+                      // Card 2 — Bank Name (dropdown).
+                      Positioned(left: 25, top: 467, child: _CardBank()),
+                      Positioned(left: 36, top: 482, child: _TileBank()),
+                      Positioned(left: 81, top: 485.81, child: _LabelBank()),
+                      Positioned(left: 81, top: 506, child: _InputBank()),
+                      Positioned(
+                          left: 90.5, top: 520.10, child: _InputTextBank()),
+                      Positioned(left: 348, top: 521, child: _ChevronDown()),
+                      // Card 3 — Account Number.
+                      Positioned(left: 25, top: 571, child: _CardAccount()),
+                      Positioned(left: 36, top: 586, child: _TileAccount()),
+                      Positioned(left: 81, top: 589.81, child: _LabelAccount()),
+                      Positioned(left: 81, top: 610, child: _InputAccount()),
+                      Positioned(
+                          left: 90.5, top: 623.67, child: _InputTextAccount()),
+                      // Card 4 — IFSC Code + Verify button.
+                      Positioned(left: 25, top: 675, child: _CardIfsc()),
+                      Positioned(left: 36, top: 690, child: _TileIfsc()),
+                      Positioned(left: 81, top: 692.81, child: _LabelIfsc()),
+                      Positioned(left: 81, top: 714, child: _InputIfsc()),
+                      Positioned(
+                          left: 90.5, top: 727.99, child: _InputTextIfsc()),
+                      Positioned(left: 301, top: 713.5, child: _VerifyButton()),
+                      // Security banner.
+                      Positioned(left: 25, top: 793, child: _Banner()),
+                      Positioned(left: 36, top: 807, child: _Shield()),
+                      Positioned(left: 80.5, top: 808.94, child: _BannerTitle()),
+                      Positioned(left: 80.5, top: 827.99, child: _BannerBody()),
                     ],
                   ),
                 ),
               ),
             ),
             // Anchored to the physical screen bottom so it stays there on
-            // taller devices; on the 980-tall artboard this matches the
-            // design offset (980 - 54 - 16 = 910).
+            // taller devices; on the 936-tall artboard this matches the
+            // design offset (980 - 44 - 54 - 16 = 866).
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
@@ -240,7 +245,7 @@ class _Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: BankDetaileScreen.designWidth,
-      height: BankDetaileScreen.designHeight - 331.5,
+      height: BankDetaileScreen.designHeight - 287.5,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
