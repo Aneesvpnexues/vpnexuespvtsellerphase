@@ -50,6 +50,13 @@ void main() {
     expect(rectOf(find.text('State Bank of India')).top, closeTo(99, 5));
     expect(rectOf(find.text('3421')).left, closeTo(228, 3));
     expect(rectOf(find.text('3421')).top, closeTo(145, 6));
+    // The design sets the masked digits in a monospace face (24/700), so the
+    // four digits keep the design's 49px box instead of Inter's wider 58px.
+    expect(tester.getSize(find.text('3421')).width, closeTo(49, 1));
+    expect(
+      tester.widget<Text>(find.text('3421')).style?.fontFamily,
+      'IosevkaCharonMono',
+    );
     expect(rectOf(find.text('Account holder')).left, closeTo(45, 3));
     expect(rectOf(find.text('Account holder')).top, closeTo(193, 6));
     expect(rectOf(find.text('Ramesh Kumar')).left, closeTo(45, 3));

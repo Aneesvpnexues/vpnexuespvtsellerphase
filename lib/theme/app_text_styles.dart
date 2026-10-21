@@ -725,6 +725,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle bankNumber = TextStyle(
+    fontFamily: 'IosevkaCharonMono',
     fontSize: 24,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.24,
