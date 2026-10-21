@@ -12,13 +12,31 @@ import '../widgets/label_text.dart';
 ///
 /// Built against a 412x917 artboard. Same zoom-scroll pattern as
 /// 117/123/132/135: fit width, scroll vertically for the 917px tall content.
-/// Visual only.
-class OrderAcceptedScreen extends StatelessWidget {
+/// The packing checklist is live: tapping a row ticks it off, the counter and
+/// the rail follow, and the CTA only continues once all three are packed.
+class OrderAcceptedScreen extends StatefulWidget {
   const OrderAcceptedScreen({super.key});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
   static const double trimTop = 49;
+
+  @override
+  State<OrderAcceptedScreen> createState() => _OrderAcceptedScreenState();
+}
+
+class _OrderAcceptedScreenState extends State<OrderAcceptedScreen> {
+  final Set<int> _packed = <int>{};
+
+  bool get _allPacked => _packed.length == 3;
+
+  void _togglePacked(int index) {
+    setState(() {
+      if (!_packed.remove(index)) {
+        _packed.add(index);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +45,9 @@ class OrderAcceptedScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: OrderAcceptedScreen.designWidth,
+          designHeight: OrderAcceptedScreen.designHeight,
+          trimTop: OrderAcceptedScreen.trimTop,
           child: Stack(
             children: [
               const Positioned(left: 24, top: 73, child: _BackCircle()),
@@ -47,14 +65,18 @@ class OrderAcceptedScreen extends StatelessWidget {
               const Positioned(left: 25, top: 172, child: _OrderHero()),
               const Positioned(left: 41, top: 247, child: _ProgressCard()),
               const Positioned(left: 24, top: 358, child: _BuyerCard()),
-              const Positioned(left: 24, top: 552, child: _PackingCard()),
+              Positioned(
+                left: 24,
+                top: 552,
+                child: _PackingCard(packed: _packed, onToggle: _togglePacked),
+              ),
               Positioned(
                 left: 21,
                 top: 847,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => goToOrderReady(context),
-                  child: const _PackCta(),
+                  onTap: _allPacked ? () => goToOrderReady(context) : null,
+                  child: _PackCta(active: _allPacked),
                 ),
               ),
             ],
@@ -749,7 +771,10 @@ class _BuyerCard extends StatelessWidget {
 }
 
 class _PackingCard extends StatelessWidget {
-  const _PackingCard();
+  const _PackingCard({required this.packed, required this.onToggle});
+
+  final Set<int> packed;
+  final ValueChanged<int> onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -833,11 +858,11 @@ class _PackingCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 281,
             top: 20,
             child: _Label(
-              '0/3 packed',
+              '${packed.length}/3 packed',
               AppTextStyles.orderStepLabel,
               width: 59,
               height: 20,
@@ -846,40 +871,47 @@ class _PackingCard extends StatelessWidget {
           Positioned(
             left: 17,
             top: 59,
-            child: Container(
-              width: 330,
-              height: 6,
-              decoration: const BoxDecoration(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(7)),
+              child: Container(
+                width: 330,
+                height: 6,
                 color: AppColors.orderTrack,
-                borderRadius: BorderRadius.all(Radius.circular(7)),
+                child: CustomPaint(painter: _PackProgress(packed.length / 3)),
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 79,
             child: _PackRow(
               image: 'assets/order/tomatoes.png',
               name: 'Fresh Tomatoes',
               qty: '50 kg',
+              packed: packed.contains(0),
+              onTap: () => onToggle(0),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 142,
             child: _PackRow(
               image: 'assets/order/chillies.png',
               name: 'Green Chillies',
               qty: '30 kg',
+              packed: packed.contains(1),
+              onTap: () => onToggle(1),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 205,
             child: _PackRow(
               image: 'assets/order/chillies2.png',
               name: 'Green Chillies',
               qty: '20 kg',
+              packed: packed.contains(2),
+              onTap: () => onToggle(2),
             ),
           ),
         ],
@@ -889,66 +921,126 @@ class _PackingCard extends StatelessWidget {
 }
 
 class _PackRow extends StatelessWidget {
-  const _PackRow({required this.image, required this.name, required this.qty});
+  const _PackRow({
+    required this.image,
+    required this.name,
+    required this.qty,
+    required this.packed,
+    required this.onTap,
+  });
 
   final String image;
   final String name;
   final String qty;
+  final bool packed;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      width: 331,
-      height: 59,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-      ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-        border: Border.all(color: const Color(0x12000000)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 5,
-            top: 5,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(10)),
-              child: Image(image: AssetImage(image), width: 49, height: 49),
-            ),
-          ),
-          Positioned(
-            left: 67,
-            top: 8,
-            child: _Label(name, AppTextStyles.orderItemName, width: 120),
-          ),
-          Positioned(
-            left: 67,
-            top: 26,
-            child: _Label(qty, AppTextStyles.orderItemMeta, width: 60),
-          ),
-          Positioned(
-            left: 295,
-            top: 17,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(Radius.circular(7)),
-                border: Border.all(color: AppColors.orderCheckBorder),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        width: 331,
+        height: 59,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
+        ),
+        foregroundDecoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          border: Border.all(color: const Color(0x12000000)),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 5,
+              top: 5,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image(image: AssetImage(image), width: 49, height: 49),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 67,
+              top: 8,
+              child: _Label(name, AppTextStyles.orderItemName, width: 120),
+            ),
+            Positioned(
+              left: 67,
+              top: 26,
+              child: _Label(qty, AppTextStyles.orderItemMeta, width: 60),
+            ),
+            Positioned(
+              left: 295,
+              top: 17,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: packed ? AppColors.orderStepGreen : Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(7)),
+                  border: packed
+                      ? null
+                      : Border.all(color: AppColors.orderCheckBorder),
+                ),
+                child: packed
+                    ? const Center(
+                        child: Image(
+                          image: AssetImage(
+                            'assets/order_ready/ic_badge_check.png',
+                          ),
+                          width: 10.5,
+                          height: 9,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+class _PackProgress extends CustomPainter {
+  const _PackProgress(this.fill);
+
+  final double fill;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (fill <= 0) {
+      return;
+    }
+    final Rect full = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width * fill.clamp(0.0, 1.0), size.height),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            AppColors.orderTrackStart,
+            AppColors.orderTrackMid,
+            AppColors.orderTrackEnd,
+          ],
+          stops: [0, 0.504807710647583, 1],
+        ).createShader(full),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PackProgress oldDelegate) => oldDelegate.fill != fill;
+}
+
 class _PackCta extends StatelessWidget {
-  const _PackCta();
+  const _PackCta({required this.active});
+
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -959,7 +1051,7 @@ class _PackCta extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Opacity(
-              opacity: 0.65,
+              opacity: active ? 1 : 0.65,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(Radius.circular(28)),

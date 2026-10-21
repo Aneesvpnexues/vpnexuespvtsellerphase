@@ -118,8 +118,51 @@ void main() {
     expect(find.text('Packing checklist'), findsOneWidget);
   });
 
-  testWidgets('the packing CTA opens the ready screen', (tester) async {
+  testWidgets('tapping a checklist row packs it and the rail follows', (
+    tester,
+  ) async {
     await pumpAccepted(tester);
+
+    expect(find.text('0/3 packed'), findsOneWidget);
+
+    await tester.tap(find.text('Fresh Tomatoes'));
+    await tester.pumpAndSettle();
+    expect(find.text('1/3 packed'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/order_ready/ic_badge_check.png')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Green Chillies').first);
+    await tester.pumpAndSettle();
+    expect(find.text('2/3 packed'), findsOneWidget);
+
+    await tester.tap(find.text('Green Chillies').last);
+    await tester.pumpAndSettle();
+    expect(find.text('3/3 packed'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/order_ready/ic_badge_check.png')),
+      findsNWidgets(3),
+    );
+
+    await tester.tap(find.text('Green Chillies').last);
+    await tester.pumpAndSettle();
+    expect(find.text('2/3 packed'), findsOneWidget);
+  });
+
+  testWidgets('the packing CTA waits until every item is packed', (
+    tester,
+  ) async {
+    await pumpAccepted(tester);
+
+    await tester.tap(find.text('Pack all items to continue'));
+    await tester.pumpAndSettle();
+    expect(find.byType(OrderReadyScreen), findsNothing);
+
+    await tester.tap(find.text('Fresh Tomatoes'));
+    await tester.tap(find.text('Green Chillies').first);
+    await tester.tap(find.text('Green Chillies').last);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Pack all items to continue'));
     await tester.pumpAndSettle();
