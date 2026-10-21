@@ -150,12 +150,15 @@ void main() {
     expect(find.text('2/3 packed'), findsOneWidget);
   });
 
-  testWidgets('the packing CTA waits until every item is packed', (
+  testWidgets('the packing CTA slides on once every item is packed', (
     tester,
   ) async {
     await pumpAccepted(tester);
 
-    await tester.tap(find.text('Pack all items to continue'));
+    await tester.drag(
+      find.text('Pack all items to continue'),
+      const Offset(320, 0),
+    );
     await tester.pumpAndSettle();
     expect(find.byType(OrderReadyScreen), findsNothing);
 
@@ -164,7 +167,10 @@ void main() {
     await tester.tap(find.text('Green Chillies').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Pack all items to continue'));
+    await tester.drag(
+      find.text('Pack all items to continue'),
+      const Offset(320, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(OrderReadyScreen), findsOneWidget);

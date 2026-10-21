@@ -73,10 +73,9 @@ class _OrderAcceptedScreenState extends State<OrderAcceptedScreen> {
               Positioned(
                 left: 21,
                 top: 847,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _allPacked ? () => goToOrderReady(context) : null,
-                  child: _PackCta(active: _allPacked),
+                child: _PackCta(
+                  active: _allPacked,
+                  onComplete: () => goToOrderReady(context),
                 ),
               ),
             ],
@@ -1037,66 +1036,134 @@ class _PackProgress extends CustomPainter {
   bool shouldRepaint(_PackProgress oldDelegate) => oldDelegate.fill != fill;
 }
 
-class _PackCta extends StatelessWidget {
-  const _PackCta({required this.active});
+class _PackCta extends StatefulWidget {
+  const _PackCta({required this.active, required this.onComplete});
 
+  /// True once every checklist item is packed; the knob only slides then.
   final bool active;
+
+  /// Called once the knob has been dragged past 70% of the track.
+  final VoidCallback onComplete;
+
+  @override
+  State<_PackCta> createState() => _PackCtaState();
+}
+
+class _PackCtaState extends State<_PackCta>
+    with SingleTickerProviderStateMixin {
+  static const double _start = 4;
+  static const double _end = 310;
+  static const double _travel = _end - _start;
+  static const double _threshold = _start + _travel * 0.7;
+
+  late final AnimationController _controller;
+  double _knobX = _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(() {
+          setState(() {
+            _knobX = _start + _travel * _controller.value;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (!widget.active) {
+      return;
+    }
+    _controller.stop();
+    setState(() {
+      _knobX = (_knobX + details.delta.dx).clamp(_start, _end);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (!widget.active) {
+      _knobX = _start;
+      _controller.value = 0;
+      return;
+    }
+    if (_knobX >= _threshold) {
+      setState(() => _knobX = _end);
+      widget.onComplete();
+      return;
+    }
+    _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
+    _controller.reverse();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 364,
-      height: 58,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: active ? 1 : 0.65,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(28)),
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      AppColors.orderSlideStart,
-                      AppColors.orderSlideEnd,
-                    ],
-                    stops: [0.11656297743320465, 1],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: _onDragUpdate,
+      onHorizontalDragEnd: _onDragEnd,
+      child: SizedBox(
+        width: 364,
+        height: 58,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Opacity(
+                opacity: widget.active ? 1 : 0.65,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.all(Radius.circular(28)),
+                    gradient: const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        AppColors.orderSlideStart,
+                        AppColors.orderSlideEnd,
+                      ],
+                      stops: [0.11656297743320465, 1],
+                    ),
+                    border: Border.all(color: const Color(0x14000000)),
                   ),
-                  border: Border.all(color: const Color(0x14000000)),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: 4,
-            top: 4,
-            child: Container(
-              alignment: Alignment.center,
-              width: 50,
-              height: 50,
-              decoration: const BoxDecoration(
-                color: AppColors.orderSlideCircle,
-                shape: BoxShape.circle,
-              ),
-              child: const Image(
-                image: AssetImage('assets/order_accepted/ic_pack_arrow.png'),
-                width: 26,
-                height: 26,
+            Positioned(
+              left: _knobX,
+              top: 4,
+              child: Container(
+                alignment: Alignment.center,
+                width: 50,
+                height: 50,
+                decoration: const BoxDecoration(
+                  color: AppColors.orderSlideCircle,
+                  shape: BoxShape.circle,
+                ),
+                child: const Image(
+                  image: AssetImage('assets/order_accepted/ic_pack_arrow.png'),
+                  width: 26,
+                  height: 26,
+                ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 107,
-            top: 15,
-            child: _Label(
-              'Pack all items to continue',
-              AppTextStyles.orderSlideLabelMuted,
-              width: 179,
+            const Positioned(
+              left: 107,
+              top: 15,
+              child: _Label(
+                'Pack all items to continue',
+                AppTextStyles.orderSlideLabelMuted,
+                width: 179,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
