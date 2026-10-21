@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/order_accepted_screen.dart';
+import 'package:seller_app/screens/order_ready_screen.dart';
 
 Future<void> pumpAccepted(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -115,5 +116,15 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Order Details'), findsOneWidget);
     expect(find.text('Packing checklist'), findsOneWidget);
+  });
+
+  testWidgets('the packing CTA opens the ready screen', (tester) async {
+    await pumpAccepted(tester);
+
+    await tester.tap(find.text('Pack all items to continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderReadyScreen), findsOneWidget);
+    expect(find.text('Slide to mark as ready'), findsOneWidget);
   });
 }

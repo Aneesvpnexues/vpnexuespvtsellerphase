@@ -9,6 +9,7 @@ import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_accepted_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
+import 'package:seller_app/screens/order_ready_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -58,6 +59,7 @@ void main() {
       'MyOrdersScreen': const MyOrdersScreen(),
       'OrderDetailsScreen': const OrderDetailsScreen(),
       'OrderAcceptedScreen': const OrderAcceptedScreen(),
+      'OrderReadyScreen': const OrderReadyScreen(),
       'ProfileScreen': const ProfileScreen(),
       'PersonalDetailsScreen': const PersonalDetailsScreen(),
       'BusinessFarmScreen': const BusinessFarmScreen(),

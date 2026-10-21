@@ -416,5 +416,16 @@
         "annotations":  0,
         "file":  "design/screens/Android_Compact_-_139.png",
         "link":  "https://app.zeplin.io/project/6a8d49709e27bd8b35213d35/screen/6ad1ae15e87c44ea55984599"
+    },
+    {
+        "name":  "Android Compact - 140",
+        "id":  "6ad1ae14aa9fda71b12bf082",
+        "width":  412,
+        "height":  917,
+        "versions":  1,
+        "notes":  0,
+        "annotations":  0,
+        "file":  "design/screens/Android_Compact_-_140.png",
+        "link":  "https://app.zeplin.io/project/6a8d49709e27bd8b35213d35/screen/6ad1ae14aa9fda71b12bf082"
     }
 ]

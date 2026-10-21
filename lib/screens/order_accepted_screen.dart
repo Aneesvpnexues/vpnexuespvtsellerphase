@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
 
 /// Order Accepted (Buyer Pickup / packing checklist) - static replica of
@@ -29,9 +30,9 @@ class OrderAcceptedScreen extends StatelessWidget {
           designHeight: designHeight,
           trimTop: trimTop,
           child: Stack(
-            children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
-              Positioned(
+            children: [
+              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(
                 left: 68,
                 top: 73,
                 width: 200,
@@ -41,12 +42,20 @@ class OrderAcceptedScreen extends StatelessWidget {
                   child: Text('Order Details', style: AppTextStyles.orderTitle),
                 ),
               ),
-              Positioned(left: 24, top: 117, child: _SegmentTabs()),
-              Positioned(left: 25, top: 172, child: _OrderHero()),
-              Positioned(left: 41, top: 247, child: _ProgressCard()),
-              Positioned(left: 24, top: 358, child: _BuyerCard()),
-              Positioned(left: 24, top: 552, child: _PackingCard()),
-              Positioned(left: 21, top: 847, child: _PackCta()),
+              const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              const Positioned(left: 25, top: 172, child: _OrderHero()),
+              const Positioned(left: 41, top: 247, child: _ProgressCard()),
+              const Positioned(left: 24, top: 358, child: _BuyerCard()),
+              const Positioned(left: 24, top: 552, child: _PackingCard()),
+              Positioned(
+                left: 21,
+                top: 847,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => goToOrderReady(context),
+                  child: const _PackCta(),
+                ),
+              ),
             ],
           ),
         ),
@@ -234,6 +243,8 @@ class _OrderHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(22)),
         gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [AppColors.orderLime, AppColors.orderHeroEnd],
         ),
         boxShadow: const [
@@ -379,7 +390,6 @@ class _ProgressCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.orderMint,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A949494),
@@ -407,6 +417,10 @@ class _ProgressCard extends StatelessWidget {
             blurRadius: 70,
           ),
         ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
+        border: Border.all(color: const Color(0x12000000)),
       ),
       child: Stack(
         children: [
@@ -482,8 +496,8 @@ class _StepCircle extends StatelessWidget {
     return Container(
       width: 36,
       height: 36,
-      decoration: BoxDecoration(
-        color: fill,
+      decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
+      foregroundDecoration: BoxDecoration(
         shape: BoxShape.circle,
         border: border,
       ),
@@ -535,6 +549,9 @@ class _BuyerCard extends StatelessWidget {
       height: 181,
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
+      ),
+      foregroundDecoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(24)),
         border: Border.all(color: const Color(0x12000000)),
       ),
@@ -648,6 +665,9 @@ class _BuyerCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.orderLime,
                 borderRadius: const BorderRadius.all(Radius.circular(28)),
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: const BorderRadius.all(Radius.circular(28)),
                 border: Border.all(color: const Color(0x14000000)),
               ),
               child: const Stack(
@@ -684,6 +704,9 @@ class _BuyerCard extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: AppColors.orderSecondary,
+                borderRadius: const BorderRadius.all(Radius.circular(28)),
+              ),
+              foregroundDecoration: BoxDecoration(
                 borderRadius: const BorderRadius.all(Radius.circular(28)),
                 border: Border.all(color: const Color(0x14000000)),
               ),
@@ -734,7 +757,6 @@ class _PackingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A949494),
@@ -762,6 +784,10 @@ class _PackingCard extends StatelessWidget {
             blurRadius: 70,
           ),
         ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
+        border: Border.all(color: const Color(0x12000000)),
       ),
       child: Stack(
         children: [
@@ -876,6 +902,9 @@ class _PackRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(14)),
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
         border: Border.all(color: const Color(0x12000000)),
       ),
       child: Stack(
@@ -933,6 +962,8 @@ class _PackCta extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(Radius.circular(28)),
                   gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                     colors: [
                       AppColors.orderSlideStart,
                       AppColors.orderSlideEnd,

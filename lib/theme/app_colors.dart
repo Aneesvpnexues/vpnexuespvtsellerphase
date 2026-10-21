@@ -79,6 +79,16 @@ abstract final class AppColors {
   static const Color orderStepGreen = Color(0xFF2E8B4B);
   static const Color orderStepRing = Color(0x6BCACACA);
   static const Color orderTrack = Color(0xFFE3EAD4);
+  static const Color orderTrackStart = Color(0xFFC2E569);
+  static const Color orderTrackMid = Color(0xFF85BF5C);
+  static const Color orderTrackEnd = Color(0xFF38914D);
+  static const Color orderStepActiveRing = Color(0xFFE1F8A4);
+  static const Color orderRow1Start = Color(0xFFEEF8E3);
+  static const Color orderRow1End = Color(0xFFFCFEFA);
+  static const Color orderRow2Start = Color(0xFFF1F9E7);
+  static const Color orderRow2End = Color(0xFFFAFDF7);
+  static const Color orderRow3Start = Color(0xFFF2FAEA);
+  static const Color orderRow3End = Color(0xFFF8FCF4);
   static const Color orderCheckBorder = Color(0x3D000000);
   static const Color orderSlideCircle = Color(0xA8BEE45D);
   static const Color orderSlideText = Color(0xD1FFFFFF);

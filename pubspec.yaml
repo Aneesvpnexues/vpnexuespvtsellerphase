@@ -76,6 +76,7 @@ flutter:
     - assets/settings/
     - assets/add_product/
     - assets/order_accepted/
+    - assets/order_ready/
 
   # Inter is the Zeplin design font, bundled so every screen renders with the
   # exact same text metrics on all platforms and never fetches fonts from
