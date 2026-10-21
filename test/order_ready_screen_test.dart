@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/order_delivery_screen.dart';
 import 'package:seller_app/screens/order_ready_screen.dart';
 
 Future<void> pumpReady(WidgetTester tester) async {
@@ -129,7 +130,7 @@ void main() {
     }
   });
 
-  testWidgets('a short slide springs back and a full one settles', (
+  testWidgets('a short slide springs back and a full one opens 141', (
     tester,
   ) async {
     await pumpReady(tester);
@@ -143,10 +144,11 @@ void main() {
     await tester.drag(slideArrow(), const Offset(50, 0));
     await tester.pumpAndSettle();
     expect(rectOf(slideArrow()).left, closeTo(40, 2));
+    expect(find.byType(OrderDeliveryScreen), findsNothing);
 
     await tester.drag(slideArrow(), const Offset(400, 0));
     await tester.pumpAndSettle();
-    expect(rectOf(slideArrow()).left, closeTo(346, 2));
+    expect(find.byType(OrderDeliveryScreen), findsOneWidget);
   });
 
   testWidgets('tapping the slide settles the knob without navigating', (

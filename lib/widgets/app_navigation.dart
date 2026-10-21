@@ -4,6 +4,7 @@ import '../screens/add_product_screen.dart';
 import '../screens/my_orders_screen.dart';
 import '../screens/my_products_screen.dart';
 import '../screens/order_accepted_screen.dart';
+import '../screens/order_delivery_screen.dart';
 import '../screens/order_ready_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/seller_home_screen.dart';
@@ -26,6 +27,7 @@ abstract final class AppRoutes {
   static const String addProduct = '/add-product';
   static const String orderAccepted = '/order-accepted';
   static const String orderReady = '/order-ready';
+  static const String orderDelivery = '/order-delivery';
 }
 
 /// Switches the bottom navigation tab.
@@ -125,6 +127,16 @@ void goToOrderReady(BuildContext context) {
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderReady),
       builder: (_) => const OrderReadyScreen(),
+    ),
+  );
+}
+
+/// Opens the out-for-delivery state from the ready order's slide CTA.
+void goToOrderDelivery(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.orderDelivery),
+      builder: (_) => const OrderDeliveryScreen(),
     ),
   );
 }

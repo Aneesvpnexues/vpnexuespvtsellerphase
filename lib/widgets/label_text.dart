@@ -42,7 +42,13 @@ class LabelText extends StatelessWidget {
       height: height,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(text, style: effective, maxLines: 1, softWrap: false),
+        child: Text(
+          text,
+          style: effective,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
+        ),
       ),
     );
   }

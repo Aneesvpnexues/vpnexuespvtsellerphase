@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
 
@@ -17,8 +18,8 @@ import '../widgets/label_text.dart';
 /// REST payload drops the gradient angle).
 ///
 /// The slide CTA keeps the 135/139 gesture: a drag past 70% settles at the end,
-/// a shorter one springs back. The design defines no destination for "mark as
-/// ready", so nothing is navigated to.
+/// a shorter one springs back. A full slide opens the out-for-delivery state
+/// (141), a tap only settles the knob.
 class OrderReadyScreen extends StatelessWidget {
   const OrderReadyScreen({super.key});
 
@@ -37,24 +38,30 @@ class OrderReadyScreen extends StatelessWidget {
           designHeight: designHeight,
           trimTop: trimTop,
           child: Stack(
-            children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
-              Positioned(
+            children: [
+              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(
                 left: 68,
                 top: 73,
-                width: 200,
-                height: 25,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Order Details', style: AppTextStyles.orderTitle),
+                child: LabelText(
+                  'Order Details',
+                  AppTextStyles.orderTitle,
+                  width: 200,
+                  height: 25,
                 ),
               ),
-              Positioned(left: 24, top: 117, child: _SegmentTabs()),
-              Positioned(left: 25, top: 172, child: _OrderHero()),
-              Positioned(left: 41, top: 247, child: _ProgressCard()),
-              Positioned(left: 24, top: 358, child: _BuyerCard()),
-              Positioned(left: 24, top: 552, child: _PackingCard()),
-              Positioned(left: 24, top: 847, child: _SlideReady()),
+              const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              const Positioned(left: 25, top: 172, child: _OrderHero()),
+              const Positioned(left: 41, top: 247, child: _ProgressCard()),
+              const Positioned(left: 24, top: 358, child: _BuyerCard()),
+              const Positioned(left: 24, top: 552, child: _PackingCard()),
+              Positioned(
+                left: 24,
+                top: 847,
+                child: _SlideReady(
+                  onComplete: () => goToOrderDelivery(context),
+                ),
+              ),
             ],
           ),
         ),
@@ -203,7 +210,8 @@ class _OrderHero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.orderLime, AppColors.orderHeroEnd],
+          colors: [AppColors.orderLime, AppColors.orderHeroFade],
+          stops: [0.1037, 1],
         ),
         boxShadow: const [
           BoxShadow(
@@ -308,7 +316,7 @@ class _ProgressCard extends StatelessWidget {
     ),
     _Step(
       label: 'Accepted',
-      left: 79,
+      left: 85,
       labelLeft: 79,
       labelWidth: 48,
       icon: 'assets/order/ic_step_tick.png',
@@ -963,7 +971,10 @@ class _PackRow extends StatelessWidget {
 }
 
 class _SlideReady extends StatefulWidget {
-  const _SlideReady();
+  const _SlideReady({required this.onComplete});
+
+  /// Called once the knob has been dragged all the way to the end.
+  final VoidCallback onComplete;
 
   @override
   State<_SlideReady> createState() => _SlideReadyState();
@@ -1009,6 +1020,7 @@ class _SlideReadyState extends State<_SlideReady>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold) {
       setState(() => _knobX = _end);
+      widget.onComplete();
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -1031,6 +1043,14 @@ class _SlideReadyState extends State<_SlideReady>
             colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
             stops: [0.11656297743320465, 1],
           ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x2E000000),
+              offset: Offset(0, 22),
+              blurRadius: 30,
+              spreadRadius: -2,
+            ),
+          ],
         ),
         foregroundDecoration: BoxDecoration(
           borderRadius: const BorderRadius.all(Radius.circular(28)),

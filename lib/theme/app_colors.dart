@@ -68,6 +68,7 @@ abstract final class AppColors {
   static const Color orderTotalText = Color(0xFF0D3B42);
   static const Color orderIdGreen = Color(0xFF3B7530);
   static const Color orderHeroEnd = Color(0xFFD1EEC8);
+  static const Color orderHeroFade = Color(0xFFD0EDB9);
   static const Color orderCircleStart = Color(0xFFEBF8C4);
   static const Color orderCircleEnd = Color(0xFFE3F4E0);
   static const Color orderDivider = Color(0xFFC6E96D);
@@ -83,6 +84,11 @@ abstract final class AppColors {
   static const Color orderTrackMid = Color(0xFF85BF5C);
   static const Color orderTrackEnd = Color(0xFF38914D);
   static const Color orderStepActiveRing = Color(0xFFE1F8A4);
+  static const Color orderDeliveryTileStart = Color(0xFFAAD664);
+  static const Color orderDeliveryTileEnd = Color(0xFF52A152);
+  static const Color orderDateTile = Color(0xFFF3F6E6);
+  static const Color orderNoteInk = Color(0xFF5B4A31);
+  static const Color orderDeliveryDivider = Color(0x1C000000);
   static const Color orderRow1Start = Color(0xFFEEF8E3);
   static const Color orderRow1End = Color(0xFFFCFEFA);
   static const Color orderRow2Start = Color(0xFFF1F9E7);

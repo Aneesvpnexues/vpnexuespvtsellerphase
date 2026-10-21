@@ -258,7 +258,7 @@ abstract final class AppTextStyles {
     fontSize: 12,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.12,
-    color: AppColors.orderLime,
+    color: AppColors.orderDivider,
   );
 
   static const TextStyle orderSegmentIdle = TextStyle(
@@ -436,6 +436,13 @@ abstract final class AppTextStyles {
     letterSpacing: 0.12,
     height: 1.4,
     color: AppColors.orderNoteText,
+  );
+
+  static const TextStyle orderCodeNote = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.12,
+    color: AppColors.orderNoteInk,
   );
 
   static const TextStyle orderSlideLabel = TextStyle(
