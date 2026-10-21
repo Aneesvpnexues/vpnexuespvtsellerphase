@@ -37,9 +37,19 @@ class Step01LocationScreen extends StatelessWidget {
                   Positioned(left: 0, top: 151, child: _Illustration()),
                   Positioned(right: 28, top: 76.4, child: _StepLabel()),
                   Positioned(left: 0, right: 8, top: 488.4, child: _Title()),
-                  Positioned(left: 0, right: 8, top: 541.5, child: _Description()),
+                  Positioned(
+                    left: 0,
+                    right: 8,
+                    top: 541.5,
+                    child: _Description(),
+                  ),
                   Positioned(left: 24, top: 731, child: _LocationButton()),
-                  Positioned(left: 0, right: 10, top: 818.5, child: _ManualLink()),
+                  Positioned(
+                    left: 0,
+                    right: 10,
+                    top: 818.5,
+                    child: _ManualLink(),
+                  ),
                 ],
               ),
             ),
@@ -122,9 +132,7 @@ class _LocationButton extends StatelessWidget {
 
   void _openSellerTypePage(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const Step02SellerTypeScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
   }
 

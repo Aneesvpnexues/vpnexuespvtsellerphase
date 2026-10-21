@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import 'seller_home_screen.dart';
 
 /// "STEP 02 — What best describes you?" — static replica of Zeplin
@@ -128,9 +129,7 @@ class _SellerTypePill extends StatelessWidget {
       alignment: Alignment.center,
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border.fromBorderSide(
-          BorderSide(color: AppColors.pillBorder),
-        ),
+        border: Border.fromBorderSide(BorderSide(color: AppColors.pillBorder)),
         borderRadius: BorderRadius.all(Radius.circular(25)),
       ),
       // Scales the icon+label row down when the label cannot fit the pill
@@ -237,7 +236,10 @@ class _ContinueButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: AppRoutes.home),
+          builder: (_) => const SellerHomeScreen(),
+        ),
       ),
       child: Container(
         width: 364,

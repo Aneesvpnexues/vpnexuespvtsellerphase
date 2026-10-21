@@ -97,9 +97,7 @@ class _VerifyButton extends StatelessWidget {
 
   void _openLocationPage(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const Step01LocationScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
     );
   }
 

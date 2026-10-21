@@ -28,10 +28,6 @@ class OtpCaret extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 2,
-      height: 28.5,
-      color: AppColors.otpActiveBorder,
-    );
+    return Container(width: 2, height: 28.5, color: AppColors.otpActiveBorder);
   }
 }

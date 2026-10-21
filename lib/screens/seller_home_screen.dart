@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import 'my_orders_screen.dart';
+import '../widgets/app_navigation.dart';
+import '../widgets/design_canvas.dart';
 import 'my_products_screen.dart';
 
 /// Seller Home dashboard — static replica of Zeplin
@@ -18,6 +19,7 @@ class SellerHomeScreen extends StatelessWidget {
 
   static const double designWidth = 412;
   static const double designHeight = 1071;
+  static const double trimTop = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -25,113 +27,119 @@ class SellerHomeScreen extends StatelessWidget {
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Fit width to the window so Chrome Ctrl+/- and the device
-            // toolbar actually zoom, and scroll vertically for 1071px tall
-            // content instead of shrinking it to fit the height.
-            final double scale =
-                (constraints.maxWidth / designWidth).clamp(0.4, 1.0);
-            final double scaledHeight = designHeight * scale;
-            return SingleChildScrollView(
-              child: Center(
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  height: scaledHeight,
-                  child: FittedBox(
-                    fit: BoxFit.fill,
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: designWidth,
-                      height: designHeight,
-                      child: Stack(
-                        children: [
-                  const Positioned(left: 24, top: 68, child: _Greeting()),
-                  const Positioned(left: 331, top: 74, child: _HeaderIcon(icon: Icons.notifications_outlined)),
-                  const Positioned(left: 363, top: 74, child: _HeaderIcon(icon: Icons.settings_outlined)),
-                  const Positioned(left: 25, top: 143, child: _ActiveOrdersCard()),
-                  const Positioned(left: 25, top: 361, child: _SectionTitle('My Products')),
-                  const Positioned(left: 349, top: 365, child: _ViewAll()),
-                  const Positioned(left: 25, top: 389, child: _ProductCard(name: 'Tomatoes', qty: '50 kg available', color: Color(0xFF7BAE5A))),
-                  const Positioned(left: 187, top: 389, child: _ProductCard(name: 'Spinach', qty: '50 kg available', color: Color(0xFF4E8A3E))),
-                  const Positioned(left: 350, top: 389, child: _ProductCardSmall()),
-                  const Positioned(left: 25, top: 597, child: _SectionTitle('Sales Overview')),
-                  const Positioned(left: 318, top: 594, child: _MonthChip()),
-                  const Positioned(left: 25, top: 628, child: _SalesCard()),
-                  const Positioned(left: 25, top: 793, child: _SectionTitle('Needs Attention')),
-                  const Positioned(left: 24, top: 818, child: _AttentionRow(
-                    title: '2 New orders',
-                    subtitle: 'Hurry up',
-                    barColor: AppColors.attentionAmber,
-                    boxColor: AppColors.attentionAmberBg,
-                  )),
-                  const Positioned(left: 24, top: 892, child: _AttentionRow(
-                    title: 'Tomatoes low',
-                    subtitle: 'Only 10kg remaining',
-                    barColor: AppColors.attentionRed,
-                    boxColor: AppColors.attentionRedBg,
-                  )),
-                  const Positioned(left: 0, top: 991, child: _BottomNav()),
-                          Positioned(
-                            left: 25,
-                            top: 355,
-                            width: 130,
-                            height: 30,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(builder: (_) => const MyProductsScreen()),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                          Positioned(
-                            left: 330,
-                            top: 358,
-                            width: 60,
-                            height: 28,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(builder: (_) => const MyProductsScreen()),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                          Positioned(
-                            left: 90,
-                            top: 1005,
-                            width: 80,
-                            height: 60,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(builder: (_) => const MyProductsScreen()),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                          Positioned(
-                            left: 250,
-                            top: 1005,
-                            width: 80,
-                            height: 60,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(builder: (_) => const MyOrdersScreen()),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+        child: DesignCanvas(
+          designWidth: designWidth,
+          designHeight: designHeight,
+          trimTop: trimTop,
+          child: Stack(
+            children: [
+              const Positioned(left: 24, top: 68, child: _Greeting()),
+              const Positioned(
+                left: 331,
+                top: 74,
+                child: _HeaderIcon(icon: Icons.notifications_outlined),
+              ),
+              Positioned(
+                left: 363,
+                top: 74,
+                child: _HeaderIcon(
+                  icon: Icons.settings_outlined,
+                  onTap: () => goToSettings(context),
                 ),
               ),
-            );
-          },
+              const Positioned(left: 25, top: 143, child: _ActiveOrdersCard()),
+              const Positioned(
+                left: 25,
+                top: 361,
+                child: _SectionTitle('My Products'),
+              ),
+              const Positioned(left: 349, top: 365, child: _ViewAll()),
+              const Positioned(
+                left: 25,
+                top: 389,
+                child: _ProductCard(
+                  name: 'Tomatoes',
+                  qty: '50 kg available',
+                  color: Color(0xFF7BAE5A),
+                ),
+              ),
+              const Positioned(
+                left: 187,
+                top: 389,
+                child: _ProductCard(
+                  name: 'Spinach',
+                  qty: '50 kg available',
+                  color: Color(0xFF4E8A3E),
+                ),
+              ),
+              const Positioned(left: 350, top: 389, child: _ProductCardSmall()),
+              const Positioned(
+                left: 25,
+                top: 597,
+                child: _SectionTitle('Sales Overview'),
+              ),
+              const Positioned(left: 318, top: 594, child: _MonthChip()),
+              const Positioned(left: 25, top: 628, child: _SalesCard()),
+              const Positioned(
+                left: 25,
+                top: 793,
+                child: _SectionTitle('Needs Attention'),
+              ),
+              const Positioned(
+                left: 24,
+                top: 818,
+                child: _AttentionRow(
+                  title: '2 New orders',
+                  subtitle: 'Hurry up',
+                  barColor: AppColors.attentionAmber,
+                  boxColor: AppColors.attentionAmberBg,
+                ),
+              ),
+              const Positioned(
+                left: 24,
+                top: 892,
+                child: _AttentionRow(
+                  title: 'Tomatoes low',
+                  subtitle: 'Only 10kg remaining',
+                  barColor: AppColors.attentionRed,
+                  boxColor: AppColors.attentionRedBg,
+                ),
+              ),
+              const Positioned(left: 0, top: 991, child: _BottomNav()),
+              Positioned(
+                left: 25,
+                top: 355,
+                width: 130,
+                height: 30,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      settings: const RouteSettings(name: AppRoutes.products),
+                      builder: (_) => const MyProductsScreen(),
+                    ),
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Positioned(
+                left: 330,
+                top: 358,
+                width: 60,
+                height: 28,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      settings: const RouteSettings(name: AppRoutes.products),
+                      builder: (_) => const MyProductsScreen(),
+                    ),
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -176,20 +184,25 @@ class _Greeting extends StatelessWidget {
 }
 
 class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon});
+  const _HeaderIcon({required this.icon, this.onTap});
 
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 25,
-      height: 25,
-      decoration: const BoxDecoration(
-        color: AppColors.iconCircle,
-        shape: BoxShape.circle,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 25,
+        height: 25,
+        decoration: const BoxDecoration(
+          color: AppColors.iconCircle,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 17, color: AppColors.iconDark),
       ),
-      child: Icon(icon, size: 17, color: AppColors.iconDark),
     );
   }
 }
@@ -252,17 +265,25 @@ class _ActiveOrdersCard extends StatelessWidget {
             top: 162,
             child: Row(
               children: [
-                Container(
-                  width: 102,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppColors.darkCard,
-                    borderRadius: BorderRadius.all(Radius.circular(19)),
-                  ),
-                  child: const Text(
-                    'View orders',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => goToOrders(context),
+                  child: Container(
+                    width: 102,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.darkCard,
+                      borderRadius: BorderRadius.all(Radius.circular(19)),
+                    ),
+                    child: const Text(
+                      'View orders',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -273,7 +294,11 @@ class _ActiveOrdersCard extends StatelessWidget {
                     color: AppColors.limeLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.arrow_upward, size: 14, color: AppColors.darkCard),
+                  child: const Icon(
+                    Icons.arrow_upward,
+                    size: 14,
+                    color: AppColors.darkCard,
+                  ),
                 ),
               ],
             ),
@@ -299,7 +324,11 @@ class _ActiveOrdersCard extends StatelessWidget {
                     SizedBox(width: 5),
                     Text(
                       'Waiting for your response',
-                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: Color(0xFF030302)),
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF030302),
+                      ),
                     ),
                   ],
                 ),
@@ -314,15 +343,29 @@ class _ActiveOrdersCard extends StatelessWidget {
                 Container(
                   width: 52,
                   height: 45,
-                  decoration: const BoxDecoration(color: AppColors.darkCard, borderRadius: BorderRadius.all(Radius.circular(12))),
-                  child: const Icon(Icons.inventory_2_outlined, size: 27, color: AppColors.limeLight),
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkCard,
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    size: 27,
+                    color: AppColors.limeLight,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 Container(
                   width: 52,
                   height: 45,
-                  decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.all(Radius.circular(12))),
-                  child: const Icon(Icons.inventory_2_outlined, size: 27, color: AppColors.darkCard),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    size: 27,
+                    color: AppColors.darkCard,
+                  ),
                 ),
               ],
             ),
@@ -338,7 +381,14 @@ class _WaitingDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.attentionRed, shape: BoxShape.circle));
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: const BoxDecoration(
+        color: AppColors.attentionRed,
+        shape: BoxShape.circle,
+      ),
+    );
   }
 }
 
@@ -363,7 +413,11 @@ class _ViewAll extends StatelessWidget {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.name, required this.qty, required this.color});
+  const _ProductCard({
+    required this.name,
+    required this.qty,
+    required this.color,
+  });
 
   final String name;
   final String qty;
@@ -392,7 +446,14 @@ class _ProductCard extends StatelessWidget {
                 border: Border.all(color: const Color(0x12000000)),
               ),
               child: const Center(
-                child: Text('Active', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                child: Text(
+                  'Active',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
             ),
           ),
@@ -402,7 +463,12 @@ class _ProductCard extends StatelessWidget {
             bottom: 0,
             child: Container(
               height: 47,
-              padding: const EdgeInsets.only(left: 13, right: 6, top: 2, bottom: 2),
+              padding: const EdgeInsets.only(
+                left: 13,
+                right: 6,
+                top: 2,
+                bottom: 2,
+              ),
               decoration: const BoxDecoration(
                 color: Color(0x1A000000),
                 borderRadius: BorderRadius.only(
@@ -417,9 +483,25 @@ class _ProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0)),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
                     SizedBox(height: 2),
-                    Text(qty, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xDBFFFFFF), height: 1.0)),
+                    Text(
+                      qty,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xDBFFFFFF),
+                        height: 1.0,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -464,8 +546,23 @@ class _ProductCardSmall extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Carrots', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0)),
-                    Text('50 kg', style: TextStyle(fontSize: 9, color: Color(0xDBFFFFFF), height: 1.0)),
+                    Text(
+                      'Carrots',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
+                    Text(
+                      '50 kg',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Color(0xDBFFFFFF),
+                        height: 1.0,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -490,7 +587,14 @@ class _MonthChip extends StatelessWidget {
         color: AppColors.chipBg,
         borderRadius: BorderRadius.all(Radius.circular(5)),
       ),
-      child: const Text('This Month', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF104526))),
+      child: const Text(
+        'This Month',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF104526),
+        ),
+      ),
     );
   }
 }
@@ -512,12 +616,28 @@ class _SalesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Total sales this month', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xA1FFFFFF), height: 1.0)),
+          const Text(
+            'Total sales this month',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: Color(0xA1FFFFFF),
+              height: 1.0,
+            ),
+          ),
           const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text('\u20B924,850', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.limeLight, height: 1.0)),
+              const Text(
+                '\u20B924,850',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.limeLight,
+                  height: 1.0,
+                ),
+              ),
               const Spacer(),
               Container(
                 width: 52,
@@ -528,20 +648,40 @@ class _SalesCard extends StatelessWidget {
                   border: Border.all(color: AppColors.limeLight, width: 5),
                 ),
                 child: const Center(
-                  child: Text('72%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0)),
+                  child: Text(
+                    '72%',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          Container(height: 1, margin: const EdgeInsets.only(top: 6), color: const Color(0x26CDEB6B)),
+          Container(
+            height: 1,
+            margin: const EdgeInsets.only(top: 6),
+            color: const Color(0x26CDEB6B),
+          ),
           const SizedBox(height: 6),
           const Row(
             children: [
               _SalesStat(number: '12', label: 'Orders', dot: Colors.white),
               SizedBox(width: 28),
-              _SalesStat(number: '8', label: 'Complete', dot: AppColors.limeLight),
+              _SalesStat(
+                number: '8',
+                label: 'Complete',
+                dot: AppColors.limeLight,
+              ),
               SizedBox(width: 28),
-              _SalesStat(number: '4', label: 'Progress', dot: Color(0xFFE9B949)),
+              _SalesStat(
+                number: '4',
+                label: 'Progress',
+                dot: Color(0xFFE9B949),
+              ),
             ],
           ),
         ],
@@ -551,7 +691,11 @@ class _SalesCard extends StatelessWidget {
 }
 
 class _SalesStat extends StatelessWidget {
-  const _SalesStat({required this.number, required this.label, required this.dot});
+  const _SalesStat({
+    required this.number,
+    required this.label,
+    required this.dot,
+  });
 
   final String number;
   final String label;
@@ -565,14 +709,33 @@ class _SalesStat extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(number, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, height: 1.0)),
+          Text(
+            number,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              height: 1.0,
+            ),
+          ),
           const SizedBox(height: 2),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 5, height: 5, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+              Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 4),
-              Text(label, style: const TextStyle(fontSize: 10, color: Color(0xC2FFFFFF), height: 1.0)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xC2FFFFFF),
+                  height: 1.0,
+                ),
+              ),
             ],
           ),
         ],
@@ -582,7 +745,12 @@ class _SalesStat extends StatelessWidget {
 }
 
 class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.title, required this.subtitle, required this.barColor, required this.boxColor});
+  const _AttentionRow({
+    required this.title,
+    required this.subtitle,
+    required this.barColor,
+    required this.boxColor,
+  });
 
   final String title;
   final String subtitle;
@@ -604,7 +772,14 @@ class _AttentionRow extends StatelessWidget {
           Positioned(
             left: 1,
             top: 15,
-            child: Container(width: 4, height: 34, decoration: BoxDecoration(color: barColor, borderRadius: const BorderRadius.all(Radius.circular(2)))),
+            child: Container(
+              width: 4,
+              height: 34,
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: const BorderRadius.all(Radius.circular(2)),
+              ),
+            ),
           ),
           Positioned(
             left: 22,
@@ -612,8 +787,15 @@ class _AttentionRow extends StatelessWidget {
             child: Container(
               width: 34,
               height: 34,
-              decoration: BoxDecoration(color: boxColor, borderRadius: const BorderRadius.all(Radius.circular(10))),
-              child: const Icon(Icons.inventory_2_outlined, size: 23, color: Color(0xFF5A4A1A)),
+              decoration: BoxDecoration(
+                color: boxColor,
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                size: 23,
+                color: Color(0xFF5A4A1A),
+              ),
             ),
           ),
           Positioned(
@@ -622,16 +804,32 @@ class _AttentionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 10, color: Color(0x8A000000))),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0x8A000000),
+                  ),
+                ),
               ],
             ),
           ),
           const Positioned(
             right: 12,
             top: 24,
-            child: Icon(Icons.chevron_right, size: 16, color: Color(0xFF8A8A8A)),
+            child: Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: Color(0xFF8A8A8A),
+            ),
           ),
         ],
       ),
@@ -661,14 +859,82 @@ class _BottomNav extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(left: 36, top: 47, child: Text('Home', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.limeLight))),
-          const Positioned(left: 102, top: 47, child: Text('Products', style: TextStyle(fontSize: 12, color: Color(0x54000000)))),
-          const Positioned(left: 266, top: 47, child: Text('Orders', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0x54000000)))),
-          const Positioned(left: 346, top: 47, child: Text('Profile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0x54000000)))),
-          const Positioned(left: 42, top: 20, child: Icon(Icons.home_filled, size: 21, color: AppColors.limeLight)),
-          const Positioned(left: 116, top: 20, child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000))),
-          const Positioned(left: 276, top: 20, child: Icon(Icons.receipt_long_outlined, size: 21, color: Color(0x54000000))),
-          const Positioned(left: 353, top: 20, child: Icon(Icons.person_outline, size: 21, color: Color(0x54000000))),
+          const Positioned(
+            left: 36,
+            top: 47,
+            child: Text(
+              'Home',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.limeLight,
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 102,
+            top: 47,
+            child: Text(
+              'Products',
+              style: TextStyle(fontSize: 12, color: Color(0x54000000)),
+            ),
+          ),
+          const Positioned(
+            left: 266,
+            top: 47,
+            child: Text(
+              'Orders',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0x54000000),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 346,
+            top: 47,
+            child: Text(
+              'Profile',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0x54000000),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 42,
+            top: 20,
+            child: Icon(
+              Icons.home_filled,
+              size: 21,
+              color: AppColors.limeLight,
+            ),
+          ),
+          const Positioned(
+            left: 116,
+            top: 20,
+            child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000)),
+          ),
+          const Positioned(
+            left: 276,
+            top: 20,
+            child: Icon(
+              Icons.receipt_long_outlined,
+              size: 21,
+              color: Color(0x54000000),
+            ),
+          ),
+          const Positioned(
+            left: 353,
+            top: 20,
+            child: Icon(
+              Icons.person_outline,
+              size: 21,
+              color: Color(0x54000000),
+            ),
+          ),
           Positioned(
             left: 178,
             top: 0,
@@ -682,6 +948,26 @@ class _BottomNav extends StatelessWidget {
               ),
               child: const Icon(Icons.add, size: 24, color: AppColors.darkCard),
             ),
+          ),
+          Positioned(
+            left: 24,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToHome(context), width: 60),
+          ),
+          Positioned(
+            left: 100,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToProducts(context), width: 60),
+          ),
+          Positioned(
+            left: 264,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToOrders(context), width: 60),
+          ),
+          Positioned(
+            left: 344,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToProfile(context), width: 60),
           ),
         ],
       ),

@@ -37,10 +37,10 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('My Products')).left, closeTo(66, 2));
-    expect(rectOf(find.text('My Products')).top, closeTo(68, 3));
+    expect(rectOf(find.text('My Products')).left, closeTo(58, 2));
+    expect(rectOf(find.text('My Products')).top, closeTo(24, 3));
     expect(rectOf(find.text('Fresh Tomatoes').first).left, closeTo(146, 2));
-    expect(rectOf(find.text('Fresh Tomatoes').first).top, closeTo(253, 3));
+    expect(rectOf(find.text('Fresh Tomatoes').first).top, closeTo(209, 3));
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

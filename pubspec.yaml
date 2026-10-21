@@ -67,6 +67,14 @@ flutter:
     - assets/welcome/flag.png
     - assets/welcome/wave.png
     - assets/welcome/send.png
+    - assets/order/
+    - assets/profile/
+    - assets/personal/
+    - assets/business/
+    - assets/kyc/
+    - assets/bank/
+    - assets/settings/
+    - assets/add_product/
 
   # Roboto is bundled so Flutter Web never fetches fonts.gstatic.com at runtime.
   fonts:

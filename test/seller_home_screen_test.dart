@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/my_orders_screen.dart';
+import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
@@ -44,12 +46,28 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Hello,')).left, closeTo(24, 2));
-    expect(rectOf(find.text('Hello,')).top, closeTo(68, 2));
+    expect(rectOf(find.text('Hello,')).top, closeTo(24, 2));
     expect(rectOf(find.text('ACTIVE ORDERS')).left, closeTo(45, 2));
-    expect(rectOf(find.text('ACTIVE ORDERS')).top, closeTo(161, 3));
+    expect(rectOf(find.text('ACTIVE ORDERS')).top, closeTo(117, 3));
     expect(rectOf(find.text('My Products')).left, closeTo(25, 2));
     expect(rectOf(find.text('Sales Overview')).left, closeTo(25, 2));
     expect(rectOf(find.text('Needs Attention')).left, closeTo(25, 2));
+  });
+
+  testWidgets('the bottom nav opens the products tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tapAt(const Offset(130, 987));
+    await tester.pumpAndSettle();
+    expect(find.byType(MyProductsScreen), findsOneWidget);
+  });
+
+  testWidgets('the bottom nav opens the orders tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tapAt(const Offset(294, 987));
+    await tester.pumpAndSettle();
+    expect(find.byType(MyOrdersScreen), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

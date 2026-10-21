@@ -39,9 +39,9 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('My Orders')).left, closeTo(74, 2));
-    expect(rectOf(find.text('My Orders')).top, closeTo(73, 3));
+    expect(rectOf(find.text('My Orders')).top, closeTo(24, 3));
     expect(rectOf(find.text('Akash Stores')).left, closeTo(89, 2));
-    expect(rectOf(find.text('Akash Stores')).top, closeTo(254, 3));
+    expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

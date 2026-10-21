@@ -181,11 +181,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 656.5,
                       child: _PhoneLabel(),
                     ),
-                    const Positioned(
-                      left: 24,
-                      top: 684,
-                      child: _FieldBox(),
-                    ),
+                    const Positioned(left: 24, top: 684, child: _FieldBox()),
                     Positioned(
                       left: 24,
                       top: 684,
@@ -222,9 +218,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     Positioned(
                       left: 112,
                       top: 684,
-                      child: _PhoneBox(
-                        maxLength: _country.maxDigits,
-                      ),
+                      child: _PhoneBox(maxLength: _country.maxDigits),
                     ),
                     Positioned(
                       left: 24,
@@ -385,10 +379,7 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Welcome back',
-      style: AppTextStyles.welcomeBack,
-    );
+    return const Text('Welcome back', style: AppTextStyles.welcomeBack);
   }
 }
 
@@ -423,10 +414,7 @@ class _PhoneLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Phone Number',
-      style: AppTextStyles.phoneLabel,
-    );
+    return const Text('Phone Number', style: AppTextStyles.phoneLabel);
   }
 }
 
@@ -535,10 +523,7 @@ class _PhoneBoxState extends State<_PhoneBox> {
         keyboardType: TextInputType.phone,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlignVertical: TextAlignVertical.center,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 16,
-        ),
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
         cursorColor: AppColors.inputCaret,
         cursorWidth: 2,
         decoration: const InputDecoration(
@@ -788,7 +773,10 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               key: const Key('countrySearch'),
               controller: _search,
               onChanged: (value) => setState(() => _query = value),
-              style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 16,
+                color: AppColors.textPrimary,
+              ),
               cursorColor: AppColors.inputCaret,
               decoration: InputDecoration(
                 hintText: 'Search country or code',
@@ -875,7 +863,10 @@ class _CountryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     // Uniform rectangular emoji flags for every row (the design's wavy
     // flag.png ribbon reads as broken at list size).
-    final Widget flag = Text(country.flag, style: const TextStyle(fontSize: 18));
+    final Widget flag = Text(
+      country.flag,
+      style: const TextStyle(fontSize: 18),
+    );
 
     return InkWell(
       onTap: onTap,

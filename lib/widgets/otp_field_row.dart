@@ -109,8 +109,8 @@ class _OtpBox extends StatelessWidget {
       child: character != null
           ? Text(character!, style: AppTextStyles.otpDigit)
           : active
-              ? const OtpCaret()
-              : null,
+          ? const OtpCaret()
+          : null,
     );
   }
 }

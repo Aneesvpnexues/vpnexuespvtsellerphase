@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
+import '../widgets/design_canvas.dart';
+import 'order_details_screen.dart';
 
 /// My Orders list — static replica of Zeplin
 /// "Android Compact - 132" (project 6a8d49709e27bd8b35213d35,
@@ -14,6 +17,7 @@ class MyOrdersScreen extends StatelessWidget {
 
   static const double designWidth = 412;
   static const double designHeight = 1154;
+  static const double trimTop = 49;
 
   @override
   Widget build(BuildContext context) {
@@ -21,62 +25,116 @@ class MyOrdersScreen extends StatelessWidget {
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double scale =
-                (constraints.maxWidth / designWidth).clamp(0.4, 1.0);
-            final double scaledHeight = designHeight * scale;
-            return SingleChildScrollView(
-              child: Center(
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  height: scaledHeight,
-                  child: FittedBox(
-                    fit: BoxFit.fill,
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: designWidth,
-                      height: designHeight,
-                      child: Stack(
-                        children: const [
-                          Positioned(left: 24, top: 73, child: _BackCircle()),
-                          Positioned(left: 74, top: 73, child: Text('My Orders', style: AppTextStyles.productsTitle)),
-                          Positioned(left: 24, top: 122, child: _SearchSort()),
-                          Positioned(left: 24, top: 181, child: _OrderTabs()),
-                          Positioned(left: 24, top: 241, child: _OrderBlock(
-                            store: 'Akash Stores', orderId: '#NX4582', date: '12 Mar 2024, 10:30 AM',
-                            iconBg: AppColors.orderYellowBg, items: '4 items', thumbs: 3, extra: '+1',
-                            price: '\u20B92,400', status: 'Accepted',
-                          )),
-                          Positioned(left: 24, top: 407, child: _OrderBlock(
-                            store: 'Hotel Green Leaf', orderId: '#NX4581', date: '12 Mar 2024, 4:20 AM',
-                            iconBg: AppColors.orderBlueBg, items: '2 items', thumbs: 2, extra: '',
-                            price: '\u20B91,400', status: 'Accepted',
-                          )),
-                          Positioned(left: 24, top: 573, child: _OrderBlock(
-                            store: 'Annapoorna Mess', orderId: '#NX4580', date: '9 Mar 2024, 1:20 PM',
-                            iconBg: AppColors.darkCard, iconColor: Colors.white, items: '5 items', thumbs: 3, extra: '+2',
-                            price: '\u20B93,400', status: 'Pending',
-                          )),
-                          Positioned(left: 24, top: 739, child: _OrderBlock(
-                            store: 'Daily Needs', orderId: '#NX4579', date: '12 Mar 2024, 4:20 AM',
-                            iconBg: AppColors.attentionRedBg, items: '4 items', thumbs: 3, extra: '+1',
-                            price: '\u20B93,000', status: 'Confirmed',
-                          )),
-                          Positioned(left: 24, top: 905, child: _OrderBlock(
-                            store: 'Daily Needs', orderId: '#NX4579', date: '12 Mar 2024, 4:20 AM',
-                            iconBg: AppColors.orderPurpleBg, items: '3 items', thumbs: 3, extra: '',
-                            price: '\u20B93,500', status: 'Delivered',
-                          )),
-                          Positioned(left: 0, top: 1075, child: _BottomNavOrders()),
-                        ],
+        child: DesignCanvas(
+          designWidth: designWidth,
+          designHeight: designHeight,
+          trimTop: trimTop,
+          child: Stack(
+            children: [
+              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(
+                left: 74,
+                top: 73,
+                child: Text('My Orders', style: AppTextStyles.productsTitle),
+              ),
+              const Positioned(left: 24, top: 122, child: _SearchSort()),
+              const Positioned(left: 24, top: 181, child: _OrderTabs()),
+              const Positioned(
+                left: 24,
+                top: 241,
+                child: _OrderBlock(
+                  store: 'Akash Stores',
+                  orderId: '#NX4582',
+                  date: '12 Mar 2024, 10:30 AM',
+                  iconBg: AppColors.orderYellowBg,
+                  items: '4 items',
+                  thumbs: 3,
+                  extra: '+1',
+                  price: '\u20B92,400',
+                  status: 'Accepted',
+                ),
+              ),
+              const Positioned(
+                left: 24,
+                top: 407,
+                child: _OrderBlock(
+                  store: 'Hotel Green Leaf',
+                  orderId: '#NX4581',
+                  date: '12 Mar 2024, 4:20 AM',
+                  iconBg: AppColors.orderBlueBg,
+                  items: '2 items',
+                  thumbs: 2,
+                  extra: '',
+                  price: '\u20B91,400',
+                  status: 'Accepted',
+                ),
+              ),
+              const Positioned(
+                left: 24,
+                top: 573,
+                child: _OrderBlock(
+                  store: 'Annapoorna Mess',
+                  orderId: '#NX4580',
+                  date: '9 Mar 2024, 1:20 PM',
+                  iconBg: AppColors.darkCard,
+                  iconColor: Colors.white,
+                  items: '5 items',
+                  thumbs: 3,
+                  extra: '+2',
+                  price: '\u20B93,400',
+                  status: 'Pending',
+                ),
+              ),
+              const Positioned(
+                left: 24,
+                top: 739,
+                child: _OrderBlock(
+                  store: 'Daily Needs',
+                  orderId: '#NX4579',
+                  date: '12 Mar 2024, 4:20 AM',
+                  iconBg: AppColors.attentionRedBg,
+                  items: '4 items',
+                  thumbs: 3,
+                  extra: '+1',
+                  price: '\u20B93,000',
+                  status: 'Confirmed',
+                ),
+              ),
+              const Positioned(
+                left: 24,
+                top: 905,
+                child: _OrderBlock(
+                  store: 'Daily Needs',
+                  orderId: '#NX4579',
+                  date: '12 Mar 2024, 4:20 AM',
+                  iconBg: AppColors.orderPurpleBg,
+                  items: '3 items',
+                  thumbs: 3,
+                  extra: '',
+                  price: '\u20B93,500',
+                  status: 'Delivered',
+                ),
+              ),
+              const Positioned(left: 0, top: 1075, child: _BottomNavOrders()),
+              Positioned(
+                left: 24,
+                top: 241,
+                width: 363,
+                height: 154,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      settings: const RouteSettings(
+                        name: AppRoutes.orderDetails,
                       ),
+                      builder: (_) => const OrderDetailsScreen(),
                     ),
                   ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
@@ -94,7 +152,10 @@ class _BackCircle extends StatelessWidget {
       child: Container(
         width: 25,
         height: 25,
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: const Icon(Icons.arrow_back, size: 15, color: Colors.black),
       ),
     );
@@ -123,12 +184,29 @@ class _SearchSort extends StatelessWidget {
               ),
               child: const Stack(
                 children: [
-                  Positioned(left: 19, top: 0, bottom: 0, child: Icon(Icons.search, size: 14, color: Color(0x8A000000))),
+                  Positioned(
+                    left: 19,
+                    top: 0,
+                    bottom: 0,
+                    child: Icon(
+                      Icons.search,
+                      size: 14,
+                      color: Color(0x8A000000),
+                    ),
+                  ),
                   Positioned(
                     left: 42,
                     top: 0,
                     bottom: 0,
-                    child: Center(child: Text('Search vegetables...', style: TextStyle(fontSize: 12, color: Color(0x8A000000)))),
+                    child: Center(
+                      child: Text(
+                        'Search vegetables...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0x8A000000),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -151,9 +229,20 @@ class _SearchSort extends StatelessWidget {
                   children: [
                     Icon(Icons.filter_list, size: 14, color: Colors.white),
                     SizedBox(width: 6),
-                    Text('Sort by', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                    Text(
+                      'Sort by',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                     SizedBox(width: 4),
-                    Icon(Icons.keyboard_arrow_down, size: 12, color: Colors.white),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                   ],
                 ),
               ),
@@ -180,9 +269,51 @@ class _OrderTabs extends StatelessWidget {
       child: const Stack(
         children: [
           Positioned(left: 4, top: 4, child: _AllPill()),
-          Positioned(left: 125, top: 0, bottom: 0, child: Center(child: Text('Active', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.tabGray)))),
-          Positioned(left: 200, top: 0, bottom: 0, child: Center(child: Text('Pending', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.tabGray)))),
-          Positioned(left: 282, top: 0, bottom: 0, child: Center(child: Text('Confirmed', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.tabGray)))),
+          Positioned(
+            left: 125,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Text(
+                'Active',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.tabGray,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 200,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Text(
+                'Pending',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.tabGray,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 282,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Text(
+                'Confirmed',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.tabGray,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -202,7 +333,10 @@ class _AllPill extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.all(Radius.circular(23)),
       ),
-      child: const Text('All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      child: const Text(
+        'All',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -265,18 +399,40 @@ class _OrderBlock extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(left: 1, top: 19, child: Container(width: 3, height: 31, decoration: const BoxDecoration(color: AppColors.limeCard, borderRadius: BorderRadius.all(Radius.circular(2))))),
+          Positioned(
+            left: 1,
+            top: 19,
+            child: Container(
+              width: 3,
+              height: 31,
+              decoration: const BoxDecoration(
+                color: AppColors.limeCard,
+                borderRadius: BorderRadius.all(Radius.circular(2)),
+              ),
+            ),
+          ),
           Positioned(
             left: 20,
             top: 16,
             child: Container(
               width: 35,
               height: 35,
-              decoration: BoxDecoration(color: iconBg, borderRadius: const BorderRadius.all(Radius.circular(10))),
-              child: Icon(Icons.storefront_outlined, size: 16, color: iconColor),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+              ),
+              child: Icon(
+                Icons.storefront_outlined,
+                size: 16,
+                color: iconColor,
+              ),
             ),
           ),
-          Positioned(left: 65, top: 13, child: Text(store, style: AppTextStyles.orderStore)),
+          Positioned(
+            left: 65,
+            top: 13,
+            child: Text(store, style: AppTextStyles.orderStore),
+          ),
           Positioned(
             left: 65,
             top: 31,
@@ -285,18 +441,62 @@ class _OrderBlock extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(orderId, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0x7A000000))),
+                  Text(
+                    orderId,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0x7A000000),
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Container(width: 3, height: 3, decoration: const BoxDecoration(color: Color(0x8F000000), shape: BoxShape.circle)),
+                  Container(
+                    width: 3,
+                    height: 3,
+                    decoration: const BoxDecoration(
+                      color: Color(0x8F000000),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Text(date, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0x7A000000))),
+                  Text(
+                    date,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0x7A000000),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          Positioned(right: 11, top: 9, child: _OrderStatusPill(status: status)),
-          Positioned(left: 20, top: 68, child: Container(width: 324, height: 1, color: const Color(0x1A000000))),
-          Positioned(left: 20, top: 75, child: Text(items, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0x9E000000)))),
+          Positioned(
+            right: 11,
+            top: 9,
+            child: _OrderStatusPill(status: status),
+          ),
+          Positioned(
+            left: 20,
+            top: 68,
+            child: Container(
+              width: 324,
+              height: 1,
+              color: const Color(0x1A000000),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            top: 75,
+            child: Text(
+              items,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Color(0x9E000000),
+              ),
+            ),
+          ),
           for (int i = 0; i < thumbs; i++)
             Positioned(
               left: 20.0 + i * 52.0,
@@ -309,7 +509,11 @@ class _OrderBlock extends StatelessWidget {
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
                   border: Border.all(color: const Color(0x12000000)),
                 ),
-                child: const Icon(Icons.eco_outlined, size: 20, color: Colors.white),
+                child: const Icon(
+                  Icons.eco_outlined,
+                  size: 20,
+                  color: Colors.white,
+                ),
               ),
             ),
           if (extra.isNotEmpty)
@@ -324,7 +528,14 @@ class _OrderBlock extends StatelessWidget {
                   color: AppColors.filterBg,
                   borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
-                child: Text(extra, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.darkCard)),
+                child: Text(
+                  extra,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkCard,
+                  ),
+                ),
               ),
             ),
           Positioned(
@@ -334,9 +545,23 @@ class _OrderBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(price, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.0)),
+                Text(
+                  price,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    height: 1.0,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                const Text('Total Order', style: TextStyle(fontSize: 12, color: Color(0x59000000), height: 1.0)),
+                const Text(
+                  'Total Order',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0x59000000),
+                    height: 1.0,
+                  ),
+                ),
               ],
             ),
           ),
@@ -383,9 +608,16 @@ class _OrderStatusPill extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 5, height: 5, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+            ),
             const SizedBox(width: 4),
-            Text(status, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+            Text(
+              status,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -415,14 +647,86 @@ class _BottomNavOrders extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(left: 36, top: 47, child: Text('Home', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0x54000000)))),
-          const Positioned(left: 102, top: 47, child: Text('Products', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0x54000000)))),
-          const Positioned(left: 266, top: 47, child: Text('Orders', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.limeLight))),
-          const Positioned(left: 346, top: 47, child: Text('Profile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0x54000000)))),
-          const Positioned(left: 42, top: 19, child: Icon(Icons.home_outlined, size: 21, color: Color(0x54000000))),
-          const Positioned(left: 116, top: 19, child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000))),
-          const Positioned(left: 276, top: 19, child: Icon(Icons.receipt_long, size: 21, color: AppColors.limeLight)),
-          const Positioned(left: 353, top: 19, child: Icon(Icons.person_outline, size: 21, color: Color(0x54000000))),
+          const Positioned(
+            left: 36,
+            top: 47,
+            child: Text(
+              'Home',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0x54000000),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 102,
+            top: 47,
+            child: Text(
+              'Products',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0x54000000),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 266,
+            top: 47,
+            child: Text(
+              'Orders',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.limeLight,
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 346,
+            top: 47,
+            child: Text(
+              'Profile',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0x54000000),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 42,
+            top: 19,
+            child: Icon(
+              Icons.home_outlined,
+              size: 21,
+              color: Color(0x54000000),
+            ),
+          ),
+          const Positioned(
+            left: 116,
+            top: 19,
+            child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000)),
+          ),
+          const Positioned(
+            left: 276,
+            top: 19,
+            child: Icon(
+              Icons.receipt_long,
+              size: 21,
+              color: AppColors.limeLight,
+            ),
+          ),
+          const Positioned(
+            left: 353,
+            top: 19,
+            child: Icon(
+              Icons.person_outline,
+              size: 21,
+              color: Color(0x54000000),
+            ),
+          ),
           Positioned(
             left: 178,
             top: 0,
@@ -436,6 +740,26 @@ class _BottomNavOrders extends StatelessWidget {
               ),
               child: const Icon(Icons.add, size: 24, color: AppColors.darkCard),
             ),
+          ),
+          Positioned(
+            left: 24,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToHome(context), width: 60),
+          ),
+          Positioned(
+            left: 100,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToProducts(context), width: 60),
+          ),
+          Positioned(
+            left: 264,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToOrders(context), width: 60),
+          ),
+          Positioned(
+            left: 344,
+            top: 10,
+            child: BottomNavTab(onTap: () => goToProfile(context), width: 60),
           ),
         ],
       ),
