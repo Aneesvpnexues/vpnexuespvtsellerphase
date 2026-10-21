@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/order_accepted_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
 
 Future<void> pumpDetails(WidgetTester tester) async {
@@ -80,6 +81,44 @@ void main() {
     expect(rectOf(find.text('Total Amount')).top, closeTo(961, 6));
     expect(rectOf(find.text('Slide to accept order')).left, closeTo(133, 3));
     expect(rectOf(find.text('Slide to accept order')).top, closeTo(1386, 5));
+  });
+
+  testWidgets('the slide to accept button opens the accepted order screen', (
+    tester,
+  ) async {
+    await pumpDetails(tester);
+
+    expect(find.text('Slide to accept order'), findsOneWidget);
+
+    await tester.tapAt(const Offset(203, 1400));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderAcceptedScreen), findsOneWidget);
+    expect(find.text('Packing checklist'), findsOneWidget);
+  });
+
+  testWidgets('sliding the knob across opens the accepted order screen', (
+    tester,
+  ) async {
+    await pumpDetails(tester);
+
+    await tester.dragFrom(const Offset(50, 1400), const Offset(300, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderAcceptedScreen), findsOneWidget);
+    expect(find.text('Packing checklist'), findsOneWidget);
+  });
+
+  testWidgets('a short slide springs back and does not accept the order', (
+    tester,
+  ) async {
+    await pumpDetails(tester);
+
+    await tester.dragFrom(const Offset(50, 1400), const Offset(30, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderAcceptedScreen), findsNothing);
+    expect(find.text('Slide to accept order'), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

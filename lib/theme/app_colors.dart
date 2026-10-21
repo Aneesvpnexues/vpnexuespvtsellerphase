@@ -76,6 +76,12 @@ abstract final class AppColors {
   static const Color orderStepIdle = Color(0x8A0D3B20);
   static const Color orderItemMeta = Color(0x7A000000);
   static const Color orderNoteText = Color(0xB3000000);
+  static const Color orderStepGreen = Color(0xFF2E8B4B);
+  static const Color orderStepRing = Color(0x6BCACACA);
+  static const Color orderTrack = Color(0xFFE3EAD4);
+  static const Color orderCheckBorder = Color(0x3D000000);
+  static const Color orderSlideCircle = Color(0xA8BEE45D);
+  static const Color orderSlideText = Color(0xD1FFFFFF);
   static const Color profileWalletStart = Color(0xFF0B341B);
   static const Color profileWalletEnd = Color(0xFF135029);
   static const Color profileBlob = Color(0xFF3CA35A);

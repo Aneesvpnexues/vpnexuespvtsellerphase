@@ -445,6 +445,13 @@ abstract final class AppTextStyles {
     color: Colors.white,
   );
 
+  static const TextStyle orderSlideLabelMuted = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.14,
+    color: AppColors.orderSlideText,
+  );
+
   static const TextStyle profileLabel = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,

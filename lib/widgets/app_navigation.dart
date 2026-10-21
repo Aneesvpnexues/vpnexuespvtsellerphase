@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../screens/add_product_screen.dart';
 import '../screens/my_orders_screen.dart';
 import '../screens/my_products_screen.dart';
+import '../screens/order_accepted_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/settings_screen.dart';
@@ -22,6 +23,7 @@ abstract final class AppRoutes {
   static const String bankDetails = '/bank-details';
   static const String settings = '/settings';
   static const String addProduct = '/add-product';
+  static const String orderAccepted = '/order-accepted';
 }
 
 /// Switches the bottom navigation tab.
@@ -101,6 +103,16 @@ void goToAddProduct(BuildContext context) {
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.addProduct),
       builder: (_) => const AddProductScreen(),
+    ),
+  );
+}
+
+/// Opens the accepted-order state when the seller accepts an order.
+void goToOrderAccepted(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.orderAccepted),
+      builder: (_) => const OrderAcceptedScreen(),
     ),
   );
 }

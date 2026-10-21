@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
 
 /// Order Details â€” static replica of Zeplin "Android Compact - 135"
@@ -57,6 +58,17 @@ class OrderDetailsScreen extends StatelessWidget {
 
 /// Small helper that places a text inside the exact Zeplin text box so the
 /// glyphs sit at the same vertical offset as the design.
+///
+/// `height` is the line height Zeplin reports for the layer, so the style gets
+/// an explicit `height` (box / font size) with even leading distribution to
+/// reproduce the design's half-leading. Without it Flutter clamps paragraphs
+/// that are taller than the box (e.g. a 28px title: natural line box 34px >
+/// 27px box) and paints the glyphs a few pixels lower than Zeplin.
+///
+/// Zeplin boxes hug the text, so the Inter advance plus Flutter's trailing
+/// letter spacing can be a hair wider than the box (e.g. 'ORDER #NX4582':
+/// 108.8px in a 107px box). Every label in the design is single line, so
+/// wrapping is disabled instead of widening the box.
 class _Label extends StatelessWidget {
   const _Label(this.text, this.style, {required this.width, this.height = 25});
 
@@ -67,12 +79,19 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double? fontSize = style.fontSize;
+    final TextStyle effective = fontSize == null || fontSize == 0
+        ? style
+        : style.copyWith(
+            height: height / fontSize,
+            leadingDistribution: TextLeadingDistribution.even,
+          );
     return SizedBox(
       width: width,
       height: height,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(text, style: style),
+        child: Text(text, style: effective, maxLines: 1, softWrap: false),
       ),
     );
   }
@@ -1233,68 +1252,128 @@ class _DeliveryCard extends StatelessWidget {
   }
 }
 
-class _SlideAccept extends StatelessWidget {
+class _SlideAccept extends StatefulWidget {
   const _SlideAccept();
 
   @override
+  State<_SlideAccept> createState() => _SlideAcceptState();
+}
+
+class _SlideAcceptState extends State<_SlideAccept>
+    with SingleTickerProviderStateMixin {
+  static const double _start = 4;
+  static const double _end = 310;
+  static const double _travel = _end - _start;
+  static const double _threshold = _start + _travel * 0.7;
+
+  late final AnimationController _controller;
+  double _knobX = _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(() {
+          setState(() {
+            _knobX = _start + _travel * _controller.value;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _controller.stop();
+    setState(() {
+      _knobX = (_knobX + details.delta.dx).clamp(_start, _end);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_knobX >= _threshold) {
+      setState(() => _knobX = _end);
+      goToOrderAccepted(context);
+      return;
+    }
+    _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
+    _controller.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(28)),
-        gradient: const LinearGradient(
-          colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => goToOrderAccepted(context),
+      child: Container(
+        width: 364,
+        height: 58,
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(28)),
+          gradient: const LinearGradient(
+            colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+          ),
+          border: Border.all(color: const Color(0x14000000)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              offset: Offset(0, 10),
+              blurRadius: 22,
+            ),
+            BoxShadow(
+              color: Color(0x17000000),
+              offset: Offset(0, 40),
+              blurRadius: 40,
+            ),
+            BoxShadow(
+              color: Color(0x0D000000),
+              offset: Offset(0, 90),
+              blurRadius: 54,
+            ),
+          ],
         ),
-        border: Border.all(color: Color(0x14000000)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            offset: Offset(0, 10),
-            blurRadius: 22,
-          ),
-          BoxShadow(
-            color: Color(0x17000000),
-            offset: Offset(0, 40),
-            blurRadius: 40,
-          ),
-          BoxShadow(
-            color: Color(0x0D000000),
-            offset: Offset(0, 90),
-            blurRadius: 54,
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 4,
-            top: 4,
-            child: Container(
-              alignment: Alignment.center,
-              width: 50,
-              height: 50,
-              decoration: const BoxDecoration(
-                color: AppColors.orderSlideLime,
-                shape: BoxShape.circle,
-              ),
-              child: const Image(
-                image: AssetImage('assets/order/ic_slide.png'),
-                width: 26,
-                height: 26,
+        child: Stack(
+          children: [
+            Positioned(
+              left: _knobX,
+              top: 4,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragUpdate: _onDragUpdate,
+                onHorizontalDragEnd: _onDragEnd,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
+                  ),
+                ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 112,
-            top: 15,
-            child: _Label(
-              'Slide to accept order',
-              AppTextStyles.orderSlideLabel,
-              width: 180,
+            const Positioned(
+              left: 112,
+              top: 15,
+              child: _Label(
+                'Slide to accept order',
+                AppTextStyles.orderSlideLabel,
+                width: 180,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

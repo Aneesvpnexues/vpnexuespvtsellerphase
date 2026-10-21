@@ -75,17 +75,24 @@ flutter:
     - assets/bank/
     - assets/settings/
     - assets/add_product/
+    - assets/order_accepted/
 
-  # Roboto is bundled so Flutter Web never fetches fonts.gstatic.com at runtime.
+  # Inter is the Zeplin design font, bundled so every screen renders with the
+  # exact same text metrics on all platforms and never fetches fonts from
+  # fonts.gstatic.com at runtime.
   fonts:
-    - family: Roboto
+    - family: Inter
       fonts:
-        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Inter-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Roboto-Medium.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Roboto-Bold.ttf
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

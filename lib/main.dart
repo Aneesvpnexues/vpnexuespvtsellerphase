@@ -23,6 +23,7 @@ class SellerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Seller App',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: 'Inter'),
       home: const WelcomeSellerScreen(),
     );
   }
