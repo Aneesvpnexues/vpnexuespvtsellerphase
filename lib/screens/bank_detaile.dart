@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/artboard.dart';
+import 'profile_business.dart';
 
 /// "Add your bank details" — static replica of Zeplin "Android Compact - 106"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb1cc78003f7066066b).
@@ -10,7 +12,7 @@ import '../theme/app_text_styles.dart';
 /// The vegetable-basket illustration is the design PNG cropped to
 /// x190..412 / y70..332; the white "STEP 04" label sits over foliage inside
 /// that crop and is therefore baked into the asset (only "STEP 02" is rendered
-/// here). The back arrow pops; Continue is visual only.
+/// here). The back arrow pops; Continue opens [ProfileBusinessScreen].
 class BankDetaileScreen extends StatelessWidget {
   const BankDetaileScreen({super.key});
 
@@ -22,92 +24,76 @@ class BankDetaileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: SizedBox(
-                  width: designWidth,
-                  height: designHeight,
-                  child: Stack(
-                    children: const [
-                      Positioned(
-                          left: 0, top: 0, child: _HeaderBackground()),
-                      // Sheet first: the illustration is drawn above it and
-                      // carries its own baked shadow along the seam, so the
-                      // sheet's BoxShadow is only visible left of the image
-                      // (no doubling).
-                      Positioned(left: 0, top: 287.5, child: _Sheet()),
-                      Positioned(left: 190, top: 26, child: _Illustration()),
-                      Positioned(left: 21, top: 30, child: _BackButton()),
-                      Positioned(left: 25, top: 89.13, child: _StepLabel()),
-                      Positioned(left: 25, top: 118.75, child: _ProgressTrack()),
-                      Positioned(left: 24, top: 141.79, child: _TitleLead()),
-                      Positioned(left: 24, top: 175.80, child: _TitleAccent()),
-                      Positioned(left: 25, top: 218.12, child: _Subtitle()),
-                      // Bank details section row.
-                      Positioned(left: 27, top: 319, child: _SectionTick()),
-                      Positioned(left: 41, top: 319.45, child: _SectionTitle()),
-                      Positioned(left: 261, top: 313, child: _PillNote()),
-                      Positioned(left: 26, top: 350, child: _Divider()),
-                      // Card 1 — Account Holder Name (active: soft shadow).
-                      Positioned(left: 25, top: 363, child: _CardActive()),
-                      Positioned(left: 36, top: 378, child: _TilePerson()),
-                      Positioned(left: 81, top: 381.81, child: _LabelName()),
-                      Positioned(left: 81, top: 402, child: _InputName()),
-                      Positioned(
-                          left: 90.5, top: 415.99, child: _InputTextName()),
-                      // Card 2 — Bank Name (dropdown).
-                      Positioned(left: 25, top: 467, child: _CardBank()),
-                      Positioned(left: 36, top: 482, child: _TileBank()),
-                      Positioned(left: 81, top: 485.81, child: _LabelBank()),
-                      Positioned(left: 81, top: 506, child: _InputBank()),
-                      Positioned(
-                          left: 90.5, top: 520.10, child: _InputTextBank()),
-                      Positioned(left: 348, top: 521, child: _ChevronDown()),
-                      // Card 3 — Account Number.
-                      Positioned(left: 25, top: 571, child: _CardAccount()),
-                      Positioned(left: 36, top: 586, child: _TileAccount()),
-                      Positioned(left: 81, top: 589.81, child: _LabelAccount()),
-                      Positioned(left: 81, top: 610, child: _InputAccount()),
-                      Positioned(
-                          left: 90.5, top: 623.67, child: _InputTextAccount()),
-                      // Card 4 — IFSC Code + Verify button.
-                      Positioned(left: 25, top: 675, child: _CardIfsc()),
-                      Positioned(left: 36, top: 690, child: _TileIfsc()),
-                      Positioned(left: 81, top: 692.81, child: _LabelIfsc()),
-                      Positioned(left: 81, top: 714, child: _InputIfsc()),
-                      Positioned(
-                          left: 90.5, top: 727.99, child: _InputTextIfsc()),
-                      Positioned(left: 301, top: 713.5, child: _VerifyButton()),
-                      // Security banner.
-                      Positioned(left: 25, top: 793, child: _Banner()),
-                      Positioned(left: 36, top: 807, child: _Shield()),
-                      Positioned(left: 80.5, top: 808.94, child: _BannerTitle()),
-                      Positioned(left: 80.5, top: 827.99, child: _BannerBody()),
-                    ],
-                  ),
-                ),
-              ),
+      body: Stack(
+        children: [
+          Artboard(
+            designWidth: designWidth,
+            designHeight: designHeight,
+            child: Stack(
+              children: const [
+                Positioned(left: 0, top: 0, child: _HeaderBackground()),
+                // Sheet first: the illustration is drawn above it and
+                // carries its own baked shadow along the seam, so the
+                // sheet's BoxShadow is only visible left of the image
+                // (no doubling).
+                Positioned(left: 0, top: 287.5, child: _Sheet()),
+                Positioned(left: 190, top: 26, child: _Illustration()),
+                Positioned(left: 21, top: 30, child: _BackButton()),
+                Positioned(left: 25, top: 89.13, child: _StepLabel()),
+                Positioned(left: 25, top: 118.75, child: _ProgressTrack()),
+                Positioned(left: 24, top: 141.79, child: _TitleLead()),
+                Positioned(left: 24, top: 175.80, child: _TitleAccent()),
+                Positioned(left: 25, top: 218.12, child: _Subtitle()),
+                // Bank details section row.
+                Positioned(left: 27, top: 319, child: _SectionTick()),
+                Positioned(left: 41, top: 319.45, child: _SectionTitle()),
+                Positioned(left: 261, top: 313, child: _PillNote()),
+                Positioned(left: 26, top: 350, child: _Divider()),
+                // Card 1 — Account Holder Name (active: soft shadow).
+                Positioned(left: 25, top: 363, child: _CardActive()),
+                Positioned(left: 36, top: 378, child: _TilePerson()),
+                Positioned(left: 81, top: 381.81, child: _LabelName()),
+                Positioned(left: 81, top: 402, child: _InputName()),
+                Positioned(left: 90.5, top: 415.99, child: _InputTextName()),
+                // Card 2 — Bank Name (dropdown).
+                Positioned(left: 25, top: 467, child: _CardBank()),
+                Positioned(left: 36, top: 482, child: _TileBank()),
+                Positioned(left: 81, top: 485.81, child: _LabelBank()),
+                Positioned(left: 81, top: 506, child: _InputBank()),
+                Positioned(left: 90.5, top: 520.10, child: _InputTextBank()),
+                Positioned(left: 348, top: 521, child: _ChevronDown()),
+                // Card 3 — Account Number.
+                Positioned(left: 25, top: 571, child: _CardAccount()),
+                Positioned(left: 36, top: 586, child: _TileAccount()),
+                Positioned(left: 81, top: 589.81, child: _LabelAccount()),
+                Positioned(left: 81, top: 610, child: _InputAccount()),
+                Positioned(left: 90.5, top: 623.67, child: _InputTextAccount()),
+                // Card 4 — IFSC Code + Verify button.
+                Positioned(left: 25, top: 675, child: _CardIfsc()),
+                Positioned(left: 36, top: 690, child: _TileIfsc()),
+                Positioned(left: 81, top: 692.81, child: _LabelIfsc()),
+                Positioned(left: 81, top: 714, child: _InputIfsc()),
+                Positioned(left: 90.5, top: 727.99, child: _InputTextIfsc()),
+                Positioned(left: 301, top: 713.5, child: _VerifyButton()),
+                // Security banner.
+                Positioned(left: 25, top: 793, child: _Banner()),
+                Positioned(left: 36, top: 807, child: _Shield()),
+                Positioned(left: 80.5, top: 808.94, child: _BannerTitle()),
+                Positioned(left: 80.5, top: 827.99, child: _BannerBody()),
+              ],
             ),
-            // Anchored to the physical screen bottom so it stays there on
-            // taller devices; on the 936-tall artboard this matches the
-            // design offset (980 - 44 - 54 - 16 = 866).
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
-                child: SizedBox(
-                  height: 54,
-                  child: const _ContinueButton(),
-                ),
-              ),
+          ),
+          // Anchored to the physical screen bottom so it stays there on
+          // taller devices; on the 936-tall artboard this matches the
+          // design offset (980 - 44 - 54 - 16 = 866).
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
+              child: SizedBox(height: 54, child: const _ContinueButton()),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -147,7 +133,11 @@ class _BackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
-      child: const Icon(Icons.arrow_back, size: 22, color: AppColors.textPrimary),
+      child: const Icon(
+        Icons.arrow_back,
+        size: 22,
+        color: AppColors.textPrimary,
+      ),
     );
   }
 }
@@ -220,10 +210,7 @@ class _TitleAccent extends StatelessWidget {
           AppColors.bankHeadingGreenEnd,
         ],
       ).createShader(bounds),
-      child: const Text(
-        'bank details',
-        style: AppTextStyles.heading,
-      ),
+      child: const Text('bank details', style: AppTextStyles.heading),
     );
   }
 }
@@ -233,8 +220,10 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('To receive your earnings',
-        style: AppTextStyles.bankSubtitle);
+    return const Text(
+      'To receive your earnings',
+      style: AppTextStyles.bankSubtitle,
+    );
   }
 }
 
@@ -290,8 +279,10 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Fill Your Bank Details',
-        style: AppTextStyles.bankSectionTitle);
+    return const Text(
+      'Fill Your Bank Details',
+      style: AppTextStyles.bankSectionTitle,
+    );
   }
 }
 
@@ -328,11 +319,7 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 362,
-      height: 1,
-      color: AppColors.docDivider,
-    );
+    return Container(width: 362, height: 1, color: AppColors.docDivider);
   }
 }
 
@@ -422,8 +409,9 @@ class _TilePerson extends StatelessWidget {
       child: SizedBox(
         width: 12.5,
         height: 16.5,
-        child:
-            CustomPaint(painter: _PersonIconPainter(color: AppColors.fieldIconName)),
+        child: CustomPaint(
+          painter: _PersonIconPainter(color: AppColors.fieldIconName),
+        ),
       ),
     );
   }
@@ -440,7 +428,8 @@ class _TileBank extends StatelessWidget {
         width: 16.5,
         height: 15.5,
         child: CustomPaint(
-            painter: _BankIconPainter(color: AppColors.fieldIconBusiness)),
+          painter: _BankIconPainter(color: AppColors.fieldIconBusiness),
+        ),
       ),
     );
   }
@@ -457,7 +446,8 @@ class _TileAccount extends StatelessWidget {
         width: 19.5,
         height: 15.5,
         child: CustomPaint(
-            painter: _CardDotsPainter(color: AppColors.fieldIconPhone)),
+          painter: _CardDotsPainter(color: AppColors.fieldIconPhone),
+        ),
       ),
     );
   }
@@ -474,7 +464,8 @@ class _TileIfsc extends StatelessWidget {
         width: 15.5,
         height: 11.5,
         child: CustomPaint(
-            painter: _CardChipPainter(color: AppColors.fieldIconLocation)),
+          painter: _CardChipPainter(color: AppColors.fieldIconLocation),
+        ),
       ),
     );
   }
@@ -533,7 +524,10 @@ class _BankIconPainter extends CustomPainter {
     canvas.drawPath(roof, stroke);
     canvas.drawCircle(Offset(7.9 * s, 3.7 * s), 0.85 * s, fill);
     canvas.drawLine(
-        Offset(0.9 * s, 6.7 * s), Offset(15.6 * s, 6.7 * s), stroke);
+      Offset(0.9 * s, 6.7 * s),
+      Offset(15.6 * s, 6.7 * s),
+      stroke,
+    );
     for (final x in [1.0, 6.0, 9.0, 13.0]) {
       canvas.drawRect(Rect.fromLTWH(x * s, 8 * s, 2 * s, 6 * s), fill);
     }
@@ -543,7 +537,10 @@ class _BankIconPainter extends CustomPainter {
       ..strokeWidth = 1.8 * s
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
-        Offset(0.9 * s, 14.7 * s), Offset(15.6 * s, 14.7 * s), base);
+      Offset(0.9 * s, 14.7 * s),
+      Offset(15.6 * s, 14.7 * s),
+      base,
+    );
   }
 
   @override
@@ -576,7 +573,10 @@ class _CardDotsPainter extends CustomPainter {
       stroke,
     );
     canvas.drawLine(
-        Offset(1.5 * s, 5.75 * s), Offset(18 * s, 5.75 * s), stroke);
+      Offset(1.5 * s, 5.75 * s),
+      Offset(18 * s, 5.75 * s),
+      stroke,
+    );
     canvas.drawCircle(Offset(5.1 * s, 10.7 * s), 0.9 * s, fill);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -617,7 +617,10 @@ class _CardChipPainter extends CustomPainter {
       stroke,
     );
     canvas.drawLine(
-        Offset(1.3 * s, 7.5 * s), Offset(14.2 * s, 7.5 * s), stroke);
+      Offset(1.3 * s, 7.5 * s),
+      Offset(14.2 * s, 7.5 * s),
+      stroke,
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(11 * s, 3 * s, 2.4 * s, 1.9 * s),
@@ -637,8 +640,10 @@ class _LabelName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Account Holder Name',
-        style: AppTextStyles.bankFieldLabel);
+    return const Text(
+      'Account Holder Name',
+      style: AppTextStyles.bankFieldLabel,
+    );
   }
 }
 
@@ -720,8 +725,10 @@ class _InputTextName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Name should match your bank account',
-        style: AppTextStyles.bankInputText);
+    return const Text(
+      'Name should match your bank account',
+      style: AppTextStyles.bankInputText,
+    );
   }
 }
 
@@ -730,8 +737,10 @@ class _InputTextBank extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('State Bank of India',
-        style: AppTextStyles.bankInputText);
+    return const Text(
+      'State Bank of India',
+      style: AppTextStyles.bankInputText,
+    );
   }
 }
 
@@ -749,8 +758,10 @@ class _InputTextIfsc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Enter 11-digit code',
-        style: AppTextStyles.bankInputText);
+    return const Text(
+      'Enter 11-digit code',
+      style: AppTextStyles.bankInputText,
+    );
   }
 }
 
@@ -762,7 +773,9 @@ class _ChevronDown extends StatelessWidget {
     return const SizedBox(
       width: 11.5,
       height: 6.5,
-      child: CustomPaint(painter: _ChevronPainter(color: AppColors.verifiedText)),
+      child: CustomPaint(
+        painter: _ChevronPainter(color: AppColors.verifiedText),
+      ),
     );
   }
 }
@@ -888,8 +901,10 @@ class _BannerTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Your information is safe with us.',
-        style: AppTextStyles.bankBannerTitle);
+    return const Text(
+      'Your information is safe with us.',
+      style: AppTextStyles.bankBannerTitle,
+    );
   }
 }
 
@@ -899,8 +914,9 @@ class _BannerBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text(
-        'We use bank-grade security to protect your details.',
-        style: AppTextStyles.bankBannerBody);
+      'We use bank-grade security to protect your details.',
+      style: AppTextStyles.bankBannerBody,
+    );
   }
 }
 
@@ -909,26 +925,32 @@ class _ContinueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 54,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.continueGradientStart,
-            AppColors.continueGradientEnd,
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ProfileBusinessScreen()),
+        (route) => false,
+      ),
+      child: Container(
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              AppColors.continueGradientStart,
+              AppColors.continueGradientEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.continueGlow,
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.continueGlow,
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
+        child: const Text('Continue', style: AppTextStyles.button),
       ),
-      child: const Text('Continue', style: AppTextStyles.button),
     );
   }
 }

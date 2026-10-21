@@ -350,4 +350,213 @@ abstract final class AppTextStyles {
     height: 1.0,
     color: AppColors.bankBannerSub,
   );
+
+  // Seller dashboard — Profile / Add Products / Personal Details.
+  static const TextStyle balanceLabel = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.balanceLabel,
+  );
+
+  static const TextStyle balanceAmount = TextStyle(
+    fontSize: 40,
+    fontWeight: FontWeight.w800,
+    height: 1.0,
+    color: AppColors.limeAccent,
+  );
+
+  static const TextStyle balanceSub = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.balanceSub,
+  );
+
+  static const TextStyle monthPill = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.limeAccent,
+  );
+
+  static const TextStyle withdrawBtn = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.withdrawText,
+  );
+
+  static const TextStyle transactionsBtn = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.surface,
+  );
+
+  static const TextStyle sellerName = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  /// Header title "Profile" on Zeplin 151/152/153 (cap height 14).
+  static const TextStyle profileHeaderTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle sellerSub = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.dashboardSubtitle,
+  );
+
+  static const TextStyle verifiedBadge = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.sellerVerifiedText,
+  );
+
+  static const TextStyle statValue = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.darkGreenInk,
+  );
+
+  static const TextStyle statLabel = TextStyle(
+    fontSize: 10.5,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.dashboardSubtitle,
+  );
+
+  static const TextStyle tabLabel = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+  );
+
+  static const TextStyle listTitle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle listSubtitle = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.listSubtitle,
+  );
+
+  static const TextStyle navLabel = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+  );
+
+  static const TextStyle dashboardTitle = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle dashboardSubtitle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.dashboardSubtitle,
+  );
+
+  static const TextStyle sectionCardTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.darkGreenInk,
+  );
+
+  static const TextStyle photoBadge = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.surface,
+  );
+
+  static const TextStyle stepSoftStrong = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.stepSoftStrong,
+  );
+
+  static const TextStyle stepSoftLabel = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.stepSoftLabel,
+  );
+
+  static const TextStyle fieldLabelSoft = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle inputHintSoft = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.inputHintSoft,
+  );
+
+  static const TextStyle inputInkSoft = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.inputInkSoft,
+  );
+
+  static const TextStyle chipLabel = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+  );
+
+  static const TextStyle chipActiveLabel = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w600,
+    height: 1.0,
+    color: AppColors.chipActiveText,
+  );
+
+  static const TextStyle qtyValue = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.0,
+    color: AppColors.limeAccent,
+  );
+
+  static const TextStyle descCounter = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: AppColors.dashboardSubtitle,
+  );
+
+  static const TextStyle saveButton = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.limeAccent,
+  );
 }

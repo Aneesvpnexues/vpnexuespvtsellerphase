@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/artboard.dart';
 import 'verify_detaile.dart';
 
 /// "STEP 02 — Tell us about your business" — static replica of Zeplin
@@ -10,9 +11,11 @@ import 'verify_detaile.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes it scales down uniformly instead of overflowing. Fields are visual
-/// only; the Continue button opens [VerifyDetaileScreen].
-class Step03BusinessDetailsScreen extends StatelessWidget {
+/// sizes the [Artboard] viewport scales it down on small screens and up (capped
+/// at 1.5x) on large ones instead of overflowing. All five rows are
+/// editable; the Continue button stays inert until every field has a value and
+/// then opens [VerifyDetaileScreen].
+class Step03BusinessDetailsScreen extends StatefulWidget {
   const Step03BusinessDetailsScreen({super.key});
 
   static const String leavesAsset = 'assets/step03/leaves.png';
@@ -20,59 +23,158 @@ class Step03BusinessDetailsScreen extends StatelessWidget {
   static const double designHeight = 917;
 
   @override
+  State<Step03BusinessDetailsScreen> createState() =>
+      _Step03BusinessDetailsScreenState();
+}
+
+class _Step03BusinessDetailsScreenState
+    extends State<Step03BusinessDetailsScreen> {
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _business = TextEditingController();
+  final TextEditingController _phone = TextEditingController(
+    text: '+91 12345 67890',
+  );
+  final TextEditingController _location = TextEditingController(
+    text: 'Salem, Tamil Nadu',
+  );
+  final TextEditingController _address = TextEditingController();
+
+  bool get _allFilled =>
+      _name.text.isNotEmpty &&
+      _business.text.isNotEmpty &&
+      _phone.text.isNotEmpty &&
+      _location.text.isNotEmpty &&
+      _address.text.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final controller in _controllers) {
+      controller.addListener(_onChanged);
+    }
+  }
+
+  Iterable<TextEditingController> get _controllers => [
+    _name,
+    _business,
+    _phone,
+    _location,
+    _address,
+  ];
+
+  void _onChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.removeListener(_onChanged);
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _openVerifyDetails() {
+    if (!_allFilled) return;
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.stepPageBg,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: designWidth,
-              height: designHeight,
-              child: Stack(
-                children: const [
-                  Positioned(left: 200, top: 0, child: _Leaves()),
-                  Positioned(left: 24, top: 105.63, child: _StepLabel()),
-                  Positioned(left: 25, top: 139, child: _ProgressTrack()),
-                  Positioned(left: 24, top: 162.33, child: _TitleLead()),
-                  Positioned(left: 24, top: 196.83, child: _TitleYour()),
-                  Positioned(left: 105, top: 196.83, child: _TitleAccent()),
-                  Positioned(left: 24, top: 248.2, child: _Subtitle()),
-                  Positioned(left: 24, top: 330.89, child: _SectionTitle()),
-                  Positioned(right: 24.5, top: 326, child: _PillNote()),
-                  // Field rows.
-                  Positioned(left: 24, top: 380.5, child: _TileName()),
-                  Positioned(left: 43, top: 419.5, child: _Connector1()),
-                  Positioned(left: 89, top: 438, child: _Divider1()),
-                  Positioned(left: 89, top: 383.8, child: _LabelName()),
-                  Positioned(left: 89, top: 405.04, child: _PlaceholderName()),
-                  Positioned(left: 24, top: 457.5, child: _TileBusiness()),
-                  Positioned(left: 43, top: 496.5, child: _Connector2()),
-                  Positioned(left: 89, top: 515, child: _Divider2()),
-                  Positioned(left: 89, top: 460.64, child: _LabelBusiness()),
-                  Positioned(left: 89, top: 481.68, child: _PlaceholderBusiness()),
-                  Positioned(left: 24, top: 533.5, child: _TilePhone()),
-                  Positioned(left: 43, top: 572.5, child: _Connector3()),
-                  Positioned(left: 89, top: 593, child: _Divider3()),
-                  Positioned(left: 89, top: 537.31, child: _LabelPhone()),
-                  Positioned(left: 89, top: 557.69, child: _ValuePhone()),
-                  Positioned(right: 24.5, top: 541, child: _VerifiedBadge()),
-                  Positioned(left: 24, top: 611.5, child: _TileLocation()),
-                  Positioned(left: 43, top: 650.5, child: _Connector4()),
-                  Positioned(left: 89, top: 670, child: _Divider4()),
-                  Positioned(left: 89, top: 613.54, child: _LabelLocation()),
-                  Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
-                  Positioned(left: 89, top: 635.12, child: _ValueLocation()),
-                  Positioned(left: 24, top: 688.5, child: _TileAddress()),
-                  Positioned(left: 89, top: 691.81, child: _LabelAddress()),
-                  Positioned(left: 89, top: 713.28, child: _PlaceholderAddress()),
-                  Positioned(left: 24, top: 818, child: _ContinueButton()),
-                ],
+      body: Artboard(
+        designWidth: Step03BusinessDetailsScreen.designWidth,
+        designHeight: Step03BusinessDetailsScreen.designHeight,
+        child: Stack(
+          children: [
+            const Positioned(left: 200, top: 0, child: _Leaves()),
+            const Positioned(left: 24, top: 105.63, child: _StepLabel()),
+            const Positioned(left: 25, top: 139, child: _ProgressTrack()),
+            const Positioned(left: 24, top: 162.33, child: _TitleLead()),
+            const Positioned(left: 24, top: 196.83, child: _TitleYour()),
+            const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
+            const Positioned(left: 24, top: 248.2, child: _Subtitle()),
+            const Positioned(left: 24, top: 330.89, child: _SectionTitle()),
+            const Positioned(right: 24.5, top: 326, child: _PillNote()),
+            // Field rows.
+            const Positioned(left: 24, top: 380.5, child: _TileName()),
+            const Positioned(left: 43, top: 419.5, child: _Connector1()),
+            const Positioned(left: 89, top: 438, child: _Divider1()),
+            const Positioned(left: 89, top: 383.8, child: _LabelName()),
+            Positioned(
+              left: 89,
+              top: 405.04,
+              child: _FieldInput(
+                fieldKey: const Key('businessName'),
+                width: 299,
+                controller: _name,
+                hint: 'Enter your name..',
               ),
             ),
-          ),
+            const Positioned(left: 24, top: 457.5, child: _TileBusiness()),
+            const Positioned(left: 43, top: 496.5, child: _Connector2()),
+            const Positioned(left: 89, top: 515, child: _Divider2()),
+            const Positioned(left: 89, top: 460.64, child: _LabelBusiness()),
+            Positioned(
+              left: 89,
+              top: 481.68,
+              child: _FieldInput(
+                fieldKey: const Key('businessFarm'),
+                width: 299,
+                controller: _business,
+                hint: 'Enter Business name',
+              ),
+            ),
+            const Positioned(left: 24, top: 533.5, child: _TilePhone()),
+            const Positioned(left: 43, top: 572.5, child: _Connector3()),
+            const Positioned(left: 89, top: 593, child: _Divider3()),
+            const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
+            Positioned(
+              left: 89,
+              top: 557.69,
+              child: _FieldInput(
+                fieldKey: const Key('businessPhone'),
+                width: 200,
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+              ),
+            ),
+            const Positioned(right: 24.5, top: 541, child: _VerifiedBadge()),
+            const Positioned(left: 24, top: 611.5, child: _TileLocation()),
+            const Positioned(left: 43, top: 650.5, child: _Connector4()),
+            const Positioned(left: 89, top: 670, child: _Divider4()),
+            const Positioned(left: 89, top: 613.54, child: _LabelLocation()),
+            Positioned(
+              left: 89,
+              top: 635.12,
+              child: _FieldInput(
+                fieldKey: const Key('businessLocation'),
+                width: 240,
+                controller: _location,
+              ),
+            ),
+            const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
+            const Positioned(left: 24, top: 688.5, child: _TileAddress()),
+            const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
+            Positioned(
+              left: 89,
+              top: 713.28,
+              child: _FieldInput(
+                fieldKey: const Key('businessAddress'),
+                width: 299,
+                controller: _address,
+                hint: 'Enter your full address....',
+              ),
+            ),
+            Positioned(
+              left: 24,
+              top: 818,
+              child: _ContinueButton(onTap: _openVerifyDetails),
+            ),
+          ],
         ),
       ),
     );
@@ -164,15 +266,9 @@ class _TitleAccent extends StatelessWidget {
     // "business" filled with a horizontal green gradient (#00AF13 -> #035A0D).
     return ShaderMask(
       shaderCallback: (bounds) => const LinearGradient(
-        colors: [
-          AppColors.stepPageAccent,
-          AppColors.stepPageHeadingEnd,
-        ],
+        colors: [AppColors.stepPageAccent, AppColors.stepPageHeadingEnd],
       ).createShader(bounds),
-      child: const Text(
-        'business',
-        style: AppTextStyles.heading,
-      ),
+      child: const Text('business', style: AppTextStyles.heading),
     );
   }
 }
@@ -232,7 +328,11 @@ class _PillNote extends StatelessWidget {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.color, required this.icon, required this.iconColor});
+  const _Tile({
+    required this.color,
+    required this.icon,
+    required this.iconColor,
+  });
 
   final Color color;
   final IconData icon;
@@ -378,11 +478,7 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 299,
-      height: 1,
-      color: AppColors.fieldDivider,
-    );
+    return Container(width: 299, height: 1, color: AppColors.fieldDivider);
   }
 }
 
@@ -423,13 +519,44 @@ class _LabelName extends StatelessWidget {
   }
 }
 
-class _PlaceholderName extends StatelessWidget {
-  const _PlaceholderName();
+/// One editable row: a borderless [TextField] laid out where the design puts
+/// the placeholder/value text (box top == design glyph top, zero padding).
+class _FieldInput extends StatelessWidget {
+  const _FieldInput({
+    required this.fieldKey,
+    required this.width,
+    required this.controller,
+    this.hint,
+    this.keyboardType,
+  });
+
+  final Key fieldKey;
+  final double width;
+  final TextEditingController controller;
+  final String? hint;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Enter your name..',
-        style: AppTextStyles.fieldPlaceholder);
+    return SizedBox(
+      width: width,
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        keyboardType: keyboardType,
+        style: AppTextStyles.fieldValue,
+        cursorColor: AppColors.inputCaret,
+        cursorWidth: 2,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.fieldPlaceholder,
+          isDense: true,
+          border: InputBorder.none,
+          filled: false,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
   }
 }
 
@@ -442,16 +569,6 @@ class _LabelBusiness extends StatelessWidget {
   }
 }
 
-class _PlaceholderBusiness extends StatelessWidget {
-  const _PlaceholderBusiness();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Enter Business name',
-        style: AppTextStyles.fieldPlaceholder);
-  }
-}
-
 class _LabelPhone extends StatelessWidget {
   const _LabelPhone();
 
@@ -461,31 +578,15 @@ class _LabelPhone extends StatelessWidget {
   }
 }
 
-class _ValuePhone extends StatelessWidget {
-  const _ValuePhone();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('+91 12345 67890', style: AppTextStyles.fieldValue);
-  }
-}
-
 class _LabelLocation extends StatelessWidget {
   const _LabelLocation();
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Business Location',
-        style: AppTextStyles.fieldLabelMuted);
-  }
-}
-
-class _ValueLocation extends StatelessWidget {
-  const _ValueLocation();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Salem, Tamil Nadu', style: AppTextStyles.fieldValue);
+    return const Text(
+      'Business Location',
+      style: AppTextStyles.fieldLabelMuted,
+    );
   }
 }
 
@@ -495,16 +596,6 @@ class _LabelAddress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text('Business Address', style: AppTextStyles.fieldLabel);
-  }
-}
-
-class _PlaceholderAddress extends StatelessWidget {
-  const _PlaceholderAddress();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Enter your full address....',
-        style: AppTextStyles.fieldPlaceholder);
   }
 }
 
@@ -543,14 +634,14 @@ class _ChangeLink extends StatelessWidget {
 }
 
 class _ContinueButton extends StatelessWidget {
-  const _ContinueButton();
+  const _ContinueButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
-      ),
+      onTap: onTap,
       child: Container(
         width: 364,
         height: 54,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/step02_seller_type_screen.dart';
+import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 02 screen on the 412x943 artboard the design was drawn for.
@@ -25,7 +25,9 @@ Finder _continueButton() => find.byWidgetPredicate(
       (w) =>
           w is Container &&
           w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.primary,
+          (w.decoration as BoxDecoration).color == AppColors.primary &&
+          (w.decoration as BoxDecoration).borderRadius ==
+              const BorderRadius.all(Radius.circular(18)),
     );
 
 void main() {
@@ -190,19 +192,28 @@ void main() {
         'assets/step02/illustration.png');
   });
 
-  testWidgets('selecting a pill turns it green then opens STEP 03',
+  testWidgets('selecting a pill highlights it and Continue opens STEP 03',
       (tester) async {
     await pumpScreen(tester);
 
+    // Continue is inert until a seller type is picked.
+    await tester.tap(_continueButton());
+    await tester.pumpAndSettle();
+    expect(find.text('What best'), findsOneWidget);
+    expect(find.text('Business Details'), findsNothing);
+
     final farmerPill = _pills().first;
     await tester.tap(farmerPill);
-    // The selected pill paints green with white content for a beat.
+    // The selected pill paints green with white content.
     await tester.pump();
     final decoration =
         tester.widget<Container>(farmerPill).decoration! as BoxDecoration;
     expect(decoration.color, AppColors.primary);
 
-    await tester.pump(const Duration(milliseconds: 200));
+    // Selecting alone does not navigate.
+    expect(find.text('Business Details'), findsNothing);
+
+    await tester.tap(_continueButton());
     await tester.pumpAndSettle();
 
     expect(find.text('Business Details'), findsOneWidget);
@@ -214,5 +225,9 @@ void main() {
 
     expect(find.text('Business Details'), findsNothing);
     expect(find.text('What best'), findsOneWidget);
+    // The selection survives the round trip.
+    final decoration2 =
+        tester.widget<Container>(farmerPill).decoration! as BoxDecoration;
+    expect(decoration2.color, AppColors.primary);
   });
 }

@@ -149,6 +149,28 @@ void main() {
     expect(find.byType(OtpCaret), findsOneWidget);
   });
 
+  testWidgets('caret blinks', (tester) async {
+    await pumpScreen(tester);
+
+    double opacityOf() => tester
+        .widget<Opacity>(
+          find.descendant(
+            of: find.byType(OtpCaret),
+            matching: find.byType(Opacity),
+          ),
+        )
+        .opacity;
+
+    final seen = <double>{opacityOf()};
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      seen.add(opacityOf());
+    }
+
+    // Both halves of the blink cycle are observed within 1.2s.
+    expect(seen, {0.0, 1.0});
+  });
+
   testWidgets('verify navigates to the location page and back',
       (tester) async {
     await pumpScreen(tester);

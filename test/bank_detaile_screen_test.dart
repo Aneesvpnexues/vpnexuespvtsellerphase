@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
+import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the bank-details screen on the 412x936 artboard the design was drawn
@@ -411,6 +412,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Fill Your Bank Details'), findsNothing);
     expect(find.text('open'), findsOneWidget);
+  });
+
+  testWidgets('Continue opens the Business profile screen', (tester) async {
+    tester.view.physicalSize = const Size(412, 936);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const MaterialApp(home: BankDetaileScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileBusinessScreen), findsOneWidget);
+    expect(find.text('Wallet & Transactions'), findsOneWidget);
+    expect(find.text('Balance, withdrawals'), findsOneWidget);
+    expect(find.text('Review & Ratings'), findsOneWidget);
+    expect(find.text('125 reviews'), findsOneWidget);
+    // Onboarding is cleared from the stack.
+    expect(find.text('Fill Your Bank Details'), findsNothing);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/step03_business_details_screen.dart';
+import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 03 screen on the 412x917 artboard the design was drawn for.
@@ -150,8 +150,10 @@ void main() {
     final placeholder = tester.widget<Text>(find.text('Enter your name..'));
     expect(placeholder.style?.fontSize, 15);
 
-    final value = tester.widget<Text>(find.text('+91 12345 67890'));
-    expect(value.style?.fontSize, 15);
+    // The phone row holds its value in a TextField, so assert the field style.
+    final phoneField = tester
+        .widget<TextField>(find.byKey(const Key('businessPhone')));
+    expect(phoneField.style?.fontSize, 15);
 
     final verified = tester.widget<Text>(find.text('Verified'));
     expect(verified.style?.fontSize, 11.5);
@@ -215,8 +217,34 @@ void main() {
         'assets/step03/leaves.png');
   });
 
+  testWidgets('Continue is inert until every field is filled', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Business Details'), findsOneWidget);
+    expect(find.text('Verification Details'), findsNothing);
+
+    // Fill name + business only (phone/location start prefilled, address empty).
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(
+        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Business Details'), findsOneWidget);
+    expect(find.text('Verification Details'), findsNothing);
+  });
+
   testWidgets('Continue opens the verify details screen', (tester) async {
     await pumpScreen(tester);
+
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(
+        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(find.byKey(const Key('businessAddress')),
+        '12 Main Street');
+    await tester.pump();
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();

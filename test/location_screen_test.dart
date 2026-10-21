@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/step01_location_screen.dart';
+import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 01 screen on the 412x917 artboard the design was drawn for.
