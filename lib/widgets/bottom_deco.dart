@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -23,11 +25,47 @@ class BottomDeco extends StatelessWidget {
 }
 
 /// Small green caret shown in the first OTP box, mirroring the design.
-class OtpCaret extends StatelessWidget {
+///
+/// Blinks like a native text cursor: visible for 500ms, hidden for 500ms.
+/// Driven by a [Timer] rather than an [AnimationController] so it never
+/// blocks `pumpAndSettle` in tests.
+class OtpCaret extends StatefulWidget {
   const OtpCaret({super.key});
+
+  /// Same half-period Flutter's own text cursor uses.
+  static const Duration blinkInterval = Duration(milliseconds: 500);
+
+  @override
+  State<OtpCaret> createState() => _OtpCaretState();
+}
+
+class _OtpCaretState extends State<OtpCaret> {
+  Timer? _timer;
+  bool _visible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(OtpCaret.blinkInterval, (_) {
+      setState(() => _visible = !_visible);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 2, height: 28.5, color: AppColors.otpActiveBorder);
+    return Opacity(
+      opacity: _visible ? 1 : 0,
+      child: Container(
+        width: 2,
+        height: 28.5,
+        color: AppColors.otpActiveBorder,
+      ),
+    );
   }
 }

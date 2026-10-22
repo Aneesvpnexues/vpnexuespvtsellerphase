@@ -8,6 +8,8 @@ import '../widgets/label_text.dart';
 import 'bank_details_screen.dart';
 import 'business_farm_screen.dart';
 import 'personal_details_screen.dart';
+import 'profile_app.dart';
+import 'profile_business.dart';
 import 'verification_kyc_screen.dart';
 
 /// Profile â€” static replica of Zeplin "Android Compact - 151"
@@ -602,22 +604,52 @@ class _SegmentTabs extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
-            left: 156,
-            top: 9,
-            child: LabelText(
-              'Business',
-              AppTextStyles.profileSegmentIdle,
-              width: 80,
+          Positioned(
+            left: 152,
+            top: 6,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ProfileBusinessScreen(),
+                ),
+              ),
+              child: const SizedBox(
+                width: 124,
+                height: 33,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: LabelText(
+                    'Business',
+                    AppTextStyles.profileSegmentIdle,
+                    width: 80,
+                  ),
+                ),
+              ),
             ),
           ),
-          const Positioned(
-            left: 292,
-            top: 9,
-            child: LabelText(
-              'App',
-              AppTextStyles.profileSegmentIdle,
-              width: 60,
+          Positioned(
+            left: 288,
+            top: 6,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ProfileAppScreen(),
+                ),
+              ),
+              child: const SizedBox(
+                width: 72,
+                height: 33,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: LabelText(
+                    'App',
+                    AppTextStyles.profileSegmentIdle,
+                    width: 60,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -900,19 +932,23 @@ class _BottomNavProfile extends StatelessWidget {
           Positioned(
             left: 178,
             top: -8,
-            child: Container(
-              alignment: Alignment.center,
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.limeLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 7),
-              ),
-              child: const Image(
-                image: AssetImage('assets/profile/ic_add.png'),
-                width: 24,
-                height: 24,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => goToAddProduct(context),
+              child: Container(
+                alignment: Alignment.center,
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.limeLight,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 7),
+                ),
+                child: const Image(
+                  image: AssetImage('assets/profile/ic_add.png'),
+                  width: 24,
+                  height: 24,
+                ),
               ),
             ),
           ),

@@ -78,6 +78,10 @@ flutter:
     - assets/order_accepted/
     - assets/order_ready/
     - assets/order_delivery/
+    - assets/order_privew/
+    - assets/product_details/
+    - assets/step03/
+    - assets/verify/
 
   # Inter is the Zeplin design font, bundled so every screen renders with the
   # exact same text metrics on all platforms and never fetches fonts from
@@ -102,6 +106,17 @@ flutter:
     - family: IosevkaCharonMono
       fonts:
         - asset: assets/fonts/IosevkaCharonMono-Bold.ttf
+          weight: 700
+
+    # Jacinth's screens were built against Roboto, so it stays bundled for
+    # those screens only; the Inter screens above keep the Zeplin metrics.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
           weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
