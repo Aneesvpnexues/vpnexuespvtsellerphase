@@ -8,39 +8,37 @@ Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 873);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(
-    const MaterialApp(home: VerifyDetaileScreen()),
-  );
+  await tester.pumpWidget(const MaterialApp(home: VerifyDetaileScreen()));
   await tester.pumpAndSettle();
 }
 
 Finder _tiles() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(10)) &&
-          (w.decoration as BoxDecoration).color != null &&
-          (w.decoration as BoxDecoration).color != AppColors.surface,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(10)) &&
+      (w.decoration as BoxDecoration).color != null &&
+      (w.decoration as BoxDecoration).color != AppColors.surface,
+);
 
 Finder _docCards() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border != null &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(14)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).border != null &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(14)),
+);
 
 Finder _continueButton() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).gradient != null &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(18)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).gradient != null &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(18)),
+);
 
 void main() {
   testWidgets('renders the verify content', (tester) async {
@@ -93,12 +91,14 @@ void main() {
     expect(rectOf(find.text('A quick verification')).top, closeTo(180.74, 1));
 
     // Profile completion card: x 24..386, y 367..428.
-    final pcCard = rectOf(find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.pcCardBg,
-    ));
+    final pcCard = rectOf(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).color == AppColors.pcCardBg,
+      ),
+    );
     expect(pcCard.left, closeTo(24, 1));
     expect(pcCard.top, closeTo(367, 1));
     expect(pcCard.width, closeTo(362, 1));
@@ -128,7 +128,9 @@ void main() {
     expect(segRects.first.top, closeTo(209.75, 1));
     final segColors = segments
         .evaluate()
-        .map((e) => ((e.widget as Container).decoration! as BoxDecoration).color)
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
         .toList();
     expect(segColors, const [
       AppColors.progressInactive,
@@ -174,8 +176,12 @@ void main() {
     expect(button.width, closeTo(392, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
-        tester.widget<Container>(_continueButton()).decoration! as BoxDecoration;
-    expect(decoration.borderRadius, const BorderRadius.all(Radius.circular(18)));
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect(
+      decoration.borderRadius,
+      const BorderRadius.all(Radius.circular(18)),
+    );
     final gradient = decoration.gradient! as LinearGradient;
     expect(gradient.colors, const [
       AppColors.continueGradientStart,
@@ -187,7 +193,7 @@ void main() {
     await pumpScreen(tester);
 
     final step = tester.widget<Text>(find.text('STEP 03'));
-    expect(step.style?.fontSize, 15.5);
+    expect(step.style?.fontSize, 14);
     expect(step.style?.color, AppColors.textPrimary);
 
     final lead = tester.widget<Text>(find.text('Verify your'));
@@ -239,8 +245,9 @@ void main() {
 
     final tileColors = _tiles()
         .evaluate()
-        .map((e) =>
-            ((e.widget as Container).decoration! as BoxDecoration).color)
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
         .toList();
     expect(tileColors, const [
       AppColors.fieldTileName,
@@ -271,7 +278,8 @@ void main() {
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                      builder: (_) => const VerifyDetaileScreen()),
+                    builder: (_) => const VerifyDetaileScreen(),
+                  ),
                 ),
                 child: const Text('open'),
               ),
@@ -294,9 +302,7 @@ void main() {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      const MaterialApp(home: VerifyDetaileScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: VerifyDetaileScreen()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -308,9 +314,13 @@ void main() {
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
-    expect((image.image as AssetImage).assetName,
-        VerifyDetaileScreen.illustrationAsset);
-    expect(VerifyDetaileScreen.illustrationAsset,
-        'assets/verify/illustration.png');
+    expect(
+      (image.image as AssetImage).assetName,
+      VerifyDetaileScreen.illustrationAsset,
+    );
+    expect(
+      VerifyDetaileScreen.illustrationAsset,
+      'assets/verify/illustration.png',
+    );
   });
 }

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/artboard.dart';
 import '../widgets/bottom_deco.dart';
 import '../widgets/otp_field_row.dart';
-import 'location_screen.dart';
+import 'step01_location_screen.dart';
 
 /// Enter OTP screen — static replica of Zeplin "Android Compact - 50"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad063196da349aa4dae3c4).
@@ -34,70 +33,57 @@ class OtpScreen extends StatelessWidget {
             top: true,
             bottom: false,
             child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Width-driven uniform scale matching the shared Artboard
-                // (down on small screens, up to 1.5x on large ones).
-                final scale = (constraints.maxWidth / designWidth)
-                    .clamp(0.0, Artboard.defaultMaxScale)
-                    .toDouble();
-                return Align(
-                  alignment: Alignment.topCenter,
+              builder: (context, constraints) => Align(
+                alignment: Alignment.topCenter,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: SizedBox(
-                    width: designWidth * scale,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: designWidth,
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(24, topGap, 24, 132),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Center(
-                                child: Image.asset(
-                                  illustrationAsset,
-                                  width: 290,
-                                  height: 210,
-                                  fit: BoxFit.fill,
-                                ),
-                              ),
-                              const SizedBox(height: 40),
-                              const Text(
-                                'Enter OTP',
-                                style: AppTextStyles.title,
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'We\u2019ve sent a 6-digit code to',
-                                style: AppTextStyles.subtitle,
-                                softWrap: false,
-                                maxLines: 1,
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                '+91 1234567890',
-                                style: AppTextStyles.phone,
-                              ),
-                              const SizedBox(height: 42),
-                              const OtpFieldRow(),
-                              const SizedBox(height: 16),
-                              const Center(
-                                child: Text(
-                                  'Resent OTP in 00:12',
-                                  style: AppTextStyles.resend,
-                                ),
-                              ),
-                              const SizedBox(height: 112),
-                              const _VerifyButton(),
-                            ],
+                    width: designWidth,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(24, topGap, 24, 132),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Image.asset(
+                              illustrationAsset,
+                              width: 290,
+                              height: 210,
+                              fit: BoxFit.fill,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 40),
+                          const Text('Enter OTP', style: AppTextStyles.title),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'We\u2019ve sent a 6-digit code to',
+                            style: AppTextStyles.subtitle,
+                            softWrap: false,
+                            maxLines: 1,
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            '+91 1234567890',
+                            style: AppTextStyles.phone,
+                          ),
+                          const SizedBox(height: 42),
+                          const OtpFieldRow(),
+                          const SizedBox(height: 16),
+                          const Center(
+                            child: Text(
+                              'Resent OTP in 00:12',
+                              style: AppTextStyles.resend,
+                            ),
+                          ),
+                          const SizedBox(height: 112),
+                          const _VerifyButton(),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ],

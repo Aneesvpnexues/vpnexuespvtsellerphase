@@ -193,7 +193,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Add your', style: AppTextStyles.heading);
+    return const Text('Add your', style: AppTextStyles.headingLarge);
   }
 }
 
@@ -211,7 +211,7 @@ class _TitleAccent extends StatelessWidget {
           AppColors.bankHeadingGreenEnd,
         ],
       ).createShader(bounds),
-      child: const Text('bank details', style: AppTextStyles.heading),
+      child: const Text('bank details', style: AppTextStyles.headingLarge),
     );
   }
 }

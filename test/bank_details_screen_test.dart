@@ -50,6 +50,13 @@ void main() {
     expect(rectOf(find.text('State Bank of India')).top, closeTo(99, 5));
     expect(rectOf(find.text('3421')).left, closeTo(228, 3));
     expect(rectOf(find.text('3421')).top, closeTo(145, 6));
+    // The design sets the masked digits in a monospace face (24/700), so the
+    // four digits keep the design's 49px box instead of Inter's wider 58px.
+    expect(tester.getSize(find.text('3421')).width, closeTo(49, 1));
+    expect(
+      tester.widget<Text>(find.text('3421')).style?.fontFamily,
+      'IosevkaCharonMono',
+    );
     expect(rectOf(find.text('Account holder')).left, closeTo(45, 3));
     expect(rectOf(find.text('Account holder')).top, closeTo(193, 6));
     expect(rectOf(find.text('Ramesh Kumar')).left, closeTo(45, 3));
@@ -68,10 +75,7 @@ void main() {
     expect(rectOf(find.text('Active')).top, closeTo(327, 6));
     expect(rectOf(find.text('Add another bank account')).left, closeTo(124, 3));
     expect(rectOf(find.text('Add another bank account')).top, closeTo(421, 6));
-    expect(
-      rectOf(find.text('Add another bank account')).center.dx,
-      closeTo(216.5, 6),
-    );
+    expect(rectOf(find.text('Add another bank account')).center.dx, closeTo(216.5, 6));
   });
 
   testWidgets('the withdrawals note is centred under the add row', (
@@ -108,13 +112,13 @@ void main() {
   testWidgets('the bank details row of the profile opens this screen', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(412, 924);
+    tester.view.physicalSize = const Size(412, 980);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bank Details'));
+    await tester.tapAt(const Offset(120, 780));
     await tester.pumpAndSettle();
 
     expect(find.byType(BankDetailsScreen), findsOneWidget);

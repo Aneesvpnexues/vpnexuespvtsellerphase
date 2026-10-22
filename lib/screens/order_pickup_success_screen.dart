@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 
-/// Order Details ├óΓé¼ΓÇ¥ pickup completed state. Static replica of Zeplin
+/// Order Details ├óΓé¼” pickup completed state. Static replica of Zeplin
 /// "Android Compact - 165".
 class OrderPickupSuccessScreen extends StatelessWidget {
   const OrderPickupSuccessScreen({super.key});
@@ -26,29 +26,29 @@ class OrderPickupSuccessScreen extends StatelessWidget {
           child: DefaultTextStyle(
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
-            children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
-              Positioned(
-                left: 68,
-                top: 73,
-                width: 200,
-                height: 25,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Order Details',
-                    style: AppTextStyles.orderTitle.copyWith(
-                      letterSpacing: 1.05,
+              children: [
+                const Positioned(left: 24, top: 73, child: _BackCircle()),
+                Positioned(
+                  left: 68,
+                  top: 73,
+                  width: 200,
+                  height: 25,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Order Details',
+                      style: AppTextStyles.orderTitle.copyWith(
+                        letterSpacing: 1.05,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const Positioned(left: 24, top: 117, child: _SegmentTabs()),
-              const Positioned(left: 25, top: 172, child: _HeroCard()),
-              const Positioned(left: 25, top: 359, child: _SuccessCard()),
-              const Positioned(left: 24, top: 847, child: _BackButton()),
-            ],
-          ),
+                const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 25, top: 172, child: _HeroCard()),
+                const Positioned(left: 25, top: 359, child: _SuccessCard()),
+                const Positioned(left: 24, top: 847, child: _BackButton()),
+              ],
+            ),
           ),
         ),
       ),
@@ -142,7 +142,7 @@ class _SegmentTabs extends StatelessWidget {
               ),
               child: const Text(
                 'Buyer Pickup',
-                style: AppTextStyles.orderSegmentActive,
+                style: AppTextStyles.orderSegmentActiveOnDark,
               ),
             ),
           ),
@@ -305,7 +305,11 @@ class _ProgressStrip extends StatelessWidget {
             child: CustomPaint(size: Size(260, 1), painter: _DashedLine()),
           ),
           for (int i = 0; i < 5; i++)
-            Positioned(left: 21 + i * 65, top: 18, child: _StepCircle(index: i)),
+            Positioned(
+              left: 21 + i * 65,
+              top: 18,
+              child: _StepCircle(index: i),
+            ),
           const Positioned(
             left: 21,
             top: 55,
@@ -707,21 +711,18 @@ class _SuccessCard extends StatelessWidget {
           const Positioned(
             left: 113.5,
             top: 337.5,
-            child: CustomPaint(
-              size: Size(10, 8),
-              painter: _WalletPainter(),
-            ),
+            child: CustomPaint(size: Size(10, 8), painter: _WalletPainter()),
           ),
           const Positioned(
             left: 130,
             top: 334.9,
             child: _Label(
-                'Added to your earnings',
-                TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0D3D21),
-                ),
+              'Added to your earnings',
+              TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0D3D21),
+              ),
               width: 128,
               height: 15,
             ),

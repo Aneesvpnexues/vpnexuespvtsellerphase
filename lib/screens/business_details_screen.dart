@@ -245,7 +245,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Tell us about', style: AppTextStyles.heading);
+    return const Text('Tell us about', style: AppTextStyles.headingLarge);
   }
 }
 
@@ -254,7 +254,7 @@ class _TitleYour extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('your', style: AppTextStyles.heading);
+    return const Text('your', style: AppTextStyles.headingLarge);
   }
 }
 
@@ -268,7 +268,7 @@ class _TitleAccent extends StatelessWidget {
       shaderCallback: (bounds) => const LinearGradient(
         colors: [AppColors.stepPageAccent, AppColors.stepPageHeadingEnd],
       ).createShader(bounds),
-      child: const Text('business', style: AppTextStyles.heading),
+      child: const Text('business', style: AppTextStyles.headingLarge),
     );
   }
 }

@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
 
-/// Verification (KYC) ΓÇö static replica of Zeplin "Android Compact - 161"
+/// Verification (KYC) — static replica of Zeplin "Android Compact - 161"
 /// (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1af835d2f94b851860b63).
 ///

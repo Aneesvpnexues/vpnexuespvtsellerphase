@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/add_products_screen.dart';
+import 'package:seller_app/screens/add_product_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -104,7 +104,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(AddProductsScreen), findsOneWidget);
+    expect(find.byType(AddProductScreen), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

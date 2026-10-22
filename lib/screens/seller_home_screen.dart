@@ -7,14 +7,14 @@ import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
 import 'my_products_screen.dart';
 
-/// Seller Home dashboard ΓÇö static replica of Zeplin
+/// Seller Home dashboard — static replica of Zeplin
 /// "Android Compact - 117" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1adaf148b8bf14a899c54).
 ///
 /// Built against a 412x1071 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only ΓÇö no network, no state.
+/// Visual only — no network, no state.
 class SellerHomeScreen extends StatelessWidget {
   const SellerHomeScreen({super.key});
 

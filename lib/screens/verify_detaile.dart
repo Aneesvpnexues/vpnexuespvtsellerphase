@@ -143,7 +143,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Verify your', style: AppTextStyles.heading);
+    return const Text('Verify your', style: AppTextStyles.headingLarge);
   }
 }
 

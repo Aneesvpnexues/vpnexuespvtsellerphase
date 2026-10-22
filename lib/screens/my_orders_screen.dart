@@ -8,7 +8,7 @@ import '../widgets/design_canvas.dart';
 import 'order_details_screen.dart';
 import 'order_privew.dart';
 
-/// My Orders list ΓÇö static replica of Zeplin
+/// My Orders list — static replica of Zeplin
 /// "Android Compact - 132" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae17402fbd4010868423).
 ///
@@ -54,7 +54,7 @@ class MyOrdersScreen extends StatelessWidget {
                     ),
                     const Positioned(left: 24, top: 122, child: _SearchSort()),
                     const Positioned(left: 24, top: 181, child: _OrderTabs()),
-                    Positioned(
+                    const Positioned(
                       left: 24,
                       top: 241,
                       child: _OrderBlock(
@@ -67,17 +67,9 @@ class MyOrdersScreen extends StatelessWidget {
                         extra: '+1',
                         price: '\u20B92,400',
                         status: 'Accepted',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            settings: const RouteSettings(
-                              name: AppRoutes.orderDetails,
-                            ),
-                            builder: (_) => const OrderDetailsScreen(),
-                          ),
-                        ),
                       ),
                     ),
-                    Positioned(
+                    const Positioned(
                       left: 24,
                       top: 407,
                       child: _OrderBlock(
@@ -90,10 +82,9 @@ class MyOrdersScreen extends StatelessWidget {
                         extra: '',
                         price: '\u20B91,400',
                         status: 'Accepted',
-                        onTap: openOrderPrivew,
                       ),
                     ),
-                    Positioned(
+                    const Positioned(
                       left: 24,
                       top: 573,
                       child: _OrderBlock(
@@ -107,10 +98,9 @@ class MyOrdersScreen extends StatelessWidget {
                         extra: '+2',
                         price: '\u20B93,400',
                         status: 'Pending',
-                        onTap: openOrderPrivew,
                       ),
                     ),
-                    Positioned(
+                    const Positioned(
                       left: 24,
                       top: 739,
                       child: _OrderBlock(
@@ -123,10 +113,9 @@ class MyOrdersScreen extends StatelessWidget {
                         extra: '+1',
                         price: '\u20B93,000',
                         status: 'Confirmed',
-                        onTap: openOrderPrivew,
                       ),
                     ),
-                    Positioned(
+                    const Positioned(
                       left: 24,
                       top: 905,
                       child: _OrderBlock(
@@ -139,6 +128,62 @@ class MyOrdersScreen extends StatelessWidget {
                         extra: '',
                         price: '\u20B93,500',
                         status: 'Delivered',
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 241,
+                      width: 363,
+                      height: 154,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: AppRoutes.orderDetails,
+                            ),
+                            builder: (_) => const OrderDetailsScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 407,
+                      width: 363,
+                      height: 154,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 573,
+                      width: 363,
+                      height: 154,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 739,
+                      width: 363,
+                      height: 154,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 905,
+                      width: 363,
+                      height: 154,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: openOrderPrivew,
                       ),
                     ),
@@ -378,7 +423,6 @@ class _OrderBlock extends StatelessWidget {
     required this.extra,
     required this.price,
     required this.status,
-    this.onTap,
   });
 
   final String store;
@@ -391,11 +435,10 @@ class _OrderBlock extends StatelessWidget {
   final String extra;
   final String price;
   final String status;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Widget content = SizedBox(
+    return SizedBox(
       width: 363,
       height: 154,
       child: Stack(
@@ -594,11 +637,6 @@ class _OrderBlock extends StatelessWidget {
           ),
         ],
       ),
-    );
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: content,
     );
   }
 }

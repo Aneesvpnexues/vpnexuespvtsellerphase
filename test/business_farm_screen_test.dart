@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -80,13 +80,13 @@ void main() {
   testWidgets('the business and farm row of the profile opens this screen', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(412, 924);
+    tester.view.physicalSize = const Size(412, 980);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Business & Farm'));
+    await tester.tapAt(const Offset(120, 664));
     await tester.pumpAndSettle();
 
     expect(find.byType(BusinessFarmScreen), findsOneWidget);

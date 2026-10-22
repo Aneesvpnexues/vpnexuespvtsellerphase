@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../data/country_codes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/artboard.dart';
 import 'otp_screen.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
@@ -13,8 +12,7 @@ import 'otp_screen.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight
 /// from the design PNG, so on a matching viewport the layout renders 1:1; on
-/// other sizes the [Artboard] viewport scales it down on small screens and up
-/// (capped at 1.5x) on large ones instead of overflowing.
+/// other sizes it scales down uniformly instead of overflowing.
 ///
 /// The segmented Login / Sign Up control switches between the two states:
 /// - Login (default): hero + phone number form; "Send OTP" opens the OTP
@@ -64,153 +62,186 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.welcomeBg,
-      body: Artboard(
-        designWidth: WelcomeSellerScreen.designWidth,
-        designHeight: WelcomeSellerScreen.designHeight,
-        child: Stack(
-          children: [
-            const Positioned(left: 0, top: 64, child: _Leaf()),
-            const Positioned(left: 0, top: 225, child: _Hero()),
-            const Positioned(
-              left: 0,
-              right: 0,
-              top: 504,
-              bottom: 0,
-              child: _Card(),
-            ),
-            const Positioned(left: 0, right: 0, top: 127.4, child: _Title()),
-            const Positioned(left: 0, right: 6, top: 168.7, child: _Subtitle()),
-            const Positioned(left: 24, top: 506, child: _SegmentTrack()),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              left: _signUp ? 195 : 24,
-              top: 505,
-              width: 191,
-              height: 53,
-              child: _SegmentPill(),
-            ),
-            Positioned(
-              left: 24,
-              width: 191,
-              top: 522.6,
-              child: _SegmentLabel('Login', active: !_signUp),
-            ),
-            Positioned(
-              left: 215,
-              width: 171,
-              top: 522.6,
-              child: _SegmentLabel('Sign Up', active: _signUp),
-            ),
-            Positioned(
-              left: 24,
-              width: 191,
-              top: 506,
-              height: 53,
-              child: GestureDetector(
-                key: const Key('welcomeTabLogin'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _signUp ? _showLogin : null,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            Positioned(
-              left: 215,
-              width: 171,
-              top: 506,
-              height: 53,
-              child: GestureDetector(
-                key: const Key('welcomeTabSignUp'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _signUp ? null : _showSignUp,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            if (_signUp) ...[
-              const Positioned(
-                left: 24,
-                top: 574,
-                child: _SignUpField(hint: 'Name'),
-              ),
-              const Positioned(
-                left: 24,
-                top: 644,
-                child: _SignUpField(
-                  hint: 'E-Mail',
-                  keyboardType: TextInputType.emailAddress,
-                ),
-              ),
-              const Positioned(
-                left: 24,
-                top: 714,
-                child: _SignUpField(hint: 'Password', obscure: true),
-              ),
-              const Positioned(
-                left: 24,
-                top: 784,
-                child: _CreateAccountButton(),
-              ),
-            ] else ...[
-              const Positioned(left: 24, top: 587.8, child: _WelcomeBack()),
-              const Positioned(left: 166, top: 579, child: _Wave()),
-              const Positioned(
-                left: 24,
-                right: 0,
-                top: 612.3,
-                child: _PhoneHint(),
-              ),
-              const Positioned(left: 24, top: 656.5, child: _PhoneLabel()),
-              const Positioned(left: 24, top: 684, child: _FieldBox()),
-              Positioned(
-                left: 24,
-                top: 684,
-                width: 83,
-                height: 54,
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _country.isIndia
-                          ? const _Flag()
-                          : Text(
-                              _country.flag,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                      const SizedBox(width: 5),
-                      _DialCode(_country.dial),
-                    ],
+      body: LayoutBuilder(
+        builder: (context, constraints) => Align(
+          alignment: Alignment.topCenter,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+              width: WelcomeSellerScreen.designWidth,
+              height: WelcomeSellerScreen.designHeight,
+              child: Stack(
+                children: [
+                  const Positioned(left: 0, top: 64, child: _Leaf()),
+                  const Positioned(left: 0, top: 225, child: _Hero()),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 504,
+                    bottom: 0,
+                    child: _Card(),
                   ),
-                ),
-              ),
-              Positioned(
-                left: 24,
-                top: 684,
-                width: 83,
-                height: 54,
-                child: GestureDetector(
-                  key: const Key('countryPicker'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _showCountryPicker,
-                  child: const SizedBox.expand(),
-                ),
-              ),
-              Positioned(
-                left: 112,
-                top: 684,
-                child: _PhoneBox(maxLength: _country.maxDigits),
-              ),
-              Positioned(
-                left: 24,
-                top: 749,
-                child: _SendOtpButton(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(builder: (_) => const OtpScreen()),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 127.4,
+                    child: _Title(),
                   ),
-                ),
+                  const Positioned(
+                    left: 0,
+                    right: 6,
+                    top: 168.7,
+                    child: _Subtitle(),
+                  ),
+                  const Positioned(left: 24, top: 506, child: _SegmentTrack()),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    left: _signUp ? 195 : 24,
+                    top: 505,
+                    width: 191,
+                    height: 53,
+                    child: _SegmentPill(),
+                  ),
+                  Positioned(
+                    left: 24,
+                    width: 191,
+                    top: 522.6,
+                    child: _SegmentLabel('Login', active: !_signUp),
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 522.6,
+                    child: _SegmentLabel('Sign Up', active: _signUp),
+                  ),
+                  Positioned(
+                    left: 24,
+                    width: 191,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabLogin'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? _showLogin : null,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabSignUp'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? null : _showSignUp,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  if (_signUp) ...[
+                    const Positioned(
+                      left: 24,
+                      top: 574,
+                      child: _SignUpField(hint: 'Name'),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 644,
+                      child: _SignUpField(
+                        hint: 'E-Mail',
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 714,
+                      child: _SignUpField(hint: 'Password', obscure: true),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 784,
+                      child: _CreateAccountButton(),
+                    ),
+                  ] else ...[
+                    const Positioned(
+                      left: 24,
+                      top: 587.8,
+                      child: _WelcomeBack(),
+                    ),
+                    const Positioned(left: 166, top: 579, child: _Wave()),
+                    const Positioned(
+                      left: 24,
+                      right: 0,
+                      top: 612.3,
+                      child: _PhoneHint(),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 656.5,
+                      child: _PhoneLabel(),
+                    ),
+                    const Positioned(left: 24, top: 684, child: _FieldBox()),
+                    Positioned(
+                      left: 24,
+                      top: 684,
+                      width: 83,
+                      height: 54,
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _country.isIndia
+                                ? const _Flag()
+                                : Text(
+                                    _country.flag,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                            const SizedBox(width: 5),
+                            _DialCode(_country.dial),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 684,
+                      width: 83,
+                      height: 54,
+                      child: GestureDetector(
+                        key: const Key('countryPicker'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _showCountryPicker,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                    Positioned(
+                      left: 112,
+                      top: 684,
+                      child: _PhoneBox(maxLength: _country.maxDigits),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 749,
+                      child: _SendOtpButton(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const OtpScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 859,
+                    child: _Footer(),
+                  ),
+                ],
               ),
-            ],
-            const Positioned(left: 0, right: 0, top: 859, child: _Footer()),
-          ],
+            ),
+          ),
         ),
       ),
     );

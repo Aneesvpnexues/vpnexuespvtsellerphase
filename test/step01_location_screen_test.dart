@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/location_screen.dart';
+import 'package:seller_app/screens/step01_location_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 01 screen on the 412x917 artboard the design was drawn for.
@@ -77,7 +77,7 @@ void main() {
     expect(step.style?.fontWeight, FontWeight.w700);
 
     final title = tester.widget<Text>(find.text('Choose your location'));
-    expect(title.style?.fontSize, 35);
+    expect(title.style?.fontSize, 32);
     expect(title.style?.color, AppColors.textPrimary);
 
     final link = tester.widget<Text>(find.text('Select it Manually'));

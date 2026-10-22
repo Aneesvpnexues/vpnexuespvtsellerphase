@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// Scales a fixed-size Zeplin artboard to the available width and trims the
 /// artboard's own status-bar strip so the design padding below it stays as the

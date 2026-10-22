@@ -6,7 +6,7 @@ import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
 
-/// My Products list ΓÇö static replica of Zeplin
+/// My Products list — static replica of Zeplin
 /// "Android Compact - 123" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae1c0e2a2f1a17cbef0e).
 ///

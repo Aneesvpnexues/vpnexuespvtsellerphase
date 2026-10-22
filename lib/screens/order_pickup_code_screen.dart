@@ -5,7 +5,7 @@ import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import 'order_pickup_success_screen.dart';
 
-/// Order Details ├óΓé¼ΓÇ¥ pickup code entry state. Static replica of Zeplin
+/// Order Details ├óΓé¼” pickup code entry state. Static replica of Zeplin
 /// "Android Compact - 154".
 class OrderPickupCodeScreen extends StatelessWidget {
   const OrderPickupCodeScreen({super.key});
@@ -27,29 +27,29 @@ class OrderPickupCodeScreen extends StatelessWidget {
           child: DefaultTextStyle(
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
-            children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
-              Positioned(
-                left: 68,
-                top: 73,
-                width: 200,
-                height: 25,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Order Details',
-                    style: AppTextStyles.orderTitle.copyWith(
-                      letterSpacing: 1.05,
+              children: [
+                const Positioned(left: 24, top: 73, child: _BackCircle()),
+                Positioned(
+                  left: 68,
+                  top: 73,
+                  width: 200,
+                  height: 25,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Order Details',
+                      style: AppTextStyles.orderTitle.copyWith(
+                        letterSpacing: 1.05,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const Positioned(left: 24, top: 117, child: _SegmentTabs()),
-              const Positioned(left: 25, top: 172, child: _HeroCard()),
-              const Positioned(left: 25, top: 359, child: _CodeCard()),
-              const Positioned(left: 24, top: 847, child: _ContinueButton()),
-            ],
-          ),
+                const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 25, top: 172, child: _HeroCard()),
+                const Positioned(left: 25, top: 359, child: _CodeCard()),
+                const Positioned(left: 24, top: 847, child: _ContinueButton()),
+              ],
+            ),
           ),
         ),
       ),
@@ -143,7 +143,7 @@ class _SegmentTabs extends StatelessWidget {
               ),
               child: const Text(
                 'Buyer Pickup',
-                style: AppTextStyles.orderSegmentActive,
+                style: AppTextStyles.orderSegmentActiveOnDark,
               ),
             ),
           ),
@@ -582,22 +582,38 @@ class _CodeCard extends StatelessWidget {
                 color: AppColors.orderTile,
                 borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
-        child: Transform.translate(
-          offset: const Offset(-1, -1),
-          child: ColorFiltered(
-            colorFilter: const ColorFilter.matrix(<double>[
-              0, 0, 0, 0, 13,
-              0, 0, 0, 0, 59,
-              0, 0, 0, 0, 32,
-              0, 8, 0, 0, -1200,
-            ]),
-            child: const Image(
-              image: AssetImage('assets/order/ic_shop.png'),
-              width: 20,
-              height: 20,
-            ),
-          ),
-        ),
+              child: Transform.translate(
+                offset: const Offset(-1, -1),
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.matrix(<double>[
+                    0,
+                    0,
+                    0,
+                    0,
+                    13,
+                    0,
+                    0,
+                    0,
+                    0,
+                    59,
+                    0,
+                    0,
+                    0,
+                    0,
+                    32,
+                    0,
+                    8,
+                    0,
+                    0,
+                    -1200,
+                  ]),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_shop.png'),
+                    width: 20,
+                    height: 20,
+                  ),
+                ),
+              ),
             ),
           ),
           const Positioned(
@@ -701,10 +717,7 @@ class _CodeCard extends StatelessWidget {
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
                 border: Border.all(color: const Color(0xFF2E8B4B), width: 2),
                 boxShadow: const [
-                  BoxShadow(
-                    color: Color(0xFFDDECE2),
-                    spreadRadius: 4.5,
-                  ),
+                  BoxShadow(color: Color(0xFFDDECE2), spreadRadius: 4.5),
                 ],
               ),
             ),
@@ -842,4 +855,3 @@ class _ArrowPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

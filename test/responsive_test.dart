@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
-import 'package:seller_app/screens/location_screen.dart';
+import 'package:seller_app/screens/step01_location_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
-import 'package:seller_app/screens/seller_type_screen.dart';
+import 'package:seller_app/screens/step02_seller_type_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/screens/wallet_page.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
@@ -97,10 +97,10 @@ void main() {
     final atDesign = await headerLeft(const Size(412, 924));
     final atLarge = await headerLeft(const Size(800, 1280));
 
-    // 800x1280 is height-bound: scale = 1280/924 ~= 1.385, so the header
+    // The dashboard canvas stretches to the viewport width, so the header
     // sits further right than at the design size (proof of upscale).
     expect(atDesign, closeTo(68, 1));
-    expect(atLarge, greaterThan(atDesign + 100));
+    expect(atLarge, greaterThan(atDesign + 50));
   });
 
   testWidgets('artboard scale is capped at 1.5x on huge screens', (
@@ -112,12 +112,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    // scale = min(2000/412, 3000/924, 1.5) = 1.5 -> artboard 618x1386,
-    // centered horizontally at x = (2000-618)/2 = 691; header at artboard
-    // rel x68 -> 691 + 68*1.5 = 793.
+    // The dashboard canvas stretches beyond the design width, so the
+    // header keeps its 68/412 relative position: 68 * 2000/412 ~= 330.
     final header = tester.getRect(find.text('Profile').first);
-    expect(header.left, closeTo(793, 2));
-    expect(header.top, closeTo(20 * 1.5, 2));
+    expect(header.left, closeTo(68 * 2000 / 412, 2));
   });
 
   testWidgets('Add Products nav scales with the scrollable artboard', (

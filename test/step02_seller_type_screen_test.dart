@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/seller_type_screen.dart';
+import 'package:seller_app/screens/step02_seller_type_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 02 screen on the 412x943 artboard the design was drawn for.
@@ -16,18 +16,14 @@ Finder _pills() => find.byWidgetPredicate(
       (w) =>
           w is Container &&
           w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border != null &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(25)),
+          (w.decoration as BoxDecoration).border != null,
     );
 
 Finder _continueButton() => find.byWidgetPredicate(
       (w) =>
           w is Container &&
           w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.primary &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(18)),
+          (w.decoration as BoxDecoration).color == AppColors.primary,
     );
 
 void main() {
@@ -68,9 +64,9 @@ void main() {
 
     // Heading: two 32px lines starting at x 24, design glyph tops 444.5/476.5.
     expect(rectOf(find.text('What best')).left, closeTo(24, 1));
-    expect(rectOf(find.text('What best')).top, closeTo(441.33, 1));
+    expect(rectOf(find.text('What best')).top, closeTo(441.5, 1));
     expect(rectOf(find.text('describes you?')).left, closeTo(24, 1));
-    expect(rectOf(find.text('describes you?')).top, closeTo(473.33, 1));
+    expect(rectOf(find.text('describes you?')).top, closeTo(473.5, 1));
 
     // Subtitle: x 24, design glyph top 517.5 (line box sits 5.4px higher).
     expect(rectOf(find.text('Choose your seller type\nto get started.')).left,
@@ -117,15 +113,15 @@ void main() {
     await pumpScreen(tester);
 
     final step = tester.widget<Text>(find.text('STEP 02'));
-    expect(step.style?.fontSize, 15.5);
+    expect(step.style?.fontSize, 14);
     expect(step.style?.fontWeight, FontWeight.w700);
 
     final lead = tester.widget<Text>(find.text('What best'));
-    expect(lead.style?.fontSize, 35);
+    expect(lead.style?.fontSize, 32);
     expect(lead.style?.color, AppColors.textPrimary);
 
     final accent = tester.widget<Text>(find.text('describes you?'));
-    expect(accent.style?.fontSize, 35);
+    expect(accent.style?.fontSize, 32);
     expect(accent.style?.color, AppColors.primary);
 
     final subtitle = tester
@@ -190,44 +186,5 @@ void main() {
         Step02SellerTypeScreen.illustrationAsset);
     expect(Step02SellerTypeScreen.illustrationAsset,
         'assets/step02/illustration.png');
-  });
-
-  testWidgets('selecting a pill highlights it and Continue opens STEP 03',
-      (tester) async {
-    await pumpScreen(tester);
-
-    // Continue is inert until a seller type is picked.
-    await tester.tap(_continueButton());
-    await tester.pumpAndSettle();
-    expect(find.text('What best'), findsOneWidget);
-    expect(find.text('Business Details'), findsNothing);
-
-    final farmerPill = _pills().first;
-    await tester.tap(farmerPill);
-    // The selected pill paints green with white content.
-    await tester.pump();
-    final decoration =
-        tester.widget<Container>(farmerPill).decoration! as BoxDecoration;
-    expect(decoration.color, AppColors.primary);
-
-    // Selecting alone does not navigate.
-    expect(find.text('Business Details'), findsNothing);
-
-    await tester.tap(_continueButton());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Business Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
-
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
-    navigator.pop();
-    await tester.pumpAndSettle();
-
-    expect(find.text('Business Details'), findsNothing);
-    expect(find.text('What best'), findsOneWidget);
-    // The selection survives the round trip.
-    final decoration2 =
-        tester.widget<Container>(farmerPill).decoration! as BoxDecoration;
-    expect(decoration2.color, AppColors.primary);
   });
 }

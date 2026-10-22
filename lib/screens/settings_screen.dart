@@ -1,17 +1,17 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
 
-/// Settings ΓÇö static replica of Zeplin "Android Compact - 164"
+/// Settings — static replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
 ///
 /// Built against a 412x917 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only ΓÇö no network, no state.
+/// Visual only — no network, no state.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 

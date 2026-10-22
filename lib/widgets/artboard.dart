@@ -45,7 +45,17 @@ class Artboard extends StatelessWidget {
     height: designHeight * scale,
     child: FittedBox(
       fit: BoxFit.contain,
-      child: SizedBox(width: designWidth, height: designHeight, child: child),
+      child: SizedBox(
+        width: designWidth,
+        height: designHeight,
+        // These screens were drawn against Roboto; the rest of the app uses
+        // Inter, so the typeface is scoped to the artboard instead of the
+        // global theme.
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(fontFamily: 'Roboto'),
+          child: child,
+        ),
+      ),
     ),
   );
 

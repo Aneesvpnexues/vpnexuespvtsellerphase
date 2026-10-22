@@ -2,168 +2,133 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/artboard.dart';
+import '../widgets/design_canvas.dart';
+import '../widgets/label_text.dart';
 
-/// "Personal Details" — replica of Zeplin "Android Compact - 159"
-/// (project 6a8d49709e27bd8b35213d35, screen 6ad1af843d0244e28bb51c66).
+/// Personal Details â€” static replica of Zeplin "Android Compact - 159"
+/// (project 6a8d49709e27bd8b35213d35,
+/// screen 6ad1af843d0244e28bb51c66).
 ///
-/// Built against a 412x917 artboard (the design's 44px top headroom removed).
-/// Name/mobile/email are editable text fields prefilled with the seller's
-/// data; Seller Type chips select one of Farmer/Trader/FPO; Save changes
-/// pops the route. The back arrow pops too.
-class PersonalDetailsScreen extends StatefulWidget {
+/// Built against a 412x917 artboard. Same zoom-scroll pattern as 117/123/132/135:
+/// fit width, scroll vertically. Visual only.
+class PersonalDetailsScreen extends StatelessWidget {
   const PersonalDetailsScreen({super.key});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
-
-  @override
-  State<PersonalDetailsScreen> createState() => _PersonalDetailsScreenState();
-}
-
-class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
-  late final TextEditingController _name = TextEditingController(
-    text: 'Ramesh Kumar',
-  );
-  late final TextEditingController _phone = TextEditingController(
-    text: '+91 12345 67890',
-  );
-  late final TextEditingController _email = TextEditingController();
-  int _sellerType = 0;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _phone.dispose();
-    _email.dispose();
-    super.dispose();
-  }
+  static const double trimTop = 49;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.dashboardBg,
-      body: Artboard(
-        designWidth: PersonalDetailsScreen.designWidth,
-        designHeight: PersonalDetailsScreen.designHeight,
-        child: Stack(
-          children: [
-            Positioned(left: 24, top: 58, child: _BackButton()),
-            const Positioned(left: 84, top: 64, child: _Title()),
-            const Positioned(left: 154, top: 148, child: _Avatar()),
-            Positioned(
-              left: 24,
-              top: 287,
-              child: _Card(
-                name: _name,
-                phone: _phone,
-                email: _email,
-                sellerType: _sellerType,
-                onSellerType: (i) => setState(() => _sellerType = i),
+      backgroundColor: AppColors.homeBg,
+      body: SafeArea(
+        bottom: false,
+        child: DesignCanvas(
+          designWidth: designWidth,
+          designHeight: designHeight,
+          trimTop: trimTop,
+          child: Stack(
+            children: const [
+              Positioned(left: 24, top: 73, child: _BackCircle()),
+              Positioned(
+                left: 68,
+                top: 73,
+                width: 200,
+                height: 25,
+                child: LabelText(
+                  'Personal Details',
+                  AppTextStyles.orderTitle,
+                  width: 200,
+                ),
               ),
-            ),
-            Positioned(
-              left: 24,
-              top: 850,
-              child: _SaveButton(onTap: () => Navigator.of(context).maybePop()),
-            ),
-          ],
+              Positioned(left: 153, top: 148, child: _Avatar()),
+              Positioned(left: 25, top: 287, child: _FormCard()),
+              Positioned(left: 25, top: 850, child: _SaveBar()),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _BackButton extends StatelessWidget {
-  const _BackButton();
+class _BackCircle extends StatelessWidget {
+  const _BackCircle();
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => Navigator.of(context).maybePop(),
       child: Container(
-        width: 36,
-        height: 36,
+        alignment: Alignment.center,
+        width: 25,
+        height: 25,
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 6,
-              offset: Offset(0, 2),
+              color: Color(0x1A000000),
+              offset: Offset(0, 1),
+              blurRadius: 2,
             ),
           ],
         ),
-        child: const Icon(
-          Icons.arrow_back,
-          size: 18,
-          color: AppColors.textPrimary,
+        child: const Image(
+          image: AssetImage('assets/order/ic_back.png'),
+          width: 15,
+          height: 15,
         ),
       ),
     );
-  }
-}
-
-class _Title extends StatelessWidget {
-  const _Title();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Personal Details', style: AppTextStyles.dashboardTitle);
   }
 }
 
 class _Avatar extends StatelessWidget {
   const _Avatar();
 
-  static const String initials = 'RK';
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 104,
-      height: 104,
+      width: 105,
+      height: 105,
       child: Stack(
         children: [
           Container(
-            width: 104,
-            height: 104,
+            width: 105,
+            height: 105,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  AppColors.avatarGradientTop,
-                  AppColors.avatarGradientBottom,
+                  AppColors.personalAvatarStart,
+                  AppColors.personalAvatarEnd,
                 ],
               ),
             ),
-            child: const Text(
-              initials,
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w700,
-                color: AppColors.surface,
-              ),
-            ),
+            child: const Text('RK', style: AppTextStyles.personalInitials),
           ),
           Positioned(
-            right: 0,
-            bottom: 2,
+            left: 71,
+            top: 70,
             child: Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.cameraBadgeBg,
+              width: 33,
+              height: 33,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.personalCameraBorder),
               ),
-              child: const Icon(
-                Icons.photo_camera_outlined,
-                size: 16,
-                color: AppColors.cameraBadgeInk,
+              child: const Image(
+                image: AssetImage('assets/personal/ic_camera.png'),
+                width: 17,
+                height: 17,
               ),
             ),
           ),
@@ -173,159 +138,169 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-class _Card extends StatelessWidget {
-  const _Card({
-    required this.name,
-    required this.phone,
-    required this.email,
-    required this.sellerType,
-    required this.onSellerType,
-  });
-
-  final TextEditingController name;
-  final TextEditingController phone;
-  final TextEditingController email;
-  final int sellerType;
-  final ValueChanged<int> onSellerType;
+class _FormCard extends StatelessWidget {
+  const _FormCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
-      height: 322,
+      width: 362,
+      height: 324,
       decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        color: AppColors.profileCardBg,
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        border: Border.all(color: Color(0x14000000)),
       ),
       child: Stack(
         children: [
           const Positioned(
-            left: 22,
-            top: 22,
-            child: Text('Full Name', style: AppTextStyles.fieldLabelSoft),
+            left: 21,
+            top: 17,
+            child: LabelText(
+              'Full Name',
+              AppTextStyles.personalLabel,
+              width: 120,
+            ),
           ),
-          Positioned(
-            left: 22,
-            top: 43,
-            child: _Field(
-              icon: Icons.person_outline,
-              controller: name,
-              hint: 'Your full name',
+          const Positioned(left: 21, top: 43, child: _InputField()),
+          const Positioned(
+            left: 14,
+            top: 55,
+            child: Image(
+              image: AssetImage('assets/personal/ic_user.png'),
+              width: 16,
+              height: 16,
             ),
           ),
           const Positioned(
-            left: 22,
-            top: 98,
-            child: Text('Mobile Number', style: AppTextStyles.fieldLabelSoft),
-          ),
-          Positioned(
-            left: 22,
-            top: 119,
-            child: _Field(
-              icon: Icons.phone_outlined,
-              controller: phone,
-              hint: 'Phone number',
-            ),
-          ),
-          Positioned(
-            left: 22,
-            top: 174,
-            child: Row(
-              children: const [
-                Text('Email', style: AppTextStyles.fieldLabelSoft),
-                SizedBox(width: 6),
-                Text('(optional)', style: AppTextStyles.dashboardSubtitle),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 22,
-            top: 195,
-            child: _Field(
-              icon: Icons.mail_outline,
-              controller: email,
-              hint: 'you@example.com',
+            left: 67,
+            top: 51,
+            child: LabelText(
+              'Ramesh Kumar',
+              AppTextStyles.personalValue,
+              width: 150,
             ),
           ),
           const Positioned(
-            left: 22,
-            top: 250,
-            child: Text('Seller Type', style: AppTextStyles.fieldLabelSoft),
+            left: 21,
+            top: 93,
+            child: LabelText(
+              'Mobile Number',
+              AppTextStyles.personalLabel,
+              width: 140,
+            ),
+          ),
+          const Positioned(left: 21, top: 119, child: _InputField()),
+          const Positioned(
+            left: 15,
+            top: 130,
+            child: Image(
+              image: AssetImage('assets/personal/ic_phone.png'),
+              width: 14,
+              height: 18,
+            ),
+          ),
+          const Positioned(
+            left: 67,
+            top: 127,
+            child: LabelText(
+              '+91 12345 67890',
+              AppTextStyles.personalValue,
+              width: 150,
+            ),
+          ),
+          const Positioned(
+            left: 21,
+            top: 169,
+            child: LabelText('Email', AppTextStyles.personalLabel, width: 60),
+          ),
+          const Positioned(
+            left: 55,
+            top: 170,
+            child: LabelText(
+              '(optional)',
+              AppTextStyles.personalOptional,
+              width: 80,
+            ),
+          ),
+          const Positioned(left: 21, top: 195, child: _InputField()),
+          const Positioned(
+            left: 14,
+            top: 207,
+            child: Image(
+              image: AssetImage('assets/personal/ic_mail.png'),
+              width: 16,
+              height: 16,
+            ),
+          ),
+          const Positioned(
+            left: 67,
+            top: 207,
+            child: LabelText(
+              'you@example.com',
+              AppTextStyles.personalPlaceholder,
+              width: 160,
+            ),
+          ),
+          const Positioned(
+            left: 21,
+            top: 245,
+            child: LabelText(
+              'Seller Type',
+              AppTextStyles.personalLabel,
+              width: 120,
+            ),
           ),
           Positioned(
-            left: 22,
+            left: 21,
             top: 271,
-            child: Row(
-              children: [
-                _SellerChip(
-                  label: 'Farmer',
-                  selected: sellerType == 0,
-                  onTap: () => onSellerType(0),
-                ),
-                const SizedBox(width: 14),
-                _SellerChip(
-                  label: 'Trader',
-                  selected: sellerType == 1,
-                  onTap: () => onSellerType(1),
-                ),
-                const SizedBox(width: 14),
-                _SellerChip(
-                  label: 'FPO / Group',
-                  selected: sellerType == 2,
-                  onTap: () => onSellerType(2),
-                ),
-              ],
+            child: Container(
+              width: 77,
+              height: 31,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.orderDark,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+              child: const Text(
+                'Farmer',
+                style: AppTextStyles.personalPillActive,
+              ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.icon,
-    required this.controller,
-    required this.hint,
-  });
-
-  final IconData icon;
-  final TextEditingController controller;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 320,
-      height: 41,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: AppColors.fieldFillSoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.inputInkSoft),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              style: AppTextStyles.inputInkSoft,
-              cursorColor: AppColors.inputCaret,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: hint,
-                hintStyle: AppTextStyles.inputHintSoft,
+          Positioned(
+            left: 119,
+            top: 271,
+            child: Container(
+              width: 89,
+              height: 31,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.homeBg,
+                borderRadius: const BorderRadius.all(Radius.circular(14)),
+                border: Border.all(color: Color(0x12000000)),
+              ),
+              child: const Text(
+                'Trader',
+                style: AppTextStyles.personalPillIdle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 228,
+            top: 271,
+            child: Container(
+              width: 111,
+              height: 31,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.homeBg,
+                borderRadius: const BorderRadius.all(Radius.circular(14)),
+                border: Border.all(color: Color(0x12000000)),
+              ),
+              child: const Text(
+                'FPO / Group',
+                style: AppTextStyles.personalPillIdle,
               ),
             ),
           ),
@@ -335,62 +310,36 @@ class _Field extends StatelessWidget {
   }
 }
 
-class _SellerChip extends StatelessWidget {
-  const _SellerChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+class _InputField extends StatelessWidget {
+  const _InputField();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 31,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.chipActive : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: selected ? null : Border.all(color: AppColors.chipBorder),
-        ),
-        child: Text(
-          label,
-          style: selected
-              ? AppTextStyles.chipActiveLabel
-              : AppTextStyles.chipLabel.copyWith(
-                  color: AppColors.tabUnselectedText,
-                ),
-        ),
+    return Container(
+      width: 319,
+      height: 41,
+      decoration: const BoxDecoration(
+        color: AppColors.orderPale,
+        borderRadius: BorderRadius.all(Radius.circular(10)),
       ),
     );
   }
 }
 
-class _SaveButton extends StatelessWidget {
-  const _SaveButton({required this.onTap});
-
-  final VoidCallback onTap;
+class _SaveBar extends StatelessWidget {
+  const _SaveBar();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 364,
-        height: 53,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.saveButton,
-          borderRadius: BorderRadius.circular(27),
-        ),
-        child: const Text('Save changes', style: AppTextStyles.saveButton),
+    return Container(
+      width: 362,
+      height: 53,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: AppColors.orderDark,
+        borderRadius: BorderRadius.all(Radius.circular(26)),
       ),
+      child: const Text('Save changes', style: AppTextStyles.personalSave),
     );
   }
 }
