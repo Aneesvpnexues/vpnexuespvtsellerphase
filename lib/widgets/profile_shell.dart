@@ -34,7 +34,6 @@ class ProfileShell extends StatelessWidget {
     this.onBankDetails,
     this.onWallet,
     this.onReviews,
-    this.onAddProducts,
   });
 
   static const double designWidth = 412;
@@ -52,7 +51,6 @@ class ProfileShell extends StatelessWidget {
   final VoidCallback? onBankDetails;
   final VoidCallback? onWallet;
   final VoidCallback? onReviews;
-  final VoidCallback? onAddProducts;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +96,7 @@ class ProfileShell extends StatelessWidget {
                 selectedIndex: 3,
                 onHomeTap: () => goToHome(context),
                 onProductsTap: () => goToProducts(context),
-                onAddTap: onAddProducts ?? () => goToAddProduct(context),
+                onAddTap: () => goToAddProduct(context),
                 onOrdersTap: () => goToOrders(context),
                 onProfileTap: () => goToProfile(context),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/step02_seller_type_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
@@ -13,18 +14,18 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 Finder _pills() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border != null,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).border != null,
+);
 
 Finder _continueButton() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.primary,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).color == AppColors.primary,
+);
 
 void main() {
   testWidgets('renders the STEP 02 content', (tester) async {
@@ -69,10 +70,14 @@ void main() {
     expect(rectOf(find.text('describes you?')).top, closeTo(473.5, 1));
 
     // Subtitle: x 24, design glyph top 517.5 (line box sits 5.4px higher).
-    expect(rectOf(find.text('Choose your seller type\nto get started.')).left,
-        closeTo(24, 1));
-    expect(rectOf(find.text('Choose your seller type\nto get started.')).top,
-        closeTo(512, 1));
+    expect(
+      rectOf(find.text('Choose your seller type\nto get started.')).left,
+      closeTo(24, 1),
+    );
+    expect(
+      rectOf(find.text('Choose your seller type\nto get started.')).top,
+      closeTo(512, 1),
+    );
 
     // STEP 02 label: top right, design glyph box (330..386, y 86).
     final step = rectOf(find.text('STEP 02'));
@@ -103,10 +108,13 @@ void main() {
     expect(button.top, closeTo(866, 1));
     expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
-    final decoration = tester
-        .widget<Container>(_continueButton())
-        .decoration! as BoxDecoration;
-    expect(decoration.borderRadius, const BorderRadius.all(Radius.circular(18)));
+    final decoration =
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect(
+      decoration.borderRadius,
+      const BorderRadius.all(Radius.circular(18)),
+    );
   });
 
   testWidgets('text styles follow the design', (tester) async {
@@ -124,8 +132,9 @@ void main() {
     expect(accent.style?.fontSize, 32);
     expect(accent.style?.color, AppColors.primary);
 
-    final subtitle = tester
-        .widget<Text>(find.text('Choose your seller type\nto get started.'));
+    final subtitle = tester.widget<Text>(
+      find.text('Choose your seller type\nto get started.'),
+    );
     expect(subtitle.style?.fontSize, 20);
     expect(subtitle.style?.color, AppColors.stepSubtitle);
 
@@ -138,8 +147,9 @@ void main() {
     expect(continueLabel.style?.fontSize, 18);
   });
 
-  testWidgets('pills carry the design border, radius and icon size',
-      (tester) async {
+  testWidgets('pills carry the design border, radius and icon size', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     for (var i = 0; i < 6; i++) {
@@ -148,22 +158,59 @@ void main() {
       final border = decoration.border! as Border;
       expect(border.top.color, AppColors.pillBorder);
       expect(border.top.width, 1);
-      expect(decoration.borderRadius,
-          const BorderRadius.all(Radius.circular(25)));
+      expect(
+        decoration.borderRadius,
+        const BorderRadius.all(Radius.circular(25)),
+      );
       expect(decoration.color, AppColors.surface);
     }
 
     final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
     expect(icons.length, 6);
     expect(icons.every((i) => i.size == 16), isTrue);
-    expect(icons.map((i) => i.icon), containsAll(<IconData>[
-      Icons.spa,
-      Icons.storefront,
-      Icons.local_dining,
-      Icons.directions_bus,
-      Icons.inventory_2,
-      Icons.apartment,
-    ]));
+    expect(
+      icons.map((i) => i.icon),
+      containsAll(<IconData>[
+        Icons.spa,
+        Icons.storefront,
+        Icons.local_dining,
+        Icons.directions_bus,
+        Icons.inventory_2,
+        Icons.apartment,
+      ]),
+    );
+  });
+
+  testWidgets('tapping a seller type selects it', (tester) async {
+    await pumpScreen(tester);
+
+    BoxDecoration decorationOf(String label) {
+      final Finder pill = find
+          .ancestor(of: find.text(label), matching: _pills())
+          .first;
+      return tester.widget<Container>(pill).decoration! as BoxDecoration;
+    }
+
+    expect(decorationOf('Farmer').color, AppColors.surface);
+
+    await tester.tap(find.text('Farmer'));
+    await tester.pumpAndSettle();
+
+    expect(decorationOf('Farmer').color, AppColors.primary);
+    expect(
+      tester.widget<Text>(find.text('Farmer')).style?.color,
+      AppColors.surface,
+    );
+
+    await tester.tap(find.text('Wholesaler'));
+    await tester.pumpAndSettle();
+
+    expect(decorationOf('Farmer').color, AppColors.surface);
+    expect(decorationOf('Wholesaler').color, AppColors.primary);
+    expect(
+      tester.widget<Text>(find.text('Farmer')).style?.color,
+      AppColors.pillLabel,
+    );
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
@@ -177,14 +224,27 @@ void main() {
     expect(find.text('describes you?'), findsOneWidget);
   });
 
+  testWidgets('Continue opens the business details step', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
+  });
+
   testWidgets('uses the step02 illustration asset', (tester) async {
     await pumpScreen(tester);
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
-    expect((image.image as AssetImage).assetName,
-        Step02SellerTypeScreen.illustrationAsset);
-    expect(Step02SellerTypeScreen.illustrationAsset,
-        'assets/step02/illustration.png');
+    expect(
+      (image.image as AssetImage).assetName,
+      Step02SellerTypeScreen.illustrationAsset,
+    );
+    expect(
+      Step02SellerTypeScreen.illustrationAsset,
+      'assets/step02/illustration.png',
+    );
   });
 }

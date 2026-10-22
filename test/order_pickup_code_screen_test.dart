@@ -123,6 +123,33 @@ void main() {
     expect(find.text('Enter pickup code'), findsOneWidget);
   });
 
+  testWidgets('swiping the continue bar opens the pickup success screen', (
+    tester,
+  ) async {
+    await pumpPickupCode(tester);
+
+    await tester.drag(
+      find.text('Enter the code to continus'),
+      const Offset(320, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back to orders'), findsOneWidget);
+  });
+
+  testWidgets('a short swipe on the continue bar springs back', (tester) async {
+    await pumpPickupCode(tester);
+
+    await tester.drag(
+      find.text('Enter the code to continus'),
+      const Offset(30, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter pickup code'), findsOneWidget);
+    expect(find.text('Back to orders'), findsNothing);
+  });
+
   testWidgets('golden: 154 pickup code at 412x868', (tester) async {
     await _loadRoboto(tester);
     await pumpPickupCode(tester);

@@ -97,10 +97,10 @@ void main() {
     final atDesign = await headerLeft(const Size(412, 924));
     final atLarge = await headerLeft(const Size(800, 1280));
 
-    // The dashboard canvas stretches to the viewport width, so the header
+    // 800x1280 is height-bound: scale = 1280/924 ~= 1.385, so the header
     // sits further right than at the design size (proof of upscale).
     expect(atDesign, closeTo(68, 1));
-    expect(atLarge, greaterThan(atDesign + 50));
+    expect(atLarge, greaterThan(atDesign + 100));
   });
 
   testWidgets('artboard scale is capped at 1.5x on huge screens', (
@@ -112,10 +112,12 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    // The dashboard canvas stretches beyond the design width, so the
-    // header keeps its 68/412 relative position: 68 * 2000/412 ~= 330.
+    // scale = min(2000/412, 3000/924, 1.5) = 1.5 -> artboard 618x1386,
+    // centered horizontally at x = (2000-618)/2 = 691; header at artboard
+    // rel x68 -> 691 + 68*1.5 = 793.
     final header = tester.getRect(find.text('Profile').first);
-    expect(header.left, closeTo(68 * 2000 / 412, 2));
+    expect(header.left, closeTo(793, 2));
+    expect(header.top, closeTo(20 * 1.5, 2));
   });
 
   testWidgets('Add Products nav scales with the scrollable artboard', (

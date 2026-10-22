@@ -75,7 +75,10 @@ void main() {
     expect(rectOf(find.text('Active')).top, closeTo(327, 6));
     expect(rectOf(find.text('Add another bank account')).left, closeTo(124, 3));
     expect(rectOf(find.text('Add another bank account')).top, closeTo(421, 6));
-    expect(rectOf(find.text('Add another bank account')).center.dx, closeTo(216.5, 6));
+    expect(
+      rectOf(find.text('Add another bank account')).center.dx,
+      closeTo(216.5, 6),
+    );
   });
 
   testWidgets('the withdrawals note is centred under the add row', (
@@ -112,13 +115,13 @@ void main() {
   testWidgets('the bank details row of the profile opens this screen', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(412, 980);
+    tester.view.physicalSize = const Size(412, 924);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tapAt(const Offset(120, 780));
+    await tester.tap(find.text('Bank Details'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BankDetailsScreen), findsOneWidget);

@@ -17,10 +17,7 @@ void main() {
 
     expect(find.text('Verification (KYC)'), findsOneWidget);
     expect(find.text('Verified Seller'), findsOneWidget);
-    expect(
-      find.text('Buyer see a green tick on your profile'),
-      findsOneWidget,
-    );
+    expect(find.text('Buyer see a green tick on your profile'), findsOneWidget);
     expect(find.text('Documents'), findsOneWidget);
     expect(find.text('Aadhaar Card'), findsOneWidget);
     expect(find.text('4821'), findsOneWidget);
@@ -52,8 +49,7 @@ void main() {
     expect(rectOf(find.text('Verified Seller')).top, closeTo(105, 6));
     expect(
       rectOf(find.text('Buyer see a green tick on your profile')).top,
-      closeTo(133,
-          4),
+      closeTo(133, 4),
     );
     expect(rectOf(find.text('Documents')).left, closeTo(46, 3));
     expect(rectOf(find.text('Documents')).top, closeTo(199, 4));
@@ -94,13 +90,13 @@ void main() {
   testWidgets('the verification row of the profile opens this screen', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(412, 980);
+    tester.view.physicalSize = const Size(412, 924);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tapAt(const Offset(120, 722));
+    await tester.tap(find.text('Verification (KYC)'));
     await tester.pumpAndSettle();
 
     expect(find.byType(VerificationKycScreen), findsOneWidget);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/order_delivery_screen.dart';
+import 'package:seller_app/screens/order_pickup_code_screen.dart';
 
 Future<void> pumpDelivery(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -156,26 +157,67 @@ void main() {
     }
   });
 
-  testWidgets('a short slide springs back and a full one settles', (
+  testWidgets(
+    'a short slide springs back and a full one opens the pickup code',
+    (tester) async {
+      await pumpDelivery(tester);
+
+      final origin = tester.getTopLeft(find.byType(MaterialApp));
+      Rect rectOf(Finder finder) =>
+          tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+      expect(rectOf(slideArrow()).left, closeTo(40, 2));
+
+      await tester.drag(slideArrow(), const Offset(50, 0));
+      await tester.pumpAndSettle();
+      expect(rectOf(slideArrow()).left, closeTo(40, 2));
+
+      await tester.drag(slideArrow(), const Offset(400, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
+      expect(find.text('Enter pickup code'), findsOneWidget);
+    },
+  );
+
+  testWidgets('swiping anywhere on the bar opens the pickup code', (
     tester,
   ) async {
     await pumpDelivery(tester);
 
-    final origin = tester.getTopLeft(find.byType(MaterialApp));
-    Rect rectOf(Finder finder) =>
-        tester.getRect(finder).translate(-origin.dx, -origin.dy);
-
-    expect(rectOf(slideArrow()).left, closeTo(40, 2));
-
-    await tester.drag(slideArrow(), const Offset(50, 0));
+    await tester.drag(
+      find.text('Slide when the buyer arrives'),
+      const Offset(320, 0),
+    );
     await tester.pumpAndSettle();
-    expect(rectOf(slideArrow()).left, closeTo(40, 2));
 
-    await tester.drag(slideArrow(), const Offset(400, 0));
-    await tester.pumpAndSettle();
-    expect(rectOf(slideArrow()).left, closeTo(346, 2));
-    expect(find.byType(OrderDeliveryScreen), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
   });
+
+  testWidgets(
+    'a diagonal swipe that starts vertical still opens the pickup code',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderDeliveryScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Slide when the buyer arrives'));
+      await tester.pumpAndSettle();
+
+      final TestGesture gesture = await tester.startGesture(
+        tester.getCenter(find.text('Slide when the buyer arrives')),
+      );
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(320, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
+    },
+  );
 
   testWidgets('tapping the slide settles the knob without navigating', (
     tester,

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/profile_shell.dart';
-import 'add_products_screen.dart';
 import 'profile_app.dart';
 import 'profile_screen.dart';
 import 'review_ratings_page.dart';
@@ -32,8 +31,6 @@ class ProfileBusinessScreen extends StatelessWidget {
         MaterialPageRoute(builder: (_) => const ProfileAppScreen()),
         (route) => false,
       ),
-      onAddProducts: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const AddProductsScreen())),
       listCard: ProfileListCard(
         rows: [
           ProfileListRow(

@@ -94,7 +94,7 @@ class BottomNavBar extends StatelessWidget {
           )),
           Positioned(
             left: (designWidth - 66) / 2,
-            top: -2,
+            top: -22,
             child: GestureDetector(
               onTap: onAddTap,
               child: Container(

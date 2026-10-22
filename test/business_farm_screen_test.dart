@@ -80,13 +80,13 @@ void main() {
   testWidgets('the business and farm row of the profile opens this screen', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(412, 980);
+    tester.view.physicalSize = const Size(412, 924);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tapAt(const Offset(120, 664));
+    await tester.tap(find.text('Business & Farm'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BusinessFarmScreen), findsOneWidget);

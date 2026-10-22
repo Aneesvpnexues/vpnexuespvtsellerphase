@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
-import 'order_pickup_success_screen.dart';
+import '../widgets/slide_drag_detector.dart';
 
 /// Order Details ├óΓé¼” pickup code entry state. Static replica of Zeplin
 /// "Android Compact - 154".
@@ -764,20 +765,66 @@ class _CodeCard extends StatelessWidget {
   }
 }
 
-class _ContinueButton extends StatelessWidget {
+class _ContinueButton extends StatefulWidget {
   const _ContinueButton();
 
   @override
+  State<_ContinueButton> createState() => _ContinueButtonState();
+}
+
+class _ContinueButtonState extends State<_ContinueButton>
+    with SingleTickerProviderStateMixin {
+  static const double _start = 4;
+  static const double _end = 310;
+  static const double _travel = _end - _start;
+  static const double _threshold = _start + _travel * 0.3;
+
+  late final AnimationController _controller;
+  double _knobX = _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(() {
+          setState(() {
+            _knobX = _start + _travel * _controller.value;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _controller.stop();
+    setState(() {
+      _knobX = (_knobX + details.delta.dx).clamp(_start, _end);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
+      setState(() => _knobX = _end);
+      goToOrderPickupSuccess(context);
+      return;
+    }
+    _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
+    _controller.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const OrderPickupSuccessScreen(),
-          ),
-        );
-      },
+    return SlideDragDetector(
+      onTap: () => goToOrderPickupSuccess(context),
+      onUpdate: _onDragUpdate,
+      onEnd: _onDragEnd,
       child: Container(
         width: 364,
         height: 58,
@@ -791,7 +838,7 @@ class _ContinueButton extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              left: 4,
+              left: _knobX,
               top: 4,
               child: Container(
                 alignment: Alignment.center,

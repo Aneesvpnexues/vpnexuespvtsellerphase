@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../screens/add_product_screen.dart';
 import '../screens/add_products_screen.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
 import '../screens/my_orders_screen.dart';
 import '../screens/my_products_screen.dart';
-import '../screens/order_accepted_screen.dart';
 import '../screens/order_delivery_screen.dart';
 import '../screens/order_pickup_code_screen.dart';
 import '../screens/order_pickup_success_screen.dart';
@@ -35,7 +33,6 @@ abstract final class AppRoutes {
   static const String bankDetails = '/bank-details';
   static const String settings = '/settings';
   static const String addProduct = '/add-product';
-  static const String orderAccepted = '/order-accepted';
   static const String orderReady = '/order-ready';
   static const String orderDelivery = '/order-delivery';
   static const String orderPrivew = '/order-privew';
@@ -47,7 +44,6 @@ abstract final class AppRoutes {
   static const String businessDetails = '/business-details';
   static const String verifyDetails = '/verify-details';
   static const String bankDetaile = '/bank-detaile';
-  static const String addProducts = '/add-products';
 }
 
 /// Switches the bottom navigation tab.
@@ -126,17 +122,7 @@ void goToAddProduct(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.addProduct),
-      builder: (_) => const AddProductScreen(),
-    ),
-  );
-}
-
-/// Opens the accepted-order state when the seller accepts an order.
-void goToOrderAccepted(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: AppRoutes.orderAccepted),
-      builder: (_) => const OrderAcceptedScreen(),
+      builder: (_) => const AddProductsScreen(),
     ),
   );
 }
@@ -247,16 +233,6 @@ void goToBankDetaile(BuildContext context) {
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.bankDetaile),
       builder: (_) => const BankDetaileScreen(),
-    ),
-  );
-}
-
-/// Opens the responsive Add Products screen used by the profile FAB tab bar.
-void goToAddProducts(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: AppRoutes.addProducts),
-      builder: (_) => const AddProductsScreen(),
     ),
   );
 }

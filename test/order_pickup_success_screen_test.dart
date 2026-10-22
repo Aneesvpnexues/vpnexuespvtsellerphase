@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/order_pickup_success_screen.dart';
+import 'package:seller_app/screens/order_privew.dart';
 
 const List<String> _assets = [
   'assets/order/ic_back.png',
@@ -80,10 +81,7 @@ void main() {
     expect(rectOf(find.text('3')).center.dx, closeTo(196.4, 3));
     expect(rectOf(find.text('25 Mar 2024')).center.dx, closeTo(300, 3));
     expect(rectOf(find.text('Added to your earnings')).left, closeTo(155, 3));
-    expect(
-      rectOf(find.text('Added to your earnings')).top,
-      closeTo(645.4, 3),
-    );
+    expect(rectOf(find.text('Added to your earnings')).top, closeTo(645.4, 3));
 
     final Rect button = rectOf(find.text('Back to orders'));
     expect(button.center.dx, closeTo(212.25, 3));
@@ -94,13 +92,34 @@ void main() {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const MaterialApp(home: OrderPickupSuccessScreen()));
+    await tester.pumpWidget(
+      const MaterialApp(home: OrderPickupSuccessScreen()),
+    );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     final double scale = 360 / 412;
     final Rect title = tester.getRect(find.text('Order Details'));
     expect(title.left, closeTo(68 * scale, 1.5));
+  });
+
+  testWidgets('swiping back to orders opens the order preview', (tester) async {
+    await pumpPickupSuccess(tester);
+
+    await tester.drag(find.text('Back to orders'), const Offset(320, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderPrivewScreen), findsOneWidget);
+  });
+
+  testWidgets('a short swipe on the bar springs back', (tester) async {
+    await pumpPickupSuccess(tester);
+
+    await tester.drag(find.text('Back to orders'), const Offset(40, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderPrivewScreen), findsNothing);
+    expect(find.text('Back to orders'), findsOneWidget);
   });
 
   testWidgets('golden: 165 pickup success at 412x868', (tester) async {

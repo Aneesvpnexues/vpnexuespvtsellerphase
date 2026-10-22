@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/slide_drag_detector.dart';
 
 /// Order Details ├óΓé¼” pickup completed state. Static replica of Zeplin
 /// "Android Compact - 165".
@@ -779,14 +781,66 @@ class _WalletPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _BackButton extends StatelessWidget {
+class _BackButton extends StatefulWidget {
   const _BackButton();
 
   @override
+  State<_BackButton> createState() => _BackButtonState();
+}
+
+class _BackButtonState extends State<_BackButton>
+    with SingleTickerProviderStateMixin {
+  static const double _start = 3;
+  static const double _end = 311;
+  static const double _travel = _end - _start;
+  static const double _threshold = _start + _travel * 0.3;
+
+  late final AnimationController _controller;
+  double _knobX = _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(() {
+          setState(() {
+            _knobX = _start + _travel * _controller.value;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _controller.stop();
+    setState(() {
+      _knobX = (_knobX + details.delta.dx).clamp(_start, _end);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
+      setState(() => _knobX = _end);
+      goToOrderPrivew(context);
+      return;
+    }
+    _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
+    _controller.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return SlideDragDetector(
       onTap: () => Navigator.of(context).maybePop(),
+      onUpdate: _onDragUpdate,
+      onEnd: _onDragEnd,
       child: Container(
         width: 364,
         height: 58,
@@ -796,18 +850,11 @@ class _BackButton extends StatelessWidget {
             colors: [Color(0xFF0E3B1F), AppColors.orderSlideEnd],
           ),
           border: Border.all(color: const Color(0x14000000)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x21000000), offset: Offset(0, 12)),
-            BoxShadow(color: Color(0x01000000), offset: Offset(0, 8)),
-            BoxShadow(color: Color(0x02000000), offset: Offset(0, 6)),
-            BoxShadow(color: Color(0x01000000), offset: Offset(0, 4)),
-            BoxShadow(color: Color(0x02000000), offset: Offset(0, 2)),
-          ],
         ),
         child: Stack(
           children: [
             Positioned(
-              left: 3,
+              left: _knobX,
               top: 3,
               child: Container(
                 alignment: Alignment.center,

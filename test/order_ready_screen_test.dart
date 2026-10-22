@@ -151,6 +151,18 @@ void main() {
     expect(find.byType(OrderDeliveryScreen), findsOneWidget);
   });
 
+  testWidgets('swiping anywhere on the bar opens 141', (tester) async {
+    await pumpReady(tester);
+
+    await tester.drag(
+      find.text('Slide to mark as ready'),
+      const Offset(320, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderDeliveryScreen), findsOneWidget);
+  });
+
   testWidgets('tapping the slide settles the knob without navigating', (
     tester,
   ) async {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/add_product_screen.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
@@ -58,7 +57,7 @@ void main() {
       // "Orders" appears in the stats card and the nav label.
       expect(find.text('Orders'), findsNWidgets(2));
       expect(find.text('₹2,480'), findsOneWidget);
-      expect(find.text('4.8'), findsOneWidget);
+      expect(find.text('4.8 ★'), findsOneWidget);
       expect(find.text('Rating'), findsOneWidget);
       // Tab bar.
       expect(find.text('Account'), findsOneWidget);
@@ -75,8 +74,7 @@ void main() {
       expect(find.text('Verification (KYC)'), findsOneWidget);
       expect(find.text('Aadhaar, PAN, farm proof'), findsOneWidget);
       expect(find.text('Bank Details'), findsOneWidget);
-      expect(find.text('SBI'), findsOneWidget);
-      expect(find.text('3421'), findsOneWidget);
+      expect(find.text('SBI •••• 3421'), findsOneWidget);
       // Bottom nav ("Orders" also appears in the stats card).
       expect(find.text('Home'), findsOneWidget);
       expect(find.text('Products'), findsOneWidget);
@@ -92,21 +90,29 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Zeplin 151 stacks the balance card, the seller card, the tab bar and
-      // the account list top to bottom.
-      final balance = rectOf(find.text('Withdrawal balance'));
-      final seller = rectOf(find.text('Ramesh Kumar'));
-      final accountTab = rectOf(find.text('Account'));
-      final personal = rectOf(find.text('Personal Details'));
+      // Balance card: x 24..388, y 65..315 (design 121..371, top trim -56).
+      final balance = rectOf(find.text('Withdrawal balance').hitTestable());
+      expect(balance.left, closeTo(48, 1));
 
-      expect(balance.bottom, lessThan(seller.top));
-      expect(seller.bottom, lessThan(accountTab.top));
-      expect(accountTab.bottom, lessThan(personal.top));
-      expect(rectOf(find.text('Withdraw')).height, greaterThan(0));
+      final withdraw = rectOf(find.text('Withdraw'));
+      // Label is vertically centered inside the y 255..292 button.
+      expect(withdraw.top, closeTo(255 + 11, 3));
+
+      // Seller card top at y 336 (design 392, -56).
+      final seller = rectOf(find.text('Ramesh Kumar'));
+      expect(seller.top, closeTo(336 + 22, 2));
+
+      // Tab bar top at y 502 (design 558, -56).
+      final accountTab = rectOf(find.text('Account'));
+      expect(accountTab.top, closeTo(502 + 12, 3));
+
+      // List card top at y 560 (design 616, -56).
+      final personal = rectOf(find.text('Personal Details'));
+      expect(personal.top, closeTo(560 + 14, 4));
 
       // Bottom nav present.
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Products'), findsOneWidget);
+      expect(find.byType(BottomNavBar), findsOneWidget);
+      expect(find.byType(ProfileShell), findsOneWidget);
     });
 
     testWidgets('Business tab pushes the Business screen', (tester) async {
@@ -190,28 +196,31 @@ void main() {
     testWidgets('FAB opens AddProductsScreen', (tester) async {
       await pumpProfile(tester, const ProfileScreen());
 
-      await tester.tap(
-        find.image(const AssetImage('assets/profile/ic_add.png')),
-      );
+      await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AddProductScreen), findsOneWidget);
       expect(find.text('Add Products'), findsOneWidget);
+      expect(find.text('Product Photos'), findsOneWidget);
     });
 
     testWidgets('bottom nav tabs are fully wired', (tester) async {
+      Finder navText(String label) => find.descendant(
+        of: find.byType(BottomNavBar),
+        matching: find.text(label),
+      );
+
       await pumpProfile(tester, const ProfileScreen());
-      await tester.tapAt(const Offset(54, 890));
+      await tester.tap(navText('Home'));
       await tester.pumpAndSettle();
       expect(find.byType(SellerHomeScreen), findsOneWidget);
 
       await pumpProfile(tester, const ProfileScreen());
-      await tester.tapAt(const Offset(130, 890));
+      await tester.tap(navText('Products'));
       await tester.pumpAndSettle();
       expect(find.byType(MyProductsScreen), findsOneWidget);
 
       await pumpProfile(tester, const ProfileScreen());
-      await tester.tapAt(const Offset(294, 890));
+      await tester.tap(navText('Orders'));
       await tester.pumpAndSettle();
       expect(find.byType(MyOrdersScreen), findsOneWidget);
     });
@@ -730,6 +739,23 @@ void main() {
           reason: '$label right ${rect.right}',
         );
       }
+    });
+
+    testWidgets('bottom nav opens the Home and Products tabs', (tester) async {
+      Finder navText(String label) => find.descendant(
+        of: find.byType(BottomNavBar),
+        matching: find.text(label),
+      );
+
+      await pumpAddProducts(tester);
+      await tester.tap(navText('Home'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
+
+      await pumpAddProducts(tester);
+      await tester.tap(navText('Products'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyProductsScreen), findsOneWidget);
     });
 
     testWidgets('quantity stepper increments and decrements', (tester) async {

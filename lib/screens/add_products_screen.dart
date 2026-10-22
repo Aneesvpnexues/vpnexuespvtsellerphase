@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/artboard.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'my_orders_screen.dart';
@@ -466,6 +467,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         height: BottomNavBar.barHeight,
                         child: BottomNavBar(
                           selectedIndex: null,
+                          onHomeTap: () => goToHome(context),
+                          onProductsTap: () => goToProducts(context),
                           onAddTap: () => Navigator.of(context).maybePop(),
                           onOrdersTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(

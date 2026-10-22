@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
-import 'add_products_screen.dart';
 import 'personal_details_screen.dart';
 import 'profile_business.dart';
 import 'profile_screen.dart';
@@ -33,8 +32,6 @@ class ProfileAppScreen extends StatelessWidget {
         (route) => false,
       ),
       onAppTab: () {},
-      onAddProducts: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const AddProductsScreen())),
       onPersonalDetails: () => Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => const PersonalDetailsScreen())),
