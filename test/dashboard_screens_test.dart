@@ -4,11 +4,13 @@ import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
+import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/wallet_page.dart';
@@ -199,6 +201,28 @@ void main() {
 
       expect(find.text('Add Products'), findsOneWidget);
       expect(find.text('Product Photos'), findsOneWidget);
+    });
+
+    testWidgets('bottom nav tabs are fully wired', (tester) async {
+      Finder navText(String label) => find.descendant(
+        of: find.byType(BottomNavBar),
+        matching: find.text(label),
+      );
+
+      await pumpProfile(tester, const ProfileScreen());
+      await tester.tap(navText('Home'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
+
+      await pumpProfile(tester, const ProfileScreen());
+      await tester.tap(navText('Products'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyProductsScreen), findsOneWidget);
+
+      await pumpProfile(tester, const ProfileScreen());
+      await tester.tap(navText('Orders'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyOrdersScreen), findsOneWidget);
     });
 
     testWidgets('layout scales down instead of overflowing', (tester) async {

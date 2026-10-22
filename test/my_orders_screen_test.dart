@@ -1,6 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
+import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/profile_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
+import 'package:seller_app/widgets/bottom_nav_bar.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 1154);
@@ -42,6 +47,56 @@ void main() {
     expect(rectOf(find.text('My Orders')).top, closeTo(24, 3));
     expect(rectOf(find.text('Akash Stores')).left, closeTo(89, 2));
     expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
+  });
+
+  testWidgets('the bottom nav is pinned with Orders selected', (tester) async {
+    await pumpScreen(tester);
+
+    final nav = tester.widget<BottomNavBar>(find.byType(BottomNavBar));
+    expect(nav.selectedIndex, 2);
+    expect(tester.getRect(find.byType(BottomNavBar)).bottom, closeTo(1154, 1));
+  });
+
+  Finder navText(String label) => find.descendant(
+    of: find.byType(BottomNavBar),
+    matching: find.text(label),
+  );
+
+  testWidgets('the bottom nav opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(navText('Home'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
+  testWidgets('the bottom nav opens the Products tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(navText('Products'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MyProductsScreen), findsOneWidget);
+  });
+
+  testWidgets('the bottom nav opens the Profile tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(navText('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+  });
+
+  testWidgets('the bottom nav FAB opens the add product flow', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomNavBar),
+        matching: find.byIcon(Icons.add),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AddProductsScreen), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

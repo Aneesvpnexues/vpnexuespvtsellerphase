@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
+import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
 import 'order_details_screen.dart';
 import 'order_privew.dart';
@@ -33,111 +34,132 @@ class MyOrdersScreen extends StatelessWidget {
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
-          child: Stack(
-            children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
-              const Positioned(
-                left: 74,
-                top: 73,
-                child: Text('My Orders', style: AppTextStyles.productsTitle),
-              ),
-              const Positioned(left: 24, top: 122, child: _SearchSort()),
-              const Positioned(left: 24, top: 181, child: _OrderTabs()),
-              Positioned(
-                left: 24,
-                top: 241,
-                child: _OrderBlock(
-                  store: 'Akash Stores',
-                  orderId: '#NX4582',
-                  date: '12 Mar 2024, 10:30 AM',
-                  iconBg: AppColors.orderYellowBg,
-                  items: '4 items',
-                  thumbs: 3,
-                  extra: '+1',
-                  price: '\u20B92,400',
-                  status: 'Accepted',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(
-                        name: AppRoutes.orderDetails,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DesignCanvas(
+                designWidth: designWidth,
+                designHeight: designHeight,
+                trimTop: trimTop,
+                child: Stack(
+                  children: [
+                    const Positioned(left: 24, top: 73, child: _BackCircle()),
+                    const Positioned(
+                      left: 74,
+                      top: 73,
+                      child: Text(
+                        'My Orders',
+                        style: AppTextStyles.productsTitle,
                       ),
-                      builder: (_) => const OrderDetailsScreen(),
                     ),
-                  ),
+                    const Positioned(left: 24, top: 122, child: _SearchSort()),
+                    const Positioned(left: 24, top: 181, child: _OrderTabs()),
+                    Positioned(
+                      left: 24,
+                      top: 241,
+                      child: _OrderBlock(
+                        store: 'Akash Stores',
+                        orderId: '#NX4582',
+                        date: '12 Mar 2024, 10:30 AM',
+                        iconBg: AppColors.orderYellowBg,
+                        items: '4 items',
+                        thumbs: 3,
+                        extra: '+1',
+                        price: '\u20B92,400',
+                        status: 'Accepted',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: AppRoutes.orderDetails,
+                            ),
+                            builder: (_) => const OrderDetailsScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 407,
+                      child: _OrderBlock(
+                        store: 'Hotel Green Leaf',
+                        orderId: '#NX4581',
+                        date: '12 Mar 2024, 4:20 AM',
+                        iconBg: AppColors.orderBlueBg,
+                        items: '2 items',
+                        thumbs: 2,
+                        extra: '',
+                        price: '\u20B91,400',
+                        status: 'Accepted',
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 573,
+                      child: _OrderBlock(
+                        store: 'Annapoorna Mess',
+                        orderId: '#NX4580',
+                        date: '9 Mar 2024, 1:20 PM',
+                        iconBg: AppColors.darkCard,
+                        iconColor: Colors.white,
+                        items: '5 items',
+                        thumbs: 3,
+                        extra: '+2',
+                        price: '\u20B93,400',
+                        status: 'Pending',
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 739,
+                      child: _OrderBlock(
+                        store: 'Daily Needs',
+                        orderId: '#NX4579',
+                        date: '12 Mar 2024, 4:20 AM',
+                        iconBg: AppColors.attentionRedBg,
+                        items: '4 items',
+                        thumbs: 3,
+                        extra: '+1',
+                        price: '\u20B93,000',
+                        status: 'Confirmed',
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 905,
+                      child: _OrderBlock(
+                        store: 'Daily Needs',
+                        orderId: '#NX4579',
+                        date: '12 Mar 2024, 4:20 AM',
+                        iconBg: AppColors.orderPurpleBg,
+                        items: '3 items',
+                        thumbs: 3,
+                        extra: '',
+                        price: '\u20B93,500',
+                        status: 'Delivered',
+                        onTap: openOrderPrivew,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Positioned(
-                left: 24,
-                top: 407,
-                child: _OrderBlock(
-                  store: 'Hotel Green Leaf',
-                  orderId: '#NX4581',
-                  date: '12 Mar 2024, 4:20 AM',
-                  iconBg: AppColors.orderBlueBg,
-                  items: '2 items',
-                  thumbs: 2,
-                  extra: '',
-                  price: '\u20B91,400',
-                  status: 'Accepted',
-                  onTap: openOrderPrivew,
-                ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PinnedBottomNav(
+                selectedIndex: 2,
+                onHomeTap: () => goToHome(context),
+                onProductsTap: () => goToProducts(context),
+                onAddTap: () => goToAddProduct(context),
+                onOrdersTap: () => goToOrders(context),
+                onProfileTap: () => goToProfile(context),
               ),
-              Positioned(
-                left: 24,
-                top: 573,
-                child: _OrderBlock(
-                  store: 'Annapoorna Mess',
-                  orderId: '#NX4580',
-                  date: '9 Mar 2024, 1:20 PM',
-                  iconBg: AppColors.darkCard,
-                  iconColor: Colors.white,
-                  items: '5 items',
-                  thumbs: 3,
-                  extra: '+2',
-                  price: '\u20B93,400',
-                  status: 'Pending',
-                  onTap: openOrderPrivew,
-                ),
-              ),
-              Positioned(
-                left: 24,
-                top: 739,
-                child: _OrderBlock(
-                  store: 'Daily Needs',
-                  orderId: '#NX4579',
-                  date: '12 Mar 2024, 4:20 AM',
-                  iconBg: AppColors.attentionRedBg,
-                  items: '4 items',
-                  thumbs: 3,
-                  extra: '+1',
-                  price: '\u20B93,000',
-                  status: 'Confirmed',
-                  onTap: openOrderPrivew,
-                ),
-              ),
-              Positioned(
-                left: 24,
-                top: 905,
-                child: _OrderBlock(
-                  store: 'Daily Needs',
-                  orderId: '#NX4579',
-                  date: '12 Mar 2024, 4:20 AM',
-                  iconBg: AppColors.orderPurpleBg,
-                  items: '3 items',
-                  thumbs: 3,
-                  extra: '',
-                  price: '\u20B93,500',
-                  status: 'Delivered',
-                  onTap: openOrderPrivew,
-                ),
-              ),
-              const Positioned(left: 0, top: 1075, child: _BottomNavOrders()),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -630,148 +652,6 @@ class _OrderStatusPill extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _BottomNavOrders extends StatelessWidget {
-  const _BottomNavOrders();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 412,
-      height: 79,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 412,
-              height: 79,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0x24000000))),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 36,
-            top: 47,
-            child: Text(
-              'Home',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 102,
-            top: 47,
-            child: Text(
-              'Products',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 266,
-            top: 47,
-            child: Text(
-              'Orders',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.limeLight,
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 346,
-            top: 47,
-            child: Text(
-              'Profile',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 42,
-            top: 19,
-            child: Icon(
-              Icons.home_outlined,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          const Positioned(
-            left: 116,
-            top: 19,
-            child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000)),
-          ),
-          const Positioned(
-            left: 276,
-            top: 19,
-            child: Icon(
-              Icons.receipt_long,
-              size: 21,
-              color: AppColors.limeLight,
-            ),
-          ),
-          const Positioned(
-            left: 353,
-            top: 19,
-            child: Icon(
-              Icons.person_outline,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          Positioned(
-            left: 178,
-            top: 0,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.limeLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 7),
-              ),
-              child: const Icon(Icons.add, size: 24, color: AppColors.darkCard),
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToHome(context), width: 60),
-          ),
-          Positioned(
-            left: 100,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProducts(context), width: 60),
-          ),
-          Positioned(
-            left: 264,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToOrders(context), width: 60),
-          ),
-          Positioned(
-            left: 344,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProfile(context), width: 60),
-          ),
-        ],
       ),
     );
   }

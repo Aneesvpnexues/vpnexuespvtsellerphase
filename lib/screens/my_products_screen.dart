@@ -1,10 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
+import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
-import 'my_orders_screen.dart';
 
 /// My Products list ΓÇö static replica of Zeplin
 /// "Android Compact - 123" (project 6a8d49709e27bd8b35213d35,
@@ -25,86 +25,80 @@ class MyProductsScreen extends StatelessWidget {
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
-          child: Stack(
-            children: [
-              const Positioned(left: 16, top: 68, child: _BackCircle()),
-              const Positioned(
-                left: 58,
-                top: 68,
-                child: Text('My Products', style: AppTextStyles.productsTitle),
-              ),
-              const Positioned(left: 24, top: 120, child: _SearchBar()),
-              const Positioned(left: 24, top: 184, child: _FilterTabs()),
-              const Positioned(
-                left: 24,
-                top: 247,
-                child: _ProductRow(top: 247, status: _Status.active),
-              ),
-              const Positioned(
-                left: 24,
-                top: 376,
-                child: _ProductRow(top: 376, status: _Status.outOfStock),
-              ),
-              const Positioned(
-                left: 24,
-                top: 505,
-                child: _ProductRow(top: 505, status: _Status.active),
-              ),
-              const Positioned(
-                left: 24,
-                top: 634,
-                child: _ProductRow(
-                  top: 634,
-                  status: _Status.draft,
-                  showPublish: true,
-                ),
-              ),
-              const Positioned(left: 24, top: 765, child: _PromoCard()),
-              const Positioned(left: 0, top: 927, child: _BottomNavProducts()),
-              Positioned(
-                left: 250,
-                top: 940,
-                width: 80,
-                height: 60,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(name: AppRoutes.orders),
-                      builder: (_) => const MyOrdersScreen(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DesignCanvas(
+                designWidth: designWidth,
+                designHeight: designHeight,
+                trimTop: trimTop,
+                child: Stack(
+                  children: [
+                    const Positioned(left: 16, top: 68, child: _BackCircle()),
+                    const Positioned(
+                      left: 58,
+                      top: 68,
+                      child: Text(
+                        'My Products',
+                        style: AppTextStyles.productsTitle,
+                      ),
                     ),
-                  ),
-                  child: const SizedBox.expand(),
+                    const Positioned(left: 24, top: 120, child: _SearchBar()),
+                    const Positioned(left: 24, top: 184, child: _FilterTabs()),
+                    const Positioned(
+                      left: 24,
+                      top: 247,
+                      child: _ProductRow(top: 247, status: _Status.active),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 376,
+                      child: _ProductRow(top: 376, status: _Status.outOfStock),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 505,
+                      child: _ProductRow(top: 505, status: _Status.active),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 634,
+                      child: _ProductRow(
+                        top: 634,
+                        status: _Status.draft,
+                        showPublish: true,
+                      ),
+                    ),
+                    const Positioned(left: 24, top: 765, child: _PromoCard()),
+                    Positioned(
+                      left: 43,
+                      top: 856,
+                      width: 96,
+                      height: 23,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => goToAddProduct(context),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Positioned(
-                left: 178,
-                top: 927,
-                width: 56,
-                height: 56,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => goToAddProduct(context),
-                  child: const SizedBox.expand(),
-                ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PinnedBottomNav(
+                selectedIndex: 1,
+                onHomeTap: () => goToHome(context),
+                onProductsTap: () => goToProducts(context),
+                onAddTap: () => goToAddProduct(context),
+                onOrdersTap: () => goToOrders(context),
+                onProfileTap: () => goToProfile(context),
               ),
-              Positioned(
-                left: 43,
-                top: 856,
-                width: 96,
-                height: 23,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => goToAddProduct(context),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -737,148 +731,6 @@ class _PromoWave extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.all(Radius.circular(height / 2)),
-      ),
-    );
-  }
-}
-
-class _BottomNavProducts extends StatelessWidget {
-  const _BottomNavProducts();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 412,
-      height: 80,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 412,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0x24000000))),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 36,
-            top: 47,
-            child: Text(
-              'Home',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 102,
-            top: 47,
-            child: Text(
-              'Products',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.limeLight,
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 266,
-            top: 47,
-            child: Text(
-              'Orders',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 346,
-            top: 47,
-            child: Text(
-              'Profile',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 42,
-            top: 20,
-            child: Icon(
-              Icons.home_outlined,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          const Positioned(
-            left: 116,
-            top: 20,
-            child: Icon(Icons.grid_view, size: 22, color: AppColors.limeLight),
-          ),
-          const Positioned(
-            left: 276,
-            top: 20,
-            child: Icon(
-              Icons.receipt_long_outlined,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          const Positioned(
-            left: 353,
-            top: 20,
-            child: Icon(
-              Icons.person_outline,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          Positioned(
-            left: 178,
-            top: 0,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.limeLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 7),
-              ),
-              child: const Icon(Icons.add, size: 24, color: AppColors.darkCard),
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToHome(context), width: 60),
-          ),
-          Positioned(
-            left: 100,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProducts(context), width: 60),
-          ),
-          Positioned(
-            left: 264,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToOrders(context), width: 60),
-          ),
-          Positioned(
-            left: 344,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProfile(context), width: 60),
-          ),
-        ],
       ),
     );
   }

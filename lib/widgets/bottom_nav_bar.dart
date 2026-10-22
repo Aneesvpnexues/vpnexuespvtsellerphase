@@ -132,6 +132,64 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
+/// [BottomNavBar] pinned to the viewport bottom for the scrollable dashboard
+/// screens (Home, My Products, My Orders).
+///
+/// The bar is laid out at its 412x88 design size and scaled by the viewport
+/// width, matching the [DesignCanvas] content scale, so the tabs stay the same
+/// size as the artboard on every device.
+class PinnedBottomNav extends StatelessWidget {
+  const PinnedBottomNav({
+    super.key,
+    this.selectedIndex,
+    this.onHomeTap,
+    this.onProductsTap,
+    this.onAddTap,
+    this.onOrdersTap,
+    this.onProfileTap,
+    this.maxScale = 1.0,
+  });
+
+  final int? selectedIndex;
+  final VoidCallback? onHomeTap;
+  final VoidCallback? onProductsTap;
+  final VoidCallback? onAddTap;
+  final VoidCallback? onOrdersTap;
+  final VoidCallback? onProfileTap;
+  final double maxScale;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = (constraints.maxWidth / BottomNavBar.designWidth).clamp(
+          0.4,
+          maxScale,
+        );
+        return SizedBox(
+          width: BottomNavBar.designWidth * scale,
+          height: BottomNavBar.barHeight * scale,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: SizedBox(
+              width: BottomNavBar.designWidth,
+              height: BottomNavBar.barHeight,
+              child: BottomNavBar(
+                selectedIndex: selectedIndex,
+                onHomeTap: onHomeTap,
+                onProductsTap: onProductsTap,
+                onAddTap: onAddTap,
+                onOrdersTap: onOrdersTap,
+                onProfileTap: onProfileTap,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,

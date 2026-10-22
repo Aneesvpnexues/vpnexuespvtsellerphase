@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
+import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
 import 'my_products_screen.dart';
 
@@ -27,119 +28,149 @@ class SellerHomeScreen extends StatelessWidget {
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
-          child: Stack(
-            children: [
-              const Positioned(left: 24, top: 68, child: _Greeting()),
-              const Positioned(
-                left: 331,
-                top: 74,
-                child: _HeaderIcon(icon: Icons.notifications_outlined),
-              ),
-              Positioned(
-                left: 363,
-                top: 74,
-                child: _HeaderIcon(
-                  icon: Icons.settings_outlined,
-                  onTap: () => goToSettings(context),
-                ),
-              ),
-              const Positioned(left: 25, top: 143, child: _ActiveOrdersCard()),
-              const Positioned(
-                left: 25,
-                top: 361,
-                child: _SectionTitle('My Products'),
-              ),
-              const Positioned(left: 349, top: 365, child: _ViewAll()),
-              const Positioned(
-                left: 25,
-                top: 389,
-                child: _ProductCard(
-                  name: 'Tomatoes',
-                  qty: '50 kg available',
-                  color: Color(0xFF7BAE5A),
-                ),
-              ),
-              const Positioned(
-                left: 187,
-                top: 389,
-                child: _ProductCard(
-                  name: 'Spinach',
-                  qty: '50 kg available',
-                  color: Color(0xFF4E8A3E),
-                ),
-              ),
-              const Positioned(left: 350, top: 389, child: _ProductCardSmall()),
-              const Positioned(
-                left: 25,
-                top: 597,
-                child: _SectionTitle('Sales Overview'),
-              ),
-              const Positioned(left: 318, top: 594, child: _MonthChip()),
-              const Positioned(left: 25, top: 628, child: _SalesCard()),
-              const Positioned(
-                left: 25,
-                top: 793,
-                child: _SectionTitle('Needs Attention'),
-              ),
-              const Positioned(
-                left: 24,
-                top: 818,
-                child: _AttentionRow(
-                  title: '2 New orders',
-                  subtitle: 'Hurry up',
-                  barColor: AppColors.attentionAmber,
-                  boxColor: AppColors.attentionAmberBg,
-                ),
-              ),
-              const Positioned(
-                left: 24,
-                top: 892,
-                child: _AttentionRow(
-                  title: 'Tomatoes low',
-                  subtitle: 'Only 10kg remaining',
-                  barColor: AppColors.attentionRed,
-                  boxColor: AppColors.attentionRedBg,
-                ),
-              ),
-              const Positioned(left: 0, top: 991, child: _BottomNav()),
-              Positioned(
-                left: 25,
-                top: 355,
-                width: 130,
-                height: 30,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(name: AppRoutes.products),
-                      builder: (_) => const MyProductsScreen(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DesignCanvas(
+                designWidth: designWidth,
+                designHeight: designHeight,
+                trimTop: trimTop,
+                child: Stack(
+                  children: [
+                    const Positioned(left: 24, top: 68, child: _Greeting()),
+                    const Positioned(
+                      left: 331,
+                      top: 74,
+                      child: _HeaderIcon(icon: Icons.notifications_outlined),
                     ),
-                  ),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-              Positioned(
-                left: 330,
-                top: 358,
-                width: 60,
-                height: 28,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(name: AppRoutes.products),
-                      builder: (_) => const MyProductsScreen(),
+                    Positioned(
+                      left: 363,
+                      top: 74,
+                      child: _HeaderIcon(
+                        icon: Icons.settings_outlined,
+                        onTap: () => goToSettings(context),
+                      ),
                     ),
-                  ),
-                  child: const SizedBox.expand(),
+                    const Positioned(
+                      left: 25,
+                      top: 143,
+                      child: _ActiveOrdersCard(),
+                    ),
+                    const Positioned(
+                      left: 25,
+                      top: 361,
+                      child: _SectionTitle('My Products'),
+                    ),
+                    const Positioned(left: 349, top: 365, child: _ViewAll()),
+                    Positioned(
+                      left: 25,
+                      top: 355,
+                      width: 130,
+                      height: 30,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: AppRoutes.products,
+                            ),
+                            builder: (_) => const MyProductsScreen(),
+                          ),
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 25,
+                      top: 389,
+                      child: _ProductCard(
+                        name: 'Tomatoes',
+                        qty: '50 kg available',
+                        color: Color(0xFF7BAE5A),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 187,
+                      top: 389,
+                      child: _ProductCard(
+                        name: 'Spinach',
+                        qty: '50 kg available',
+                        color: Color(0xFF4E8A3E),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 350,
+                      top: 389,
+                      child: _ProductCardSmall(),
+                    ),
+                    const Positioned(
+                      left: 25,
+                      top: 597,
+                      child: _SectionTitle('Sales Overview'),
+                    ),
+                    const Positioned(left: 318, top: 594, child: _MonthChip()),
+                    const Positioned(left: 25, top: 628, child: _SalesCard()),
+                    const Positioned(
+                      left: 25,
+                      top: 793,
+                      child: _SectionTitle('Needs Attention'),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 818,
+                      child: _AttentionRow(
+                        title: '2 New orders',
+                        subtitle: 'Hurry up',
+                        barColor: AppColors.attentionAmber,
+                        boxColor: AppColors.attentionAmberBg,
+                      ),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 892,
+                      child: _AttentionRow(
+                        title: 'Tomatoes low',
+                        subtitle: 'Only 10kg remaining',
+                        barColor: AppColors.attentionRed,
+                        boxColor: AppColors.attentionRedBg,
+                      ),
+                    ),
+                    Positioned(
+                      left: 330,
+                      top: 358,
+                      width: 60,
+                      height: 28,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: AppRoutes.products,
+                            ),
+                            builder: (_) => const MyProductsScreen(),
+                          ),
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PinnedBottomNav(
+                selectedIndex: 0,
+                onHomeTap: () => goToHome(context),
+                onProductsTap: () => goToProducts(context),
+                onAddTap: () => goToAddProduct(context),
+                onOrdersTap: () => goToOrders(context),
+                onProfileTap: () => goToProfile(context),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -830,144 +861,6 @@ class _AttentionRow extends StatelessWidget {
               size: 16,
               color: Color(0xFF8A8A8A),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 412,
-      height: 80,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 412,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0x24000000))),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 36,
-            top: 47,
-            child: Text(
-              'Home',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.limeLight,
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 102,
-            top: 47,
-            child: Text(
-              'Products',
-              style: TextStyle(fontSize: 12, color: Color(0x54000000)),
-            ),
-          ),
-          const Positioned(
-            left: 266,
-            top: 47,
-            child: Text(
-              'Orders',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 346,
-            top: 47,
-            child: Text(
-              'Profile',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x54000000),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 42,
-            top: 20,
-            child: Icon(
-              Icons.home_filled,
-              size: 21,
-              color: AppColors.limeLight,
-            ),
-          ),
-          const Positioned(
-            left: 116,
-            top: 20,
-            child: Icon(Icons.grid_view, size: 22, color: Color(0x54000000)),
-          ),
-          const Positioned(
-            left: 276,
-            top: 20,
-            child: Icon(
-              Icons.receipt_long_outlined,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          const Positioned(
-            left: 353,
-            top: 20,
-            child: Icon(
-              Icons.person_outline,
-              size: 21,
-              color: Color(0x54000000),
-            ),
-          ),
-          Positioned(
-            left: 178,
-            top: 0,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.limeLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 7),
-              ),
-              child: const Icon(Icons.add, size: 24, color: AppColors.darkCard),
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToHome(context), width: 60),
-          ),
-          Positioned(
-            left: 100,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProducts(context), width: 60),
-          ),
-          Positioned(
-            left: 264,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToOrders(context), width: 60),
-          ),
-          Positioned(
-            left: 344,
-            top: 10,
-            child: BottomNavTab(onTap: () => goToProfile(context), width: 60),
           ),
         ],
       ),

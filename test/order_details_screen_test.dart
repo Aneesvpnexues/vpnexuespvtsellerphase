@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
+import 'package:seller_app/widgets/bottom_nav_bar.dart';
 
 Future<void> pumpDetails(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 1501);
@@ -121,7 +122,12 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MyOrdersScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tapAt(const Offset(130, 1066));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomNavBar),
+        matching: find.text('Products'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(MyProductsScreen), findsOneWidget);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'app_navigation.dart';
 import 'artboard.dart';
 import 'bottom_nav_bar.dart';
 
@@ -93,7 +94,14 @@ class ProfileShell extends StatelessWidget {
             Positioned(
               left: 0,
               bottom: 0,
-              child: BottomNavBar(selectedIndex: 3, onAddTap: onAddProducts),
+              child: BottomNavBar(
+                selectedIndex: 3,
+                onHomeTap: () => goToHome(context),
+                onProductsTap: () => goToProducts(context),
+                onAddTap: onAddProducts ?? () => goToAddProduct(context),
+                onOrdersTap: () => goToOrders(context),
+                onProfileTap: () => goToProfile(context),
+              ),
             ),
           ],
         ),
