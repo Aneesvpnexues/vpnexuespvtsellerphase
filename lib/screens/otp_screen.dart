@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/bottom_deco.dart';
 import '../widgets/otp_field_row.dart';
-import 'step01_location_screen.dart';
+import 'location_screen.dart';
 
 /// Enter OTP screen — static replica of Zeplin "Android Compact - 50"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad063196da349aa4dae3c4).

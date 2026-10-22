@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/screens/step01_location_screen.dart';
+import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 01 screen on the 412x917 artboard the design was drawn for.
@@ -65,8 +65,12 @@ void main() {
     expect(button.top, closeTo(731, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
-        tester.widget<Container>(_findPrimaryButton()).decoration! as BoxDecoration;
-    expect(decoration.borderRadius, const BorderRadius.all(Radius.circular(16)));
+        tester.widget<Container>(_findPrimaryButton()).decoration!
+            as BoxDecoration;
+    expect(
+      decoration.borderRadius,
+      const BorderRadius.all(Radius.circular(16)),
+    );
   });
 
   testWidgets('text styles follow the design', (tester) async {
@@ -84,13 +88,16 @@ void main() {
     expect(link.style?.color, AppColors.linkGreen);
     expect(link.style?.decoration, TextDecoration.underline);
 
-    final buttonLabel = tester.widget<Text>(find.text('Use my current Location'));
+    final buttonLabel = tester.widget<Text>(
+      find.text('Use my current Location'),
+    );
     expect(buttonLabel.style?.color, AppColors.surface);
     expect(buttonLabel.style?.fontSize, 16);
   });
 
-  testWidgets('location button opens the STEP 02 screen and back',
-      (tester) async {
+  testWidgets('location button opens the STEP 02 screen and back', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Use my current Location'));
@@ -102,7 +109,9 @@ void main() {
     expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Choose your location'), findsNothing);
 
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
     navigator.pop();
     await tester.pumpAndSettle();
 

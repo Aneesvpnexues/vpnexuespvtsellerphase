@@ -13,8 +13,8 @@ import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
-import 'package:seller_app/screens/step01_location_screen.dart';
-import 'package:seller_app/screens/step02_seller_type_screen.dart';
+import 'package:seller_app/screens/location_screen.dart';
+import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import 'step02_seller_type_screen.dart';
+import 'seller_type_screen.dart';
 
 /// "STEP 01 — Choose your location" — static replica of Zeplin
 /// "Android Compact - 51" (project 6a8d49709e27bd8b35213d35,
