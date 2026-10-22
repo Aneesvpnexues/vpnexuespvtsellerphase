@@ -4,6 +4,7 @@ import '../screens/add_products_screen.dart';
 import '../screens/my_orders_screen.dart';
 import '../screens/my_products_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/product_details_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/settings_screen.dart';
 
@@ -23,6 +24,7 @@ abstract final class AppRoutes {
   static const String bankDetails = '/bank-details';
   static const String settings = '/settings';
   static const String addProduct = '/add-product';
+  static const String productDetails = '/product-details';
 }
 
 /// Switches the bottom navigation tab.
@@ -102,6 +104,16 @@ void goToAddProduct(BuildContext context) {
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.addProduct),
       builder: (_) => const AddProductsScreen(),
+    ),
+  );
+}
+
+/// Opens the Product Details page for a product card in My Products.
+void goToProductDetails(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.productDetails),
+      builder: (_) => const ProductDetailsScreen(),
     ),
   );
 }

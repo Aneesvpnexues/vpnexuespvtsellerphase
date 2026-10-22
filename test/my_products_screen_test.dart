@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
@@ -46,6 +47,21 @@ void main() {
     expect(rectOf(find.text('My Products')).top, closeTo(24, 3));
     expect(rectOf(find.text('Fresh Tomatoes').first).left, closeTo(146, 2));
     expect(rectOf(find.text('Fresh Tomatoes').first).top, closeTo(209, 3));
+  });
+
+  testWidgets('all four product cards open the product details screen', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.text('Fresh Tomatoes').at(i));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProductDetailsScreen), findsOneWidget);
+
+      Navigator.of(tester.element(find.byType(ProductDetailsScreen))).pop();
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('the bottom nav is pinned with Products selected', (

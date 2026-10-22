@@ -285,163 +285,167 @@ class _ProductRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 364,
-      height: 116,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 277,
-              height: 116,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(20)),
-                border: Border.all(color: const Color(0x12000000)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 277,
-            top: 0,
-            child: Container(
-              width: 87,
-              height: 116,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(20)),
-                border: Border.all(color: const Color(0x12000000)),
-              ),
-            ),
-          ),
-          const Positioned(left: 7, top: 7, child: _ProductImage()),
-          const Positioned(left: 82, top: 13, child: _DotsIcon()),
-          const Positioned(
-            left: 122,
-            top: 6,
-            child: Text('Fresh Tomatoes', style: AppTextStyles.productName),
-          ),
-          const Positioned(
-            left: 122,
-            top: 27,
-            child: Text(
-              '50 kg available',
-              style: TextStyle(fontSize: 12, color: Color(0x7A000000)),
-            ),
-          ),
-          Positioned(left: 122, top: 52, child: _StatusPill(status: status)),
-          const Positioned(
-            left: 122,
-            top: 80,
-            child: Icon(
-              Icons.analytics_outlined,
-              size: 22,
-              color: Color(0xFF5A5A5A),
-            ),
-          ),
-          const Positioned(
-            left: 150,
-            top: 80,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'This week',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0x7A000000),
-                    height: 1.0,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  '24 sold',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    height: 1.0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 276,
-            top: 18,
-            child: Container(
-              width: 1,
-              height: 80,
-              color: AppColors.priceDivider,
-            ),
-          ),
-          const Positioned(
-            left: 301,
-            top: 41,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '\u20B948',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.0,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  '/ kg',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0x87000000),
-                    height: 1.0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 19,
-            child: Container(
-              width: 4,
-              height: 80,
-              decoration: BoxDecoration(
-                color: status == _Status.active
-                    ? AppColors.limeCard
-                    : status == _Status.outOfStock
-                    ? AppColors.attentionRed
-                    : AppColors.tabGray,
-                borderRadius: const BorderRadius.all(Radius.circular(2)),
-              ),
-            ),
-          ),
-          if (showPublish)
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => goToProductDetails(context),
+      child: SizedBox(
+        width: 364,
+        height: 116,
+        child: Stack(
+          children: [
             Positioned(
-              left: 122,
-              bottom: 4,
+              left: 0,
+              top: 0,
               child: Container(
-                width: 114,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
-                ),
-                child: const Text(
-                  'Publish',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                width: 277,
+                height: 116,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(20)),
+                  border: Border.all(color: const Color(0x12000000)),
                 ),
               ),
             ),
-        ],
+            Positioned(
+              left: 277,
+              top: 0,
+              child: Container(
+                width: 87,
+                height: 116,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(20)),
+                  border: Border.all(color: const Color(0x12000000)),
+                ),
+              ),
+            ),
+            const Positioned(left: 7, top: 7, child: _ProductImage()),
+            const Positioned(left: 82, top: 13, child: _DotsIcon()),
+            const Positioned(
+              left: 122,
+              top: 6,
+              child: Text('Fresh Tomatoes', style: AppTextStyles.productName),
+            ),
+            const Positioned(
+              left: 122,
+              top: 27,
+              child: Text(
+                '50 kg available',
+                style: TextStyle(fontSize: 12, color: Color(0x7A000000)),
+              ),
+            ),
+            Positioned(left: 122, top: 52, child: _StatusPill(status: status)),
+            const Positioned(
+              left: 122,
+              top: 80,
+              child: Icon(
+                Icons.analytics_outlined,
+                size: 22,
+                color: Color(0xFF5A5A5A),
+              ),
+            ),
+            const Positioned(
+              left: 150,
+              top: 80,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'This week',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0x7A000000),
+                      height: 1.0,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '24 sold',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 276,
+              top: 18,
+              child: Container(
+                width: 1,
+                height: 80,
+                color: AppColors.priceDivider,
+              ),
+            ),
+            const Positioned(
+              left: 301,
+              top: 41,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '\u20B948',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '/ kg',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0x87000000),
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 19,
+              child: Container(
+                width: 4,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: status == _Status.active
+                      ? AppColors.limeCard
+                      : status == _Status.outOfStock
+                      ? AppColors.attentionRed
+                      : AppColors.tabGray,
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
+                ),
+              ),
+            ),
+            if (showPublish)
+              Positioned(
+                left: 122,
+                bottom: 4,
+                child: Container(
+                  width: 114,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkCard,
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  ),
+                  child: const Text(
+                    'Publish',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
