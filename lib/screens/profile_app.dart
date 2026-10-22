@@ -6,6 +6,7 @@ import 'add_products_screen.dart';
 import 'personal_details_screen.dart';
 import 'profile_business.dart';
 import 'profile_screen.dart';
+import 'settings_screen.dart';
 import 'welcome_seller_screen.dart';
 
 /// "Profile / App" — replica of Zeplin "Android Compact - 153"
@@ -14,7 +15,8 @@ import 'welcome_seller_screen.dart';
 /// App tab of the seller profile; shares [ProfileShell] with
 /// [ProfileScreen] (Account) and [ProfileBusinessScreen] (Business). The
 /// list card holds Settings, Help & Suppport and Log out (design typos
-/// kept); Log out returns to the login flow.
+/// kept); Settings opens the settings page, Log out returns to the login
+/// flow.
 class ProfileAppScreen extends StatelessWidget {
   const ProfileAppScreen({super.key});
 
@@ -31,12 +33,11 @@ class ProfileAppScreen extends StatelessWidget {
         (route) => false,
       ),
       onAppTab: () {},
-      onAddProducts: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AddProductsScreen()),
-      ),
-      onPersonalDetails: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PersonalDetailsScreen()),
-      ),
+      onAddProducts: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const AddProductsScreen())),
+      onPersonalDetails: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const PersonalDetailsScreen())),
       listCard: const _AppListCard(),
     );
   }
@@ -85,30 +86,62 @@ class _AppListCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Settings (design: cap top y641, subtitle cap top y657).
-          const Positioned(left: 22, top: 20, child: _AppIconTile(
-            icon: Icons.settings_outlined,
-            tileColor: AppColors.listIconTile,
-            ink: AppColors.appIconInk,
-          )),
-          const Positioned(
-              left: 68, top: 23, child: Text('Settings', style: _title)),
-          const Positioned(
-              left: 68,
-              top: 40,
-              child: Text('Language, notifications', style: _subtitle)),
-          const Positioned(
-              left: 332, top: 29, child: _AppChevron()),
+          // Settings (design: cap top y641, subtitle cap top y657) — opens
+          // the SettingsScreen (profile 162-equivalent, anees settings page).
+          Positioned(
+            left: 16,
+            top: 14,
+            width: 332,
+            height: 48,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              child: const Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 6,
+                    top: 6,
+                    child: _AppIconTile(
+                      icon: Icons.settings_outlined,
+                      tileColor: AppColors.listIconTile,
+                      ink: AppColors.appIconInk,
+                    ),
+                  ),
+                  Positioned(
+                    left: 52,
+                    top: 9,
+                    child: Text('Settings', style: _title),
+                  ),
+                  Positioned(
+                    left: 52,
+                    top: 26,
+                    child: Text('Language, notifications', style: _subtitle),
+                  ),
+                  Positioned(left: 316, top: 15, child: _AppChevron()),
+                ],
+              ),
+            ),
+          ),
           const Positioned(left: 16, right: 16, top: 66, child: _Divider()),
 
           // Help & Suppport (design: cap top y706.5, title only).
-          const Positioned(left: 22, top: 78, child: _AppIconTile(
-            icon: Icons.help_outline,
-            tileColor: AppColors.listIconTile,
-            ink: AppColors.appIconInk,
-          )),
           const Positioned(
-              left: 68, top: 89, child: Text('Help & Suppport', style: _title)),
+            left: 22,
+            top: 78,
+            child: _AppIconTile(
+              icon: Icons.help_outline,
+              tileColor: AppColors.listIconTile,
+              ink: AppColors.appIconInk,
+            ),
+          ),
+          const Positioned(
+            left: 68,
+            top: 89,
+            child: Text('Help & Suppport', style: _title),
+          ),
           const Positioned(left: 332, top: 87, child: _AppChevron()),
           const Positioned(left: 16, right: 16, top: 122, child: _Divider()),
 
@@ -129,17 +162,19 @@ class _AppListCard extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                      left: 0,
-                      top: 0,
-                      child: _AppIconTile(
-                        icon: Icons.logout,
-                        tileColor: AppColors.logoutTile,
-                        ink: AppColors.logoutInk,
-                      )),
+                    left: 0,
+                    top: 0,
+                    child: _AppIconTile(
+                      icon: Icons.logout,
+                      tileColor: AppColors.logoutTile,
+                      ink: AppColors.logoutInk,
+                    ),
+                  ),
                   Positioned(
-                      left: 46,
-                      top: 10,
-                      child: Text('Log out', style: _logoutText)),
+                    left: 46,
+                    top: 10,
+                    child: Text('Log out', style: _logoutText),
+                  ),
                 ],
               ),
             ),
@@ -180,8 +215,11 @@ class _AppChevron extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(Icons.chevron_right,
-        size: 16, color: AppColors.chevronGray);
+    return const Icon(
+      Icons.chevron_right,
+      size: 16,
+      color: AppColors.chevronGray,
+    );
   }
 }
 

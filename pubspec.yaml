@@ -58,10 +58,12 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/bank/illustration.png
+    - assets/bank/
     - assets/otp/illustration.png
     - assets/otp/bottom_deco.png
     - assets/products/tomato.png
+    - assets/profile/
+    - assets/business/
     - assets/step01/illustration.png
     - assets/step02/illustration.png
     - assets/step03/leaves.png
@@ -71,6 +73,11 @@ flutter:
     - assets/welcome/flag.png
     - assets/welcome/wave.png
     - assets/welcome/send.png
+    - assets/kyc/
+    - assets/order/
+    - assets/order_privew/
+    - assets/product_details/
+    - assets/settings/
 
   # Roboto is bundled so Flutter Web never fetches fonts.gstatic.com at runtime.
   fonts:

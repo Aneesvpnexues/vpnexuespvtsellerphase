@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   static const Color primary = Color(0xFF42A84D);
@@ -30,7 +30,7 @@ abstract final class AppColors {
   static const Color pillBorder = Color(0xFF7FC486);
   static const Color pillLabel = Color(0xFF292929);
 
-  // STEP 03 — Business details (Zeplin "Android Compact - 88").
+  // STEP 03 â€” Business details (Zeplin "Android Compact - 88").
   static const Color stepPageBg = Color(0xFFFCFAF5);
   static const Color stepPageHeadingEnd = Color(0xFF035A0D);
   static const Color stepPageAccent = Color(0xFF00AF13);
@@ -104,7 +104,7 @@ abstract final class AppColors {
   static const Color bankShield = Color(0xFF20BF55);
   static const Color bankBannerSub = Color(0xFF828B84);
 
-  // Seller dashboard — Profile / Add Products / Personal Details / Wallet
+  // Seller dashboard â€” Profile / Add Products / Personal Details / Wallet
   // (Zeplin "Android Compact - 124/151/152/153/156/159").
   static const Color dashboardBg = Color(0xFFFAFBF3);
   static const Color cardWhite = Color(0xFFFEFEFE);
@@ -166,4 +166,98 @@ abstract final class AppColors {
   static const Color cameraBadgeInk = Color(0xFF1A482B);
   static const Color reviewStar = Color(0xFF0D3B20);
   static const Color ratingStar = Color(0xFF0D3B20);
+
+  // --- Added from anees branch (new screens: home/orders/settings/KYC) ---
+  static const Color homeBg = Color(0xFFFAFBF3);
+  static const Color limeCard = Color(0xFFC6E96F);
+  static const Color limeLight = Color(0xFFCDEB6B);
+  static const Color darkCard = Color(0xFF0F4224);
+  static const Color darkCardText = Color(0xFF0A2E18);
+  static const Color chipBg = Color(0xFFE4F2D2);
+  static const Color iconCircle = Color(0xFFE4F2D2);
+  static const Color iconDark = Color(0xFF14532D);
+  static const Color cardBorder = Color(0x12000000);
+  static const Color attentionAmber = Color(0xFF7B5B0D);
+  static const Color attentionAmberBg = Color(0xFFFBEFC8);
+  static const Color attentionRed = Color(0xFFE4604F);
+  static const Color attentionRedBg = Color(0xFFFCE4DF);
+  static const Color filterBg = Color(0xFFE3F1CC);
+  static const Color tabGray = Color(0xFF6B7B6F);
+  static const Color promoBg = Color(0xFFF4FFD7);
+  static const Color outOfStockBg = Color(0xFFFFE1DA);
+  static const Color priceDivider = Color(0x1A000000);
+  static const Color orderYellowBg = Color(0xFFFFF6DA);
+  static const Color orderBlueBg = Color(0xFFE1EFFA);
+  static const Color orderPurpleBg = Color(0xFFE0D1F7);
+  static const Color orderLime = Color(0xFFC9EA73);
+  static const Color orderDark = Color(0xFF0D3B20);
+  static const Color orderCardDark = Color(0xFF0F4224);
+  static const Color orderAvatar = Color(0xFF2C5A2F);
+  static const Color orderSecondary = Color(0xFF2E6042);
+  static const Color orderMint = Color(0xFFEFF9D2);
+  static const Color orderPale = Color(0xFFF5F8EA);
+  static const Color orderBand = Color(0xFFE2F4C9);
+  static const Color orderNoteBg = Color(0xFFFFF0C9);
+  static const Color orderNoteTile = Color(0xFFFFE8A8);
+  static const Color orderTile = Color(0xFFE3F1CC);
+  static const Color orderMuted = Color(0xFFA9CB8F);
+  static const Color orderSlideLime = Color(0xFFBEE45D);
+  static const Color orderSlideStart = Color(0xFF114927);
+  static const Color orderSlideEnd = Color(0xFF29AF5D);
+  static const Color orderTotalText = Color(0xFF0D3B42);
+  static const Color orderIdGreen = Color(0xFF3B7530);
+  static const Color orderHeroEnd = Color(0xFFD1EEC8);
+  static const Color orderCircleStart = Color(0xFFEBF8C4);
+  static const Color orderCircleEnd = Color(0xFFE3F4E0);
+  static const Color orderDivider = Color(0xFFC6E96D);
+  static const Color orderSegmentIdle = Color(0x99144326);
+  static const Color orderHeroIdle = Color(0x99000000);
+  static const Color orderStepIdle = Color(0x8A0D3B20);
+  static const Color orderItemMeta = Color(0x7A000000);
+  static const Color orderNoteText = Color(0xB3000000);
+  static const Color profileWalletStart = Color(0xFF0B341B);
+  static const Color profileWalletEnd = Color(0xFF135029);
+  static const Color profileBlob = Color(0xFF3CA35A);
+  static const Color profileMuted = Color(0xFFB6C5BC);
+  static const Color profilePillBorder = Color(0x63CDEB6B);
+  static const Color profileTransactions = Color(0xFF326344);
+  static const Color profileAvatar = Color(0xFF41A74C);
+  static const Color profileSegmentBg = Color(0xB8E3F1CC);
+  static const Color profileSegmentIdle = Color(0xFF6B7B6F);
+  static const Color profileChevron = Color(0xFF708074);
+  static const Color profileNavIdle = Color(0x54000000);
+  static const Color profileCardBg = Color(0xFFFEFEFE);
+  static const Color profileMeta = Color(0xFF454545);
+  static const Color profileStatLabel = Color(0xA1000000);
+  static const Color profileMenuSub = Color(0x7A000000);
+  static const Color personalAvatarStart = Color(0xFF41A74C);
+  static const Color personalAvatarEnd = Color(0xFF19411E);
+  static const Color personalOptional = Color(0x52000000);
+  static const Color personalPlaceholder = Color(0x66000000);
+  static const Color personalCameraBorder = Color(0xFF225627);
+  static const Color businessPillBg = Color(0x8F0D3B20);
+  static const Color businessPillBorder = Color(0x4DC6E96D);
+  static const Color businessToggle = Color(0xFF2E8B4B);
+  static const Color businessUnit = Color(0xAD000000);
+  static const Color businessIcon = Color(0xFF1D6B38);
+  static const Color kycBanner = Color(0xFF0D3D21);
+  static const Color kycBlob = Color(0x382B6933);
+  static const Color kycAmberTile = Color(0xFFFBEFC8);
+  static const Color kycAmberText = Color(0xFF8A6410);
+  static const Color kycVerifiedText = Color(0xFF1D6B38);
+  static const Color kycMaskDot = Color(0xFFD9D9D9);
+  static const Color bankCardEnd = Color(0xFF28AA5A);
+  static const Color bankAddText = Color(0xFF0D3B26);
+  static const Color bankNoteText = Color(0x4A000000);
+  static const Color bankIcon = Color(0xFF0D3D21);
+  static const Color settingsToggleOff = Color(0xFFCBD3C0);
+  static const Color settingsLogoutRed = Color(0xFFD2402F);
+  static const Color addFieldBg = Color(0xFFF6F8EA);
+  static const Color addLime = Color(0xFFC1E568);
+  static const Color addQtyHint = Color(0xFF6F9577);
+  static const Color addDotIdle = Color(0xFF7CA64C);
+  static const Color addOrange = Color(0xFFF55D1F);
+  static const Color addCounter = Color(0xA3000000);
+  static const Color addChipMuted = Color(0x6E000000);
+  static const Color addChipBorder = Color(0x1C000000);
 }

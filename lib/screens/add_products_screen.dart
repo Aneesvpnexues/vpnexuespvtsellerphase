@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
 import '../widgets/bottom_nav_bar.dart';
+import 'my_orders_screen.dart';
 import 'profile_screen.dart';
 
 /// "Add Products" — replica of Zeplin "Android Compact - 124"
@@ -50,370 +51,441 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
-      body: Artboard(
-        designWidth: AddProductsScreen.designWidth,
-        designHeight: AddProductsScreen.designHeight,
-        scrollable: true,
-        child: Stack(
-          children: [
-            Positioned(left: 24, top: 26, child: _BackButton()),
-            const Positioned(left: 70, top: 28, child: _Title()),
-            const Positioned(left: 24, top: 76, child: _ProgressCard()),
-            // Product photos card.
-            Positioned(left: 24, top: 148, child: _PhotosCard(onNext: () {})),
-            // Basic information card.
-            Positioned(
-              left: 24,
-              top: 407,
-              child: SizedBox(
-                width: 364,
-                height: 216,
-                child: Stack(
-                  children: [
-                    const Positioned.fill(child: _CardBackground()),
-                    Positioned(
-                      left: 16,
-                      top: 20,
-                      child: _SectionIcon(icon: Icons.subject),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 24,
-                      child: Text(
-                        'Basic Information',
-                        style: AppTextStyles.dashboardTitle,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // The bottom navigation is pinned to the viewport bottom so it
+          // never scrolls with the form content. It shares the artboard's
+          // width-driven scale to stay proportional on every screen size.
+          final scale = (constraints.maxWidth / AddProductsScreen.designWidth)
+              .clamp(0.0, Artboard.defaultMaxScale)
+              .toDouble();
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Artboard(
+                  designWidth: AddProductsScreen.designWidth,
+                  designHeight: AddProductsScreen.designHeight,
+                  scrollable: true,
+                  child: Stack(
+                    children: [
+                      Positioned(left: 24, top: 26, child: _BackButton()),
+                      const Positioned(left: 70, top: 28, child: _Title()),
+                      const Positioned(
+                        left: 24,
+                        top: 76,
+                        child: _ProgressCard(),
                       ),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 50,
-                      child: Text(
-                        'Tell us about your product',
-                        style: AppTextStyles.dashboardSubtitle,
+                      // Product photos card.
+                      Positioned(
+                        left: 24,
+                        top: 148,
+                        child: _PhotosCard(onNext: () {}),
                       ),
-                    ),
-                    const Positioned(
-                      left: 16,
-                      top: 88,
-                      child: Text(
-                        'Product Name',
-                        style: AppTextStyles.fieldLabelSoft,
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 109,
-                      child: _InputField(
-                        icon: Icons.sell_outlined,
-                        hint: 'e.g Fresh Tomates',
-                      ),
-                    ),
-                    const Positioned(
-                      left: 16,
-                      top: 166,
-                      child: Text(
-                        'Category',
-                        style: AppTextStyles.fieldLabelSoft,
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 183,
-                      child: Row(
-                        children: [
-                          for (var i = 0; i < _categories.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 10),
-                            _Chip(
-                              label: _categories[i],
-                              selected: _category == i,
-                              onTap: () => setState(() => _category = i),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Pricing & quantity card.
-            Positioned(
-              left: 24,
-              top: 638,
-              child: SizedBox(
-                width: 364,
-                height: 244,
-                child: Stack(
-                  children: [
-                    const Positioned.fill(child: _CardBackground()),
-                    Positioned(
-                      left: 16,
-                      top: 20,
-                      child: _SectionIcon(icon: Icons.currency_rupee),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 24,
-                      child: Text(
-                        'Pricing & Quantity',
-                        style: AppTextStyles.dashboardTitle,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 50,
-                      child: Text(
-                        'et your price and available quantity',
-                        style: AppTextStyles.dashboardSubtitle,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 16,
-                      top: 90,
-                      child: Text(
-                        'Price per unit',
-                        style: AppTextStyles.fieldLabelSoft,
-                      ),
-                    ),
-                    const Positioned(
-                      right: 16,
-                      top: 90,
-                      child: Text('Unit', style: AppTextStyles.fieldLabelSoft),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 114,
-                      child: _InputField(
-                        icon: Icons.currency_rupee,
-                        hint: 'e.g. 48',
-                        width: 242,
-                      ),
-                    ),
-                    Positioned(
-                      right: 13,
-                      top: 114,
-                      child: Container(
-                        width: 83,
-                        height: 41,
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.darkGreenInk,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'Unit',
-                                style: AppTextStyles.chipActiveLabel,
-                              ),
-                              SizedBox(width: 4),
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 14,
-                                color: AppColors.chipActiveText,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Positioned(
-                      left: 16,
-                      top: 174,
-                      child: Text(
-                        'Available Quantity',
-                        style: AppTextStyles.fieldLabelSoft,
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 195,
-                      child: _QtyStepper(
-                        quantity: _quantity,
-                        onDecrement: () => setState(() {
-                          if (_quantity > 0) _quantity--;
-                        }),
-                        onIncrement: () => setState(() => _quantity++),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Description card.
-            Positioned(
-              left: 24,
-              top: 896,
-              child: SizedBox(
-                width: 364,
-                height: 234,
-                child: Stack(
-                  children: [
-                    const Positioned.fill(child: _CardBackground()),
-                    Positioned(
-                      left: 16,
-                      top: 20,
-                      child: _SectionIcon(icon: Icons.description_outlined),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 24,
-                      child: Text(
-                        'Product Descrption',
-                        style: AppTextStyles.dashboardTitle,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 50,
-                      child: Text(
-                        'Help buyers know more about your product.',
-                        style: AppTextStyles.dashboardSubtitle,
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 88,
-                      child: Container(
-                        width: 332,
-                        height: 103,
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.fieldFillSoft,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: TextField(
-                          controller: _description,
-                          maxLines: null,
-                          expands: true,
-                          maxLength: 500,
-                          buildCounter: (
-                            context, {
-                            required currentLength,
-                            required isFocused,
-                            required maxLength,
-                          }) => null,
-                          style: AppTextStyles.inputInkSoft,
-                          cursorColor: AppColors.inputCaret,
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            hintText: 'Tell buyers about your product',
-                            hintStyle: AppTextStyles.inputHintSoft,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 16,
-                      top: 198,
-                      child: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: _description,
-                        builder: (context, value, _) => Text(
-                          '${value.text.length}/500',
-                          style: AppTextStyles.descCounter,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Status card.
-            Positioned(
-              left: 24,
-              top: 1122,
-              child: SizedBox(
-                width: 364,
-                height: 136,
-                child: Stack(
-                  children: [
-                    const Positioned.fill(child: _CardBackground()),
-                    Positioned(
-                      left: 16,
-                      top: 20,
-                      child: _SectionIcon(icon: Icons.visibility_outlined),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 24,
-                      child: Text(
-                        'Product Descrption',
-                        style: AppTextStyles.dashboardTitle,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 72,
-                      top: 50,
-                      child: Text(
-                        'Help buyers know more about your product.',
-                        style: AppTextStyles.dashboardSubtitle,
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      top: 88,
-                      child: SizedBox(
-                        width: 332,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                      // Basic information card.
+                      Positioned(
+                        left: 24,
+                        top: 407,
+                        child: SizedBox(
+                          width: 364,
+                          height: 216,
+                          child: Stack(
                             children: [
-                              _StatusChip(
-                                label: 'Active',
-                                dotColor: AppColors.progressFillSoft,
-                                selected: _status == 0,
-                                onTap: () => setState(() => _status = 0),
+                              const Positioned.fill(child: _CardBackground()),
+                              Positioned(
+                                left: 16,
+                                top: 20,
+                                child: _SectionIcon(icon: Icons.subject),
                               ),
-                              const SizedBox(width: 8),
-                              _StatusChip(
-                                label: 'Out of stock',
-                                dotColor: AppColors.statusOutOfDot,
-                                selected: _status == 1,
-                                onTap: () => setState(() => _status = 1),
+                              const Positioned(
+                                left: 72,
+                                top: 24,
+                                child: Text(
+                                  'Basic Information',
+                                  style: AppTextStyles.dashboardTitle,
+                                ),
                               ),
-                              const SizedBox(width: 8),
-                              _StatusChip(
-                                label: 'Draft',
-                                dotColor: AppColors.darkGreenInk,
-                                selected: _status == 2,
-                                onTap: () => setState(() => _status = 2),
+                              const Positioned(
+                                left: 72,
+                                top: 50,
+                                child: Text(
+                                  'Tell us about your product',
+                                  style: AppTextStyles.dashboardSubtitle,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 16,
+                                top: 88,
+                                child: Text(
+                                  'Product Name',
+                                  style: AppTextStyles.fieldLabelSoft,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 109,
+                                child: _InputField(
+                                  icon: Icons.sell_outlined,
+                                  hint: 'e.g Fresh Tomates',
+                                ),
+                              ),
+                              const Positioned(
+                                left: 16,
+                                top: 166,
+                                child: Text(
+                                  'Category',
+                                  style: AppTextStyles.fieldLabelSoft,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 183,
+                                child: Row(
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < _categories.length;
+                                      i++
+                                    ) ...[
+                                      if (i > 0) const SizedBox(width: 10),
+                                      _Chip(
+                                        label: _categories[i],
+                                        selected: _category == i,
+                                        onTap: () =>
+                                            setState(() => _category = i),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Zeplin 124 nav band, pinned to the artboard bottom exactly
-            // like ProfileShell so it scales with the content (never
-            // oversized on large screens). FAB returns to the previous
-            // screen; Profile opens the Account profile screen.
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: BottomNavBar(
-                selectedIndex: null,
-                onAddTap: () => Navigator.of(context).maybePop(),
-                onProfileTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ProfileScreen(),
+                      // Pricing & quantity card.
+                      Positioned(
+                        left: 24,
+                        top: 638,
+                        child: SizedBox(
+                          width: 364,
+                          height: 244,
+                          child: Stack(
+                            children: [
+                              const Positioned.fill(child: _CardBackground()),
+                              Positioned(
+                                left: 16,
+                                top: 20,
+                                child: _SectionIcon(icon: Icons.currency_rupee),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 24,
+                                child: Text(
+                                  'Pricing & Quantity',
+                                  style: AppTextStyles.dashboardTitle,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 50,
+                                child: Text(
+                                  'et your price and available quantity',
+                                  style: AppTextStyles.dashboardSubtitle,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 16,
+                                top: 90,
+                                child: Text(
+                                  'Price per unit',
+                                  style: AppTextStyles.fieldLabelSoft,
+                                ),
+                              ),
+                              const Positioned(
+                                right: 16,
+                                top: 90,
+                                child: Text(
+                                  'Unit',
+                                  style: AppTextStyles.fieldLabelSoft,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 114,
+                                child: _InputField(
+                                  icon: Icons.currency_rupee,
+                                  hint: 'e.g. 48',
+                                  width: 242,
+                                ),
+                              ),
+                              Positioned(
+                                right: 13,
+                                top: 114,
+                                child: Container(
+                                  width: 83,
+                                  height: 41,
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.darkGreenInk,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Text(
+                                          'Unit',
+                                          style: AppTextStyles.chipActiveLabel,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(
+                                          Icons.keyboard_arrow_down,
+                                          size: 14,
+                                          color: AppColors.chipActiveText,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Positioned(
+                                left: 16,
+                                top: 174,
+                                child: Text(
+                                  'Available Quantity',
+                                  style: AppTextStyles.fieldLabelSoft,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 195,
+                                child: _QtyStepper(
+                                  quantity: _quantity,
+                                  onDecrement: () => setState(() {
+                                    if (_quantity > 0) _quantity--;
+                                  }),
+                                  onIncrement: () =>
+                                      setState(() => _quantity++),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Description card.
+                      Positioned(
+                        left: 24,
+                        top: 896,
+                        child: SizedBox(
+                          width: 364,
+                          height: 234,
+                          child: Stack(
+                            children: [
+                              const Positioned.fill(child: _CardBackground()),
+                              Positioned(
+                                left: 16,
+                                top: 20,
+                                child: _SectionIcon(
+                                  icon: Icons.description_outlined,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 24,
+                                child: Text(
+                                  'Product Descrption',
+                                  style: AppTextStyles.dashboardTitle,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 50,
+                                child: Text(
+                                  'Help buyers know more about your product.',
+                                  style: AppTextStyles.dashboardSubtitle,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 88,
+                                child: Container(
+                                  width: 332,
+                                  height: 103,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    14,
+                                    12,
+                                    14,
+                                    12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.fieldFillSoft,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: TextField(
+                                    controller: _description,
+                                    maxLines: null,
+                                    expands: true,
+                                    maxLength: 500,
+                                    buildCounter: (
+                                      context, {
+                                      required currentLength,
+                                      required isFocused,
+                                      required maxLength,
+                                    }) => null,
+                                    style: AppTextStyles.inputInkSoft,
+                                    cursorColor: AppColors.inputCaret,
+                                    decoration: const InputDecoration(
+                                      isDense: true,
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintText:
+                                          'Tell buyers about your product',
+                                      hintStyle: AppTextStyles.inputHintSoft,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: 16,
+                                top: 198,
+                                child: ValueListenableBuilder<TextEditingValue>(
+                                  valueListenable: _description,
+                                  builder: (context, value, _) => Text(
+                                    '${value.text.length}/500',
+                                    style: AppTextStyles.descCounter,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Status card.
+                      Positioned(
+                        left: 24,
+                        top: 1122,
+                        child: SizedBox(
+                          width: 364,
+                          height: 136,
+                          child: Stack(
+                            children: [
+                              const Positioned.fill(child: _CardBackground()),
+                              Positioned(
+                                left: 16,
+                                top: 20,
+                                child: _SectionIcon(
+                                  icon: Icons.visibility_outlined,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 24,
+                                child: Text(
+                                  'Product Descrption',
+                                  style: AppTextStyles.dashboardTitle,
+                                ),
+                              ),
+                              const Positioned(
+                                left: 72,
+                                top: 50,
+                                child: Text(
+                                  'Help buyers know more about your product.',
+                                  style: AppTextStyles.dashboardSubtitle,
+                                ),
+                              ),
+                              Positioned(
+                                left: 16,
+                                top: 88,
+                                child: SizedBox(
+                                  width: 332,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _StatusChip(
+                                          label: 'Active',
+                                          dotColor: AppColors.progressFillSoft,
+                                          selected: _status == 0,
+                                          onTap: () =>
+                                              setState(() => _status = 0),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _StatusChip(
+                                          label: 'Out of stock',
+                                          dotColor: AppColors.statusOutOfDot,
+                                          selected: _status == 1,
+                                          onTap: () =>
+                                              setState(() => _status = 1),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _StatusChip(
+                                          label: 'Draft',
+                                          dotColor: AppColors.darkGreenInk,
+                                          selected: _status == 2,
+                                          onTap: () =>
+                                              setState(() => _status = 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+              // Zeplin 124 nav band: fixed to the viewport bottom (outside
+              // the scroll view) so it never moves with the form. The outer
+              // box is sized to the scaled design dimensions (412x88 * scale,
+              // identical ratio) and FittedBox maps the unscaled nav onto it,
+              // so it matches the content scale with no constraint clamping.
+              // FAB returns to the previous screen; Orders opens My Orders;
+              // Profile opens the Account profile screen.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    width: BottomNavBar.designWidth * scale,
+                    height: BottomNavBar.barHeight * scale,
+                    child: FittedBox(
+                      fit: BoxFit.fill,
+                      child: SizedBox(
+                        width: BottomNavBar.designWidth,
+                        height: BottomNavBar.barHeight,
+                        child: BottomNavBar(
+                          selectedIndex: null,
+                          onAddTap: () => Navigator.of(context).maybePop(),
+                          onOrdersTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const MyOrdersScreen(),
+                            ),
+                          ),
+                          onProfileTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ProfileScreen(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

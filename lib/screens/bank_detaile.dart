@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
-import 'profile_business.dart';
+import 'seller_home_screen.dart';
 
 /// "Add your bank details" — static replica of Zeplin "Android Compact - 106"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb1cc78003f7066066b).
@@ -12,7 +12,8 @@ import 'profile_business.dart';
 /// The vegetable-basket illustration is the design PNG cropped to
 /// x190..412 / y70..332; the white "STEP 04" label sits over foliage inside
 /// that crop and is therefore baked into the asset (only "STEP 02" is rendered
-/// here). The back arrow pops; Continue opens [ProfileBusinessScreen].
+/// here). The back arrow pops; Continue opens the home page
+/// ([SellerHomeScreen]).
 class BankDetaileScreen extends StatelessWidget {
   const BankDetaileScreen({super.key});
 
@@ -927,7 +928,7 @@ class _ContinueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ProfileBusinessScreen()),
+        MaterialPageRoute(builder: (_) => const SellerHomeScreen()),
         (route) => false,
       ),
       child: Container(

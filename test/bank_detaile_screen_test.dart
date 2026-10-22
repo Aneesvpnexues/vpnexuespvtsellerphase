@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
-import 'package:seller_app/screens/profile_business.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the bank-details screen on the 412x936 artboard the design was drawn
@@ -10,81 +10,79 @@ Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 936);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(
-    const MaterialApp(home: BankDetaileScreen()),
-  );
+  await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
   await tester.pumpAndSettle();
 }
 
 Finder _tiles() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(10)) &&
-          (w.decoration as BoxDecoration).color != null &&
-          (w.decoration as BoxDecoration).color != AppColors.surface,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(10)) &&
+      (w.decoration as BoxDecoration).color != null &&
+      (w.decoration as BoxDecoration).color != AppColors.surface,
+);
 
 Finder _docCards() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border?.top.color ==
-              AppColors.docCardBorder &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(12)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).border?.top.color ==
+          AppColors.docCardBorder &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(12)),
+);
 
 Finder _inputs() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.welcomeBg,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).color == AppColors.welcomeBg,
+);
 
 Finder _continueButton() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).gradient != null &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(18)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).gradient != null &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(18)),
+);
 
 Finder _pill() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border?.top.color ==
-              AppColors.verifyPillBorder,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).border?.top.color ==
+          AppColors.verifyPillBorder,
+);
 
 Finder _sheet() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.surface &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.vertical(top: Radius.circular(40)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).color == AppColors.surface &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.vertical(top: Radius.circular(40)),
+);
 
 Finder _verifyButton() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).border?.top.color ==
-              AppColors.verifiedText &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(7)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).border?.top.color ==
+          AppColors.verifiedText &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(7)),
+);
 
 Finder _banner() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.bankBannerBg,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).color == AppColors.bankBannerBg,
+);
 
 void main() {
   testWidgets('renders the bank-details content', (tester) async {
@@ -106,9 +104,10 @@ void main() {
     expect(find.text('Enter 11-digit code'), findsOneWidget);
     expect(find.text('Verify'), findsOneWidget);
     expect(find.text('Your information is safe with us.'), findsOneWidget);
-    expect(find.text(
-            'We use bank-grade security to protect your details.'),
-        findsOneWidget);
+    expect(
+      find.text('We use bank-grade security to protect your details.'),
+      findsOneWidget,
+    );
     expect(find.text('Continue'), findsOneWidget);
   });
 
@@ -140,8 +139,10 @@ void main() {
     expect(rectOf(find.text('bank details')).left, closeTo(24, 1));
     expect(rectOf(find.text('bank details')).top, closeTo(175.80, 1));
     expect(rectOf(find.text('To receive your earnings')).left, closeTo(25, 1));
-    expect(rectOf(find.text('To receive your earnings')).top,
-        closeTo(218.12, 1));
+    expect(
+      rectOf(find.text('To receive your earnings')).top,
+      closeTo(218.12, 1),
+    );
 
     // Progress track: left 25, top 118.75; three segments, middle active.
     final segments = find.byWidgetPredicate(
@@ -166,7 +167,9 @@ void main() {
     expect(segRects[2].width, closeTo(29.5, 1));
     final segColors = segments
         .evaluate()
-        .map((e) => ((e.widget as Container).decoration! as BoxDecoration).color)
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
         .toList();
     expect(segColors, const [
       AppColors.progressTrack,
@@ -188,11 +191,11 @@ void main() {
     expect(pill.top, closeTo(313, 1));
     expect(pill.width, closeTo(126.5, 1));
     expect(pill.height, closeTo(27.5, 1));
-    final divider = rectOf(find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.color == AppColors.docDivider,
-    ));
+    final divider = rectOf(
+      find.byWidgetPredicate(
+        (w) => w is Container && w.color == AppColors.docDivider,
+      ),
+    );
     expect(divider.left, closeTo(26, 1));
     expect(divider.top, closeTo(350, 1));
 
@@ -229,8 +232,11 @@ void main() {
     for (var i = 0; i < labelTexts.length; i++) {
       final rect = rectOf(find.text(labelTexts[i]));
       expect(rect.left, closeTo(81, 1), reason: '${labelTexts[i]} left');
-      expect(rect.top, closeTo(labelTops[i], 1),
-          reason: '${labelTexts[i]} top');
+      expect(
+        rect.top,
+        closeTo(labelTops[i], 1),
+        reason: '${labelTexts[i]} top',
+      );
     }
 
     // Inputs: left 81, tops 402 / 506 / 610 / 714; first three full width,
@@ -257,8 +263,11 @@ void main() {
     for (var i = 0; i < inputLabels.length; i++) {
       final rect = rectOf(find.text(inputLabels[i]));
       expect(rect.left, closeTo(90.5, 1), reason: '${inputLabels[i]} left');
-      expect(rect.top, closeTo(inputTopTexts[i], 1),
-          reason: '${inputLabels[i]} top');
+      expect(
+        rect.top,
+        closeTo(inputTopTexts[i], 1),
+        reason: '${inputLabels[i]} top',
+      );
     }
 
     // Verify button: x 301..374.5, y 713.5..750.5.
@@ -274,14 +283,19 @@ void main() {
     expect(banner.top, closeTo(793, 1));
     expect(banner.width, closeTo(364, 1));
     expect(banner.height, closeTo(61, 1));
-    expect(rectOf(find.text('Your information is safe with us.')).left,
-        closeTo(80.5, 1));
-    expect(rectOf(find.text('Your information is safe with us.')).top,
-        closeTo(808.94, 1));
     expect(
-        rectOf(find.text('We use bank-grade security to protect your details.'))
-            .top,
-        closeTo(827.99, 1));
+      rectOf(find.text('Your information is safe with us.')).left,
+      closeTo(80.5, 1),
+    );
+    expect(
+      rectOf(find.text('Your information is safe with us.')).top,
+      closeTo(808.94, 1),
+    );
+    expect(
+      rectOf(find.text('We use bank-grade security to protect your details.'))
+          .top,
+      closeTo(827.99, 1),
+    );
 
     // Continue button: bottom-anchored, x 10..402, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
@@ -291,8 +305,12 @@ void main() {
     expect(button.width, closeTo(392, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
-        tester.widget<Container>(_continueButton()).decoration! as BoxDecoration;
-    expect(decoration.borderRadius, const BorderRadius.all(Radius.circular(18)));
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect(
+      decoration.borderRadius,
+      const BorderRadius.all(Radius.circular(18)),
+    );
     final gradient = decoration.gradient! as LinearGradient;
     expect(gradient.colors, const [
       AppColors.continueGradientStart,
@@ -338,13 +356,15 @@ void main() {
     expect(verify.style?.fontSize, 10);
     expect(verify.style?.color, AppColors.verifiedText);
 
-    final bannerTitle =
-        tester.widget<Text>(find.text('Your information is safe with us.'));
+    final bannerTitle = tester.widget<Text>(
+      find.text('Your information is safe with us.'),
+    );
     expect(bannerTitle.style?.fontSize, 13);
     expect(bannerTitle.style?.color, AppColors.verifiedText);
 
-    final bannerBody = tester
-        .widget<Text>(find.text('We use bank-grade security to protect your details.'));
+    final bannerBody = tester.widget<Text>(
+      find.text('We use bank-grade security to protect your details.'),
+    );
     expect(bannerBody.style?.fontSize, 11);
     expect(bannerBody.style?.color, AppColors.bankBannerSub);
 
@@ -360,8 +380,9 @@ void main() {
 
     final tileColors = _tiles()
         .evaluate()
-        .map((e) =>
-            ((e.widget as Container).decoration! as BoxDecoration).color)
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
         .toList();
     expect(tileColors, const [
       AppColors.fieldTileName,
@@ -374,12 +395,14 @@ void main() {
     expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
 
     // Shield sits in a light-green circle.
-    final shield = tester.widget<Container>(find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).color == AppColors.bankShieldCircle,
-    ));
+    final shield = tester.widget<Container>(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).color == AppColors.bankShieldCircle,
+      ),
+    );
     expect((shield.decoration! as BoxDecoration).shape, BoxShape.circle);
   });
 
@@ -395,7 +418,8 @@ void main() {
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                      builder: (_) => const BankDetaileScreen()),
+                    builder: (_) => const BankDetaileScreen(),
+                  ),
                 ),
                 child: const Text('open'),
               ),
@@ -414,23 +438,20 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('Continue opens the Business profile screen', (tester) async {
+  testWidgets('Continue opens the home page', (tester) async {
     tester.view.physicalSize = const Size(412, 936);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      const MaterialApp(home: BankDetaileScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProfileBusinessScreen), findsOneWidget);
-    expect(find.text('Wallet & Transactions'), findsOneWidget);
-    expect(find.text('Balance, withdrawals'), findsOneWidget);
-    expect(find.text('Review & Ratings'), findsOneWidget);
-    expect(find.text('125 reviews'), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.text('Hello,'), findsOneWidget);
+    expect(find.text('Ramesh Kumar'), findsOneWidget);
+    expect(find.text('ACTIVE ORDERS'), findsOneWidget);
     // Onboarding is cleared from the stack.
     expect(find.text('Fill Your Bank Details'), findsNothing);
   });
@@ -439,9 +460,7 @@ void main() {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      const MaterialApp(home: BankDetaileScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -453,9 +472,10 @@ void main() {
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
-    expect((image.image as AssetImage).assetName,
-        BankDetaileScreen.illustrationAsset);
-    expect(BankDetaileScreen.illustrationAsset,
-        'assets/bank/illustration.png');
+    expect(
+      (image.image as AssetImage).assetName,
+      BankDetaileScreen.illustrationAsset,
+    );
+    expect(BankDetaileScreen.illustrationAsset, 'assets/bank/illustration.png');
   });
 }

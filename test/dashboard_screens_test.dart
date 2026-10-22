@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
+import 'package:seller_app/screens/bank_details_screen.dart';
+import 'package:seller_app/screens/business_farm_screen.dart';
+import 'package:seller_app/screens/my_orders_screen.dart';
+import 'package:seller_app/screens/order_privew.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
+import 'package:seller_app/screens/settings_screen.dart';
+import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/wallet_page.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
@@ -142,21 +148,47 @@ void main() {
       expect(find.text('Save changes'), findsOneWidget);
     });
 
-    testWidgets('the last three Account rows do not navigate', (tester) async {
-      await pumpProfile(tester, const ProfileScreen());
+    testWidgets('Business & Farm, Verification and Bank rows navigate', (
+      tester,
+    ) async {
+      // All three anees screens share the same asset-image back circle.
+      final back = find.image(const AssetImage('assets/order/ic_back.png'));
 
-      for (final row in [
-        'Business & Farm',
-        'Verification (KYC)',
-        'Bank Details',
-      ]) {
-        await tester.tap(find.text(row));
-        await tester.pumpAndSettle();
-        // Still on the profile screen; no pushed route.
-        expect(find.byType(ProfileScreen), findsOneWidget);
-        expect(find.text('Full Name'), findsNothing);
-        expect(find.text('Fill Your Bank Details'), findsNothing);
-      }
+      // Business & Farm -> BusinessFarmScreen.
+      await pumpProfile(tester, const ProfileScreen());
+      await tester.tap(find.text('Business & Farm'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BusinessFarmScreen), findsOneWidget);
+      expect(find.text('Kumar Organic Farm'), findsWidgets);
+      expect(find.text('Farm / Business Name'), findsOneWidget);
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+      expect(find.byType(BusinessFarmScreen), findsNothing);
+
+      // Verification (KYC) -> VerificationKycScreen.
+      await tester.tap(find.text('Verification (KYC)'));
+      await tester.pumpAndSettle();
+      expect(find.byType(VerificationKycScreen), findsOneWidget);
+      expect(find.text('Verified Seller'), findsOneWidget);
+      expect(find.text('Documents'), findsOneWidget);
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+      expect(find.byType(VerificationKycScreen), findsNothing);
+
+      // Bank Details -> BankDetailsScreen (the profile 162 screen, distinct
+      // from the onboarding bank_detaile flow).
+      await tester.tap(find.text('Bank Details'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BankDetailsScreen), findsOneWidget);
+      expect(find.text('State Bank of India'), findsOneWidget);
+      expect(find.text('Account holder'), findsOneWidget);
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+      expect(find.byType(BankDetailsScreen), findsNothing);
+
+      // All three came back to the profile tab.
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Personal Details'), findsOneWidget);
     });
 
     testWidgets('FAB opens AddProductsScreen', (tester) async {
@@ -314,6 +346,27 @@ void main() {
 
       expect(find.byType(WelcomeSellerScreen), findsOneWidget);
       expect(find.text('Withdrawal balance'), findsNothing);
+    });
+
+    testWidgets('Settings row opens the settings page', (tester) async {
+      await pumpProfile(tester, const ProfileAppScreen());
+
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text('Preferences'), findsWidgets);
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('Language'), findsOneWidget);
+
+      // Back (asset circle) returns to the profile App tab.
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.text('Help & Suppport'), findsOneWidget);
+      expect(find.text('Log out'), findsOneWidget);
     });
   });
 
@@ -781,6 +834,67 @@ void main() {
       expect(find.byType(ProfileScreen), findsOneWidget);
     });
 
+    testWidgets('bottom nav stays fixed at the bottom while the form scrolls', (
+      tester,
+    ) async {
+      // Phone viewport shorter than the 1397-tall artboard, so the form
+      // actually scrolls under the fixed nav.
+      tester.view.physicalSize = const Size(412, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: AddProductsScreen()));
+      await tester.pumpAndSettle();
+
+      Rect navRect() => tester.getRect(find.byType(BottomNavBar));
+      final before = navRect();
+      expect(before.bottom, closeTo(800, 1));
+
+      // Scroll the form down by 400px.
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      // Nav bottom/top/left unchanged: it did NOT scroll with the content.
+      final after = navRect();
+      expect(after.bottom, closeTo(800, 1));
+      expect(after.top, closeTo(before.top, 1));
+      expect(after.left, closeTo(before.left, 1));
+
+      // The content scrolled: the header is now above the viewport.
+      final header = tester.getRect(find.text('Add Products'));
+      expect(header.top, lessThan(0));
+    });
+
+    testWidgets('Orders tab opens the My Orders page', (tester) async {
+      tester.view.physicalSize = const Size(412, 917);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AddProductsScreen()),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AddProductsScreen), findsOneWidget);
+      expect(find.byType(MyOrdersScreen), findsNothing);
+
+      // Orders tab (in the fixed nav) pushes the My Orders screen.
+      await tester.tap(find.text('Orders'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyOrdersScreen), findsOneWidget);
+      expect(find.byType(AddProductsScreen), findsNothing);
+    });
+
     testWidgets('layout scales down instead of overflowing', (tester) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
@@ -801,6 +915,98 @@ void main() {
       final align = scroller.child as Align;
       final artboard = align.child as SizedBox;
       expect(artboard.width, closeTo(360, 0.5));
+    });
+  });
+
+  group('OrderPrivewScreen (Fresh Tomatoes is live!, Zeplin 172)', () {
+    testWidgets('an order block opens the product preview screen', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 1154);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: MyOrdersScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPrivewScreen), findsNothing);
+
+      await tester.tap(find.text('Hotel Green Leaf'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPrivewScreen), findsOneWidget);
+      expect(find.text('Fresh Tomatoes is live!'), findsOneWidget);
+      expect(find.text('Preview product'), findsOneWidget);
+      expect(find.text('Add another product'), findsOneWidget);
+      expect(
+        find.image(const AssetImage(OrderPrivewScreen.heroAsset)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('renders at the measured 412x917 geometry', (tester) async {
+      tester.view.physicalSize = const Size(412, 917);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, const Color(0xFFFAFBF3));
+
+      // Baked hero (card + shadow, baked title erased in the asset).
+      final hero = tester.getRect(
+        find.image(const AssetImage(OrderPrivewScreen.heroAsset)),
+      );
+      expect(hero.left, closeTo(0, 0.6));
+      expect(hero.top, closeTo(103, 0.6));
+      expect(hero.width, closeTo(412, 0.6));
+      expect(hero.height, closeTo(332, 0.6));
+
+      final title = tester.getRect(find.text('Fresh Tomatoes is live!'));
+      expect(title.left, closeTo(0, 0.6));
+      expect(title.top, closeTo(400.9, 0.6));
+
+      final subtitle = tester.getRect(
+        find.text('Buyers can noww see it and place orders.'),
+      );
+      expect(subtitle.top, closeTo(437.9, 0.6));
+
+      final tile = tester.getRect(
+        find.image(const AssetImage(OrderPrivewScreen.tileAsset)),
+      );
+      expect(tile.left, closeTo(40.5, 0.6));
+      expect(tile.top, closeTo(491, 0.6));
+      expect(tile.width, closeTo(75, 0.6));
+      expect(tile.height, closeTo(74, 0.6));
+
+      final cardTitle = tester.getRect(find.text('Fresh Tomatoes'));
+      expect(cardTitle.left, closeTo(141.8, 0.6));
+      expect(cardTitle.top, closeTo(496.6, 0.6));
+
+      final category = tester.getRect(find.text('Vegetables'));
+      expect(category.left, closeTo(141.7, 0.6));
+      expect(category.top, closeTo(513.4, 0.6));
+
+      final price = tester.getRect(find.text('\u20B948'));
+      expect(price.left, closeTo(142, 0.6));
+      expect(price.top, closeTo(539.9, 0.6));
+
+      final availability = tester.getRect(find.text('50 kg available'));
+      expect(availability.left, closeTo(278, 0.6));
+      expect(availability.top, closeTo(546.2, 0.6));
+
+      final pillLabel = tester.getRect(find.text('Active'));
+      expect(pillLabel.left, closeTo(330, 0.6));
+      expect(pillLabel.top, closeTo(500, 0.6));
+
+      final preview = tester.getRect(find.text('Preview product'));
+      expect(preview.center.dx, closeTo(206, 0.6));
+      expect(preview.center.dy, closeTo(808.5, 0.6));
+
+      final addLabel = tester.getRect(find.text('Add another product'));
+      expect(addLabel.center.dy, closeTo(872.5, 0.6));
     });
   });
 }
