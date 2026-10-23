@@ -4,11 +4,13 @@ import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the verify screen on the 412x873 artboard (top headroom removed).
-Future<void> pumpScreen(WidgetTester tester) async {
+Future<void> pumpScreen(WidgetTester tester, {Widget? screen}) async {
   tester.view.physicalSize = const Size(412, 873);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: VerifyDetaileScreen()));
+  await tester.pumpWidget(
+    MaterialApp(home: screen ?? const VerifyDetaileScreen()),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -254,6 +256,86 @@ void main() {
       AppColors.fieldTileBusiness,
       AppColors.fieldTilePhone,
     ]);
+  });
+
+  testWidgets('document cards open the picker and show the selected files', (
+    tester,
+  ) async {
+    final picks = <PickedDocument>[
+      const PickedDocument(name: 'aadhaar-card.pdf', path: '/tmp/aadhaar.pdf'),
+      const PickedDocument(name: 'pan-card.png', path: '/tmp/pan.png'),
+      const PickedDocument(name: 'gst-certificate.pdf'),
+    ];
+    var calls = 0;
+
+    Future<PickedDocument?> picker() async => picks[calls++];
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-aadhaar')));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text('aadhaar-card.pdf'), findsOneWidget);
+    expect(find.text('For individual farmers'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('verify-doc-pan')));
+    await tester.pumpAndSettle();
+    expect(calls, 2);
+    expect(find.text('pan-card.png'), findsOneWidget);
+    expect(find.text('For businesses / traders'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('verify-doc-business')));
+    await tester.pumpAndSettle();
+    expect(calls, 3);
+    expect(find.text('gst-certificate.pdf'), findsOneWidget);
+    expect(find.text('FSSAI / Udyam / GST (if available)'), findsNothing);
+
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+    expect(find.byIcon(Icons.check_circle), findsNWidgets(3));
+  });
+
+  testWidgets('cancelling the file picker keeps the card unchanged', (
+    tester,
+  ) async {
+    var calls = 0;
+    Future<PickedDocument?> picker() async {
+      calls++;
+      return null;
+    }
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-aadhaar')));
+    await tester.pumpAndSettle();
+
+    expect(calls, 1);
+    expect(find.text('For individual farmers'), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(3));
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+  });
+
+  testWidgets('shows an error when the file picker fails', (tester) async {
+    Future<PickedDocument?> picker() async {
+      throw Exception('picker unavailable');
+    }
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-pan')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not open the file picker.'), findsOneWidget);
+    expect(find.text('For businesses / traders'), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(3));
   });
 
   testWidgets('Continue opens the bank-details screen', (tester) async {

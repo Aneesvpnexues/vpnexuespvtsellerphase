@@ -14,6 +14,26 @@ Future<void> pumpScreen(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> enterBankDetails(WidgetTester tester, {bool verify = true}) async {
+  await tester.enterText(
+    find.byKey(const Key('bank-holder-name-field')),
+    'Sita Devi',
+  );
+  await tester.enterText(
+    find.byKey(const Key('bank-account-number-field')),
+    '987654321098',
+  );
+  await tester.enterText(
+    find.byKey(const Key('bank-ifsc-field')),
+    'SBIN0001234',
+  );
+  await tester.pump();
+  if (verify) {
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+  }
+}
+
 Finder _tiles() => find.byWidgetPredicate(
   (w) =>
       w is Container &&
@@ -391,6 +411,15 @@ void main() {
       AppColors.fieldTileLocation,
     ]);
 
+    // The active card's shadow must not show through its interior.
+    final cardColors = _docCards()
+        .evaluate()
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
+        .toList();
+    expect(cardColors, List.filled(4, AppColors.surface));
+
     // Dropdown chevron is a custom painter, not a Material icon.
     expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
 
@@ -404,6 +433,86 @@ void main() {
       ),
     );
     expect((shield.decoration! as BoxDecoration).shape, BoxShape.circle);
+  });
+
+  testWidgets('fields accept input and the bank can be changed', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-holder-name-field')),
+      'Sita Devi',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-account-number-field')),
+      '987654321098',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'sbin0001234',
+    );
+    await tester.pump();
+
+    expect(find.text('Sita Devi'), findsOneWidget);
+    expect(find.text('9876 5432 1098'), findsOneWidget);
+    expect(find.text('SBIN0001234'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bank-selector')));
+    await tester.pumpAndSettle();
+    expect(find.text('Select bank'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bank-option-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('HDFC Bank'), findsOneWidget);
+    expect(find.text('Select bank'), findsNothing);
+  });
+
+  testWidgets('Verify validates and resets the IFSC state', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'SBIN1234',
+    );
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a valid 11-character IFSC code.'), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'SBIN0001234',
+    );
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+    expect(find.text('Verified'), findsOneWidget);
+    expect(find.text('Verify'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'HDFC0001234',
+    );
+    await tester.pump();
+    expect(find.text('Verify'), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
+  });
+
+  testWidgets('Continue opens home even with dummy details', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-holder-name-field')),
+      'edsfsa',
+    );
+    await tester.enterText(find.byKey(const Key('bank-ifsc-field')), '12345');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('bank-continue')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.byType(BankDetaileScreen), findsNothing);
   });
 
   testWidgets('back arrow pops the route', (tester) async {
@@ -438,14 +547,13 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('Continue opens the home page', (tester) async {
-    tester.view.physicalSize = const Size(412, 936);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
-    await tester.pumpAndSettle();
+  testWidgets('Continue opens the home page once the details are valid', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await enterBankDetails(tester);
 
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.byKey(const Key('bank-continue')));
     await tester.pumpAndSettle();
 
     expect(find.byType(SellerHomeScreen), findsOneWidget);

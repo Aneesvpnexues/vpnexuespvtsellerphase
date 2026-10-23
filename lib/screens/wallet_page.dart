@@ -35,16 +35,16 @@ class _WalletPageState extends State<WalletPage> {
         designHeight: WalletPage.designHeight,
         child: Stack(
           children: [
-            const Positioned(left: 24, top: 72, child: _HeaderBack()),
+            const Positioned(left: 24, top: 16, child: _HeaderBack()),
             const Positioned(
               left: 68,
-              top: 76,
+              top: 20,
               child: Text('Wallet', style: AppTextStyles.profileHeaderTitle),
             ),
-            const Positioned(left: 24, top: 121, child: _BalanceCard()),
+            const Positioned(left: 24, top: 65, child: _BalanceCard()),
             Positioned(
               left: 24,
-              top: 327,
+              top: 271,
               child: _Chip(
                 width: 48.5,
                 label: 'All',
@@ -54,7 +54,7 @@ class _WalletPageState extends State<WalletPage> {
             ),
             Positioned(
               left: 91,
-              top: 327,
+              top: 271,
               child: _Chip(
                 width: 90,
                 label: 'Credited',
@@ -64,7 +64,7 @@ class _WalletPageState extends State<WalletPage> {
             ),
             Positioned(
               left: 202,
-              top: 327,
+              top: 271,
               child: _Chip(
                 width: 110.5,
                 label: 'Withdrawn',
@@ -74,7 +74,7 @@ class _WalletPageState extends State<WalletPage> {
             ),
             Positioned(
               left: 24,
-              top: 376,
+              top: 320,
               child: _TransactionsCard(filter: _filter),
             ),
           ],

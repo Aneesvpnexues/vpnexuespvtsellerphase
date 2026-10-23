@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../data/product_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -8,6 +10,10 @@ import '../widgets/bottom_nav_bar.dart';
 import 'my_orders_screen.dart';
 import 'profile_screen.dart';
 
+export '../data/product_store.dart' show ProductPhoto;
+
+typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
+
 /// "Add Products" — replica of Zeplin "Android Compact - 124"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1ae18783597fd3b9a332f).
 ///
@@ -15,20 +21,24 @@ import 'profile_screen.dart';
 /// content above, the shared [BottomNavBar] pinned to the artboard bottom
 /// exactly like [ProfileShell]). Category
 /// and status chips select, the quantity stepper adjusts local state, the
-/// description counts characters to 500, and the back arrow pops.
+/// description counts characters to 500, the photos strip accepts up to five
+/// gallery images, and the back arrow pops.
 ///
 /// Design copy quirks kept verbatim: "et your price and available quantity"
 /// (missing leading "S") and "Product Descrption" (used for both the
 /// description and status section titles).
 class AddProductsScreen extends StatefulWidget {
-  const AddProductsScreen({super.key});
+  const AddProductsScreen({super.key, this.photoPicker});
 
+  final ProductPhotoPicker? photoPicker;
+
+  static const int maxPhotos = 5;
   static const String tomatoAsset = 'assets/products/tomato.png';
   static const double designWidth = 412;
 
-  /// Full Zeplin 124 frame height (1397): form content ends ~y1256 and the
-  /// bottom-nav band occupies y1309..1397.
-  static const double designHeight = 1397;
+  /// The Zeplin frame extends to 1440 so the Continue button sits above the
+  /// pinned bottom-nav band and remains reachable at the end of the scroll.
+  static const double designHeight = 1440;
 
   @override
   State<AddProductsScreen> createState() => _AddProductsScreenState();
@@ -38,12 +48,179 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   int _category = -1;
   int _status = 0;
   int _quantity = 50;
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _price = TextEditingController();
   final TextEditingController _description = TextEditingController();
+  final List<ProductPhoto> _photos = [];
+  int _currentPage = 0;
+  bool _isPicking = false;
+  bool _isPhotoAnimating = false;
+  bool _isSaving = false;
+  final PageController _photoController = PageController(viewportFraction: 0.6);
 
   static const _categories = ['Vegetables', 'Fruits', 'Grains & pulses'];
 
+  int get _photoPageCount {
+    if (_photos.isEmpty) return 0;
+    return _photos.length < AddProductsScreen.maxPhotos
+        ? _photos.length + 1
+        : _photos.length;
+  }
+
+  Future<void> _addPhoto() async {
+    if (_isPicking || _isPhotoAnimating) return;
+    if (_photos.length >= AddProductsScreen.maxPhotos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can add up to 5 photos.')),
+      );
+      return;
+    }
+    setState(() => _isPicking = true);
+
+    ProductPhoto? photo;
+    try {
+      photo = await (widget.photoPicker ?? _pickPhotoFromGallery)();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the photo picker.')),
+        );
+      }
+    }
+
+    if (!mounted) return;
+    final added = photo != null && _photos.length < AddProductsScreen.maxPhotos;
+    final target = _photos.length;
+    setState(() {
+      _isPicking = false;
+      if (added) {
+        _photos.add(photo!);
+        _currentPage = target;
+      }
+    });
+    if (added) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_photoController.hasClients) return;
+        if (_photoController.page?.round() == target) return;
+        _animateToPage(target);
+      });
+    }
+  }
+
+  Future<ProductPhoto?> _pickPhotoFromGallery() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (file == null) return null;
+    return ProductPhoto(bytes: await file.readAsBytes());
+  }
+
+  Future<void> _animateToPage(int target) async {
+    if (_isPhotoAnimating || !_photoController.hasClients) return;
+    _isPhotoAnimating = true;
+    try {
+      await _photoController.animateToPage(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } finally {
+      _isPhotoAnimating = false;
+    }
+  }
+
+  void _removeCurrentPhoto() {
+    if (_photos.isEmpty ||
+        _currentPage >= _photos.length ||
+        _isPhotoAnimating ||
+        (_photoController.hasClients &&
+            _photoController.position.isScrollingNotifier.value)) {
+      return;
+    }
+    setState(() {
+      _photos.removeAt(_currentPage);
+      final pageCount = _photoPageCount;
+      if (pageCount == 0) {
+        _currentPage = 0;
+      } else if (_currentPage >= pageCount) {
+        _currentPage = pageCount - 1;
+      }
+    });
+    if (_photos.isEmpty) return;
+    final target = _currentPage;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_photoController.hasClients) return;
+      _photoController.jumpToPage(target);
+    });
+  }
+
+  void _showPhoto(int offset) {
+    if (_photos.isEmpty || _isPhotoAnimating) return;
+    final pageCount = _photoPageCount;
+    if (pageCount <= 1) return;
+    if (_photoController.hasClients &&
+        _photoController.position.isScrollingNotifier.value) {
+      return;
+    }
+    final target = (_currentPage + offset) % pageCount;
+    if (target == _currentPage) return;
+    setState(() => _currentPage = target);
+    if (!_photoController.hasClients) return;
+    _animateToPage(target);
+  }
+
+  void _previewPhoto(int index) {
+    if (index < 0 || index >= _photos.length) return;
+    showDialog<void>(
+      context: context,
+      barrierColor: const Color(0xA6000000),
+      builder: (context) => _PhotoPreviewDialog(photo: _photos[index]),
+    );
+  }
+
+  void _saveProduct() {
+    if (_isSaving) return;
+    final String name = _name.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter a product name.')));
+      return;
+    }
+    final String rawPrice = _price.text
+        .replaceAll('\u20B9', '')
+        .replaceAll(',', '')
+        .trim();
+    final double? price = double.tryParse(rawPrice);
+    if (price == null || !price.isFinite || price <= 0) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter a valid price.')));
+      return;
+    }
+
+    _isSaving = true;
+    FocusScope.of(context).unfocus();
+    ProductStore.instance.addProduct(
+      name: name,
+      category: _category >= 0 ? _categories[_category] : 'Vegetables',
+      price: price,
+      unit: 'kg',
+      quantity: _quantity,
+      description: _description.text.trim(),
+      status: ProductStatus.values[_status],
+      photos: _photos,
+    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Product added')));
+    Navigator.of(context).maybePop();
+  }
+
   @override
   void dispose() {
+    _photoController.dispose();
+    _name.dispose();
+    _price.dispose();
     _description.dispose();
     super.dispose();
   }
@@ -80,7 +257,22 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                       Positioned(
                         left: 24,
                         top: 148,
-                        child: _PhotosCard(onNext: () {}),
+                        child: _PhotosCard(
+                          photos: _photos,
+                          controller: _photoController,
+                          currentPage: _currentPage,
+                          isPicking: _isPicking,
+                          onAdd: _addPhoto,
+                          onRemove: _removeCurrentPhoto,
+                          onPreview: _previewPhoto,
+                          onNext: () => _showPhoto(1),
+                          onPrevious: () => _showPhoto(-1),
+                          onPageChanged: (index) {
+                            if (_currentPage != index) {
+                              setState(() => _currentPage = index);
+                            }
+                          },
+                        ),
                       ),
                       // Basic information card.
                       Positioned(
@@ -127,6 +319,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                                 child: _InputField(
                                   icon: Icons.sell_outlined,
                                   hint: 'e.g Fresh Tomates',
+                                  controller: _name,
+                                  fieldKey: const ValueKey('product-name'),
                                 ),
                               ),
                               const Positioned(
@@ -216,6 +410,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                                   icon: Icons.currency_rupee,
                                   hint: 'e.g. 48',
                                   width: 242,
+                                  controller: _price,
+                                  fieldKey: const ValueKey('product-price'),
                                 ),
                               ),
                               Positioned(
@@ -326,6 +522,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: TextField(
+                                    key: const ValueKey('product-description'),
                                     controller: _description,
                                     maxLines: null,
                                     expands: true,
@@ -440,6 +637,15 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                           ),
                         ),
                       ),
+                      Positioned(
+                        left: 24,
+                        top: 1274,
+                        child: SizedBox(
+                          width: 364,
+                          height: 54,
+                          child: _ContinueButton(onTap: _saveProduct),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -489,6 +695,41 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ContinueButton extends StatelessWidget {
+  const _ContinueButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const ValueKey('add-product-continue'),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              AppColors.continueGradientStart,
+              AppColors.continueGradientEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.continueGlow,
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Text('Continue', style: AppTextStyles.button),
       ),
     );
   }
@@ -598,12 +839,39 @@ class _ProgressCard extends StatelessWidget {
 }
 
 class _PhotosCard extends StatelessWidget {
-  const _PhotosCard({required this.onNext});
+  const _PhotosCard({
+    required this.photos,
+    required this.controller,
+    required this.currentPage,
+    required this.isPicking,
+    required this.onAdd,
+    required this.onRemove,
+    required this.onPreview,
+    required this.onNext,
+    required this.onPrevious,
+    required this.onPageChanged,
+  });
 
+  final List<ProductPhoto> photos;
+  final PageController controller;
+  final int currentPage;
+  final bool isPicking;
+  final VoidCallback onAdd;
+  final VoidCallback onRemove;
+  final ValueChanged<int> onPreview;
   final VoidCallback onNext;
+  final VoidCallback onPrevious;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
+    final hasPhotos = photos.isNotEmpty;
+    final pageCount = photos.length < AddProductsScreen.maxPhotos
+        ? photos.length + 1
+        : photos.length;
+    final activeDot = currentPage < AddProductsScreen.maxPhotos
+        ? currentPage
+        : AddProductsScreen.maxPhotos - 1;
     return Container(
       width: 364,
       height: 232,
@@ -651,6 +919,7 @@ class _PhotosCard extends StatelessWidget {
             right: 16,
             top: 20,
             child: Container(
+              key: const ValueKey('photo-counter'),
               height: 28,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               alignment: Alignment.center,
@@ -658,13 +927,12 @@ class _PhotosCard extends StatelessWidget {
                 color: AppColors.photoBadge,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('1/5', style: AppTextStyles.photoBadge),
+              child: Text(
+                '${photos.length}/${AddProductsScreen.maxPhotos}',
+                style: AppTextStyles.photoBadge,
+              ),
             ),
           ),
-          // Photo strip: tomato photo (bleeds to the artboard's left edge),
-          // add-photo tile, and a sliver of the next tile with a chevron.
-          // The asset is a pixel-exact design crop (design x0..127, y253..380),
-          // so its baked-in ✕ and ‹ buttons land exactly where Zeplin has them.
           Positioned(
             left: 0,
             top: 71,
@@ -674,105 +942,137 @@ class _PhotosCard extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned(
-                    left: -24,
-                    top: 0,
-                    child: Image.asset(
-                      AddProductsScreen.tomatoAsset,
-                      width: 127,
-                      height: 127,
-                    ),
-                  ),
-                  Positioned(
-                    left: 88,
-                    top: 0,
-                    child: Container(
-                      width: 188,
-                      height: 127,
-                      decoration: const BoxDecoration(
-                        color: AppColors.addPhotoBg,
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                  if (!hasPhotos) ...[
+                    Positioned(
+                      left: -24,
+                      top: 0,
+                      child: Image.asset(
+                        AddProductsScreen.tomatoAsset,
+                        key: const ValueKey('photo-tomato'),
+                        width: 127,
+                        height: 127,
                       ),
-                      child: CustomPaint(
-                        painter: const _DashedBorderPainter(
-                          color: AppColors.chipActive,
-                          strokeWidth: 1.5,
-                          radius: 16,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                    ),
+                    Positioned(
+                      left: 88,
+                      top: 0,
+                      child: _AddPhotoTile(onTap: onAdd),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      width: 364,
+                      height: 132,
+                      child: ClipRect(
+                        child: Stack(
+                          clipBehavior: Clip.none,
                           children: [
-                            const Icon(
-                              Icons.add,
-                              size: 28,
-                              color: AppColors.darkGreenInk,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Add photo',
-                              style: AppTextStyles.chipActiveLabel.copyWith(
-                                fontSize: 14,
-                                color: AppColors.darkGreenInk,
+                            Positioned(
+                              left: 306,
+                              top: 6,
+                              child: Transform.rotate(
+                                angle: 0.1419,
+                                alignment: Alignment.topLeft,
+                                child: Container(
+                                  width: 100,
+                                  height: 114,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.addPhotoBg,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                  // Next carousel tile: a rounded rect rotated ~8.1° clockwise,
-                  // clipped at the card's right edge (design measurements).
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    width: 364,
-                    height: 132,
-                    child: ClipRect(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            left: 306,
-                            top: 6,
-                            child: Transform.rotate(
-                              angle: 0.1419,
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                width: 100,
-                                height: 114,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.addPhotoBg,
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(16),
+                  ] else ...[
+                    Positioned.fill(
+                      child: PageView.builder(
+                        key: const ValueKey('photo-carousel'),
+                        controller: controller,
+                        itemCount: pageCount,
+                        onPageChanged: onPageChanged,
+                        itemBuilder: (context, index) {
+                          if (index == photos.length) {
+                            return Center(child: _AddPhotoTile(onTap: onAdd));
+                          }
+                          return Center(
+                            child: SizedBox(
+                              key: ValueKey('product-photo-$index'),
+                              width: 188,
+                              height: 127,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: GestureDetector(
+                                      onTap: () => onPreview(index),
+                                      behavior: HitTestBehavior.opaque,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.memory(
+                                          photos[index].bytes,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  if (index == currentPage)
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: _PhotoRemoveButton(
+                                        onTap: onRemove,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
-                  ),
+                    Positioned(
+                      left: 8,
+                      top: 50,
+                      child: _PhotoNavButton(
+                        key: const ValueKey('photo-previous'),
+                        icon: Icons.chevron_left,
+                        onTap: onPrevious,
+                      ),
+                    ),
+                  ],
                   Positioned(
                     left: 332,
                     top: 50,
-                    child: GestureDetector(
+                    child: _PhotoNavButton(
+                      key: const ValueKey('photo-next'),
+                      icon: Icons.chevron_right,
                       onTap: onNext,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: const BoxDecoration(
-                          color: AppColors.darkGreenInk,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.chevron_right,
-                          size: 14,
-                          color: AppColors.limeAccent,
+                    ),
+                  ),
+                  if (isPicking)
+                    Positioned.fill(
+                      child: AbsorbPointer(
+                        key: const ValueKey('photo-loading'),
+                        child: ColoredBox(
+                          color: const Color(0xB3FEFEFE),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.darkGreenInk,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -783,13 +1083,14 @@ class _PhotosCard extends StatelessWidget {
             top: 214,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
+              children: List.generate(AddProductsScreen.maxPhotos, (i) {
                 return Container(
+                  key: ValueKey('photo-dot-$i'),
                   width: 7,
                   height: 7,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: i == 1
+                    color: i == activeDot
                         ? AppColors.darkGreenInk
                         : AppColors.dotInactive,
                     shape: BoxShape.circle,
@@ -799,6 +1100,157 @@ class _PhotosCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhotoRemoveButton extends StatelessWidget {
+  const _PhotoRemoveButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const ValueKey('photo-remove'),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.close, size: 12, color: AppColors.textPrimary),
+      ),
+    );
+  }
+}
+
+class _PhotoPreviewDialog extends StatelessWidget {
+  const _PhotoPreviewDialog({required this.photo});
+
+  final ProductPhoto photo;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.sizeOf(context);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SizedBox(
+          width: double.maxFinite,
+          height: (media.height * 0.6).clamp(240.0, 560.0).toDouble(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ColoredBox(
+                  color: AppColors.darkGreenInk,
+                  child: Image.memory(
+                    photo.bytes,
+                    key: const ValueKey('photo-preview-image'),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: GestureDetector(
+                    key: const ValueKey('photo-preview-close'),
+                    onTap: () => Navigator.of(context).pop(),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: AppColors.surface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoNavButton extends StatelessWidget {
+  const _PhotoNavButton({super.key, required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: const BoxDecoration(
+          color: AppColors.darkGreenInk,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 14, color: AppColors.limeAccent),
+      ),
+    );
+  }
+}
+
+class _AddPhotoTile extends StatelessWidget {
+  const _AddPhotoTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const ValueKey('add-photo'),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 188,
+        height: 127,
+        decoration: const BoxDecoration(
+          color: AppColors.addPhotoBg,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+        child: CustomPaint(
+          painter: const _DashedBorderPainter(
+            color: AppColors.chipActive,
+            strokeWidth: 1.5,
+            radius: 16,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add, size: 28, color: AppColors.darkGreenInk),
+              const SizedBox(height: 8),
+              Text(
+                'Add photo',
+                style: AppTextStyles.chipActiveLabel.copyWith(
+                  fontSize: 14,
+                  color: AppColors.darkGreenInk,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -845,11 +1297,19 @@ class _SectionIcon extends StatelessWidget {
 }
 
 class _InputField extends StatelessWidget {
-  const _InputField({required this.icon, required this.hint, this.width = 332});
+  const _InputField({
+    required this.icon,
+    required this.hint,
+    this.width = 332,
+    this.controller,
+    this.fieldKey,
+  });
 
   final IconData icon;
   final String hint;
   final double width;
+  final TextEditingController? controller;
+  final Key? fieldKey;
 
   @override
   Widget build(BuildContext context) {
@@ -868,6 +1328,8 @@ class _InputField extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              key: fieldKey,
+              controller: controller,
               style: AppTextStyles.inputInkSoft,
               cursorColor: AppColors.inputCaret,
               decoration: InputDecoration(

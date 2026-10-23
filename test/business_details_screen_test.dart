@@ -15,23 +15,23 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 Finder _tiles() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(8)) &&
-          (w.decoration as BoxDecoration).color != null &&
-          (w.decoration as BoxDecoration).color != AppColors.surface,
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(8)) &&
+      (w.decoration as BoxDecoration).color != null &&
+      (w.decoration as BoxDecoration).color != AppColors.surface,
+);
 
 Finder _continueButton() => find.byWidgetPredicate(
-      (w) =>
-          w is Container &&
-          w.decoration is BoxDecoration &&
-          (w.decoration as BoxDecoration).gradient != null &&
-          (w.decoration as BoxDecoration).borderRadius ==
-              const BorderRadius.all(Radius.circular(18)),
-    );
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).gradient != null &&
+      (w.decoration as BoxDecoration).borderRadius ==
+          const BorderRadius.all(Radius.circular(18)),
+);
 
 void main() {
   testWidgets('renders the STEP 03 content', (tester) async {
@@ -82,8 +82,10 @@ void main() {
 
     // Subtitle, section title.
     expect(rectOf(find.text("Let's create your profile")).left, closeTo(24, 1));
-    expect(rectOf(find.text("Let's create your profile")).top,
-        closeTo(248.2, 1));
+    expect(
+      rectOf(find.text("Let's create your profile")).top,
+      closeTo(248.2, 1),
+    );
     expect(rectOf(find.text('Business Details')).left, closeTo(24, 1));
     expect(rectOf(find.text('Business Details')).top, closeTo(330.89, 1));
 
@@ -111,8 +113,12 @@ void main() {
     expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
-        tester.widget<Container>(_continueButton()).decoration! as BoxDecoration;
-    expect(decoration.borderRadius, const BorderRadius.all(Radius.circular(18)));
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect(
+      decoration.borderRadius,
+      const BorderRadius.all(Radius.circular(18)),
+    );
     final gradient = decoration.gradient! as LinearGradient;
     expect(gradient.colors, const [
       AppColors.continueGradientStart,
@@ -134,7 +140,9 @@ void main() {
     final accent = tester.widget<Text>(find.text('business'));
     expect(accent.style?.fontSize, 35);
 
-    final subtitle = tester.widget<Text>(find.text("Let's create your profile"));
+    final subtitle = tester.widget<Text>(
+      find.text("Let's create your profile"),
+    );
     expect(subtitle.style?.fontSize, 16);
 
     final section = tester.widget<Text>(find.text('Business Details'));
@@ -144,6 +152,22 @@ void main() {
     final note = tester.widget<Text>(find.text('All fiedls are required'));
     expect(note.style?.fontSize, 11.5);
 
+    final notePill = tester.widget<Container>(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).color == AppColors.surface &&
+            (w.decoration as BoxDecoration).border != null,
+      ),
+    );
+    final noteDecoration = notePill.decoration! as BoxDecoration;
+    expect(noteDecoration.gradient, isNull);
+    expect(
+      (noteDecoration.border! as Border).top.color,
+      AppColors.verifyPillBorder,
+    );
+
     final label = tester.widget<Text>(find.text('Your name'));
     expect(label.style?.fontSize, 13);
 
@@ -151,8 +175,9 @@ void main() {
     expect(placeholder.style?.fontSize, 15);
 
     // The phone row holds its value in a TextField, so assert the field style.
-    final phoneField = tester
-        .widget<TextField>(find.byKey(const Key('businessPhone')));
+    final phoneField = tester.widget<TextField>(
+      find.byKey(const Key('businessPhone')),
+    );
     expect(phoneField.style?.fontSize, 15);
 
     final verified = tester.widget<Text>(find.text('Verified'));
@@ -181,8 +206,9 @@ void main() {
 
     final tileColors = _tiles()
         .evaluate()
-        .map((e) =>
-            ((e.widget as Container).decoration! as BoxDecoration).color)
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
         .toList();
     expect(tileColors, const [
       AppColors.fieldTileName,
@@ -211,10 +237,11 @@ void main() {
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
-    expect((image.image as AssetImage).assetName,
-        Step03BusinessDetailsScreen.leavesAsset);
-    expect(Step03BusinessDetailsScreen.leavesAsset,
-        'assets/step03/leaves.png');
+    expect(
+      (image.image as AssetImage).assetName,
+      Step03BusinessDetailsScreen.leavesAsset,
+    );
+    expect(Step03BusinessDetailsScreen.leavesAsset, 'assets/step03/leaves.png');
   });
 
   testWidgets('Continue is inert until every field is filled', (tester) async {
@@ -227,8 +254,7 @@ void main() {
 
     // Fill name + business only (phone/location start prefilled, address empty).
     await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
-    await tester.enterText(
-        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
     await tester.pump();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -240,10 +266,11 @@ void main() {
     await pumpScreen(tester);
 
     await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
     await tester.enterText(
-        find.byKey(const Key('businessFarm')), 'Green Farm');
-    await tester.enterText(find.byKey(const Key('businessAddress')),
-        '12 Main Street');
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
     await tester.pump();
 
     await tester.tap(find.text('Continue'));

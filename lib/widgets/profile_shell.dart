@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_navigation.dart';
@@ -318,78 +319,96 @@ class _SellerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onPersonalDetails,
-      child: Container(
-        width: 364,
-        height: 78,
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 22,
-              top: 15,
-              child: Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.avatarGreen,
-                  shape: BoxShape.circle,
+      child: AnimatedBuilder(
+        animation: SellerProfileStore.instance,
+        builder: (context, _) {
+          final SellerProfileStore store = SellerProfileStore.instance;
+          return Container(
+            width: 364,
+            height: 78,
+            decoration: BoxDecoration(
+              color: AppColors.cardWhite,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
                 ),
-                child: const Text(
-                  'RK',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.surface,
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 22,
+                  top: 15,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.avatarGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      store.initials,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.surface,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const Positioned(
-              left: 81,
-              top: 22,
-              child: Text('Ramesh Kumar', style: AppTextStyles.sellerName),
-            ),
-            const Positioned(
-              left: 81,
-              top: 46,
-              child: Text(
-                'Farmer, Salem, Tamil Nadu',
-                style: AppTextStyles.sellerSub,
-              ),
-            ),
-            Positioned(
-              right: 18,
-              top: 28,
-              child: Container(
-                height: 26,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.sellerVerifiedBg,
-                  borderRadius: BorderRadius.circular(13),
+                Positioned(
+                  left: 81,
+                  top: 22,
+                  width: 165,
+                  child: Text(
+                    store.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.sellerName,
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    _Dot(color: AppColors.sellerVerifiedText, size: 6),
-                    SizedBox(width: 6),
-                    Text('Verfiled Seller', style: AppTextStyles.verifiedBadge),
-                  ],
+                Positioned(
+                  left: 81,
+                  top: 46,
+                  width: 165,
+                  child: Text(
+                    store.sellerSummary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.sellerSub,
+                  ),
                 ),
-              ),
+                Positioned(
+                  right: 18,
+                  top: 28,
+                  child: Container(
+                    height: 26,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.sellerVerifiedBg,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        _Dot(color: AppColors.sellerVerifiedText, size: 6),
+                        SizedBox(width: 6),
+                        Text(
+                          'Verfiled Seller',
+                          style: AppTextStyles.verifiedBadge,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

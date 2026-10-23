@@ -27,17 +27,17 @@ class ReviewRatingsPage extends StatelessWidget {
         designHeight: designHeight,
         child: Stack(
           children: [
-            const Positioned(left: 24, top: 72, child: _HeaderBack()),
+            const Positioned(left: 24, top: 16, child: _HeaderBack()),
             const Positioned(
               left: 68,
-              top: 76,
+              top: 20,
               child: Text(
                 'Review & Ratings',
                 style: AppTextStyles.profileHeaderTitle,
               ),
             ),
-            const Positioned(left: 24, top: 121, child: _RatingSummaryCard()),
-            const Positioned(left: 24, top: 321, child: _ReviewsCard()),
+            const Positioned(left: 24, top: 65, child: _RatingSummaryCard()),
+            const Positioned(left: 24, top: 265, child: _ReviewsCard()),
           ],
         ),
       ),

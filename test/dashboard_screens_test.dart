@@ -1,5 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/product_store.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
@@ -30,15 +35,28 @@ Future<void> pumpProfile(WidgetTester tester, Widget widget) async {
 }
 
 /// Pumps the Add Products screen on a 412x917 phone viewport.
-Future<void> pumpAddProducts(WidgetTester tester) async {
+Future<void> pumpAddProducts(
+  WidgetTester tester, {
+  ProductPhotoPicker? photoPicker,
+}) async {
   tester.view.physicalSize = const Size(412, 917);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: AddProductsScreen()));
+  await tester.pumpWidget(
+    MaterialApp(home: AddProductsScreen(photoPicker: photoPicker)),
+  );
   await tester.pumpAndSettle();
 }
 
+final _photoBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6Q'
+  'AAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhX'
+  'Y/jPwPAfAAUAAf+mXJtdAAAAAElFTkSuQmCC',
+);
+
 void main() {
+  setUp(SellerProfileStore.instance.reset);
+
   group('ProfileScreen (Account, Zeplin 151)', () {
     testWidgets('renders the Account content', (tester) async {
       await pumpProfile(tester, const ProfileScreen());
@@ -148,6 +166,33 @@ void main() {
       expect(find.text('Trader'), findsOneWidget);
       expect(find.text('FPO / Group'), findsOneWidget);
       expect(find.text('Save changes'), findsOneWidget);
+    });
+
+    testWidgets('saving Personal Details updates the Profile seller card', (
+      tester,
+    ) async {
+      await pumpProfile(tester, const ProfileScreen());
+
+      await tester.tap(find.text('Personal Details'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('personal-name-field')),
+        'Sita Devi',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('personal-mobile-field')),
+        '9876543210',
+      );
+      await tester.tap(find.byKey(const ValueKey('seller-type-trader')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('save-personal-details')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Sita Devi'), findsOneWidget);
+      expect(find.text('SD'), findsOneWidget);
+      expect(find.text('Trader, Salem, Tamil Nadu'), findsOneWidget);
     });
 
     testWidgets('Business & Farm, Verification and Bank rows navigate', (
@@ -444,46 +489,48 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header title at (68, 76).
+      // Header title at (68, 20).
       final header = rectOf(find.text('Wallet'));
       expect(header.left, closeTo(68, 1));
-      expect(header.top, closeTo(76, 1));
+      expect(header.top, closeTo(20, 1));
 
-      // Balance card at (24, 121); label rel (21, 20), amount rel (22, 44).
+      // Balance card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Available balance'));
       expect(label.left, closeTo(24 + 21, 1));
-      expect(label.top, closeTo(121 + 20, 2));
-      final amount = rectOf(find.text('₹12,480'));
+      expect(label.top, closeTo(65 + 20, 2));
+      final amount = rectOf(find.text('\u20B912,480'));
       expect(amount.left, closeTo(24 + 22, 1));
-      expect(amount.top, closeTo(121 + 44, 2));
-      final sub = rectOf(find.text('₹3,480 more coming from orders in prog.'));
-      expect(sub.top, closeTo(121 + 95, 2));
+      expect(amount.top, closeTo(65 + 44, 2));
+      final sub = rectOf(
+        find.text('\u20B93,480 more coming from orders in prog.'),
+      );
+      expect(sub.top, closeTo(65 + 95, 2));
 
-      // "All" chip pill at (24, 327).
+      // "All" chip pill at (24, 271).
       final chip = rectOf(find.text('All'));
       expect(chip.left, greaterThanOrEqualTo(24));
-      expect(chip.top, greaterThanOrEqualTo(327));
-      expect(chip.top, lessThanOrEqualTo(327 + 31));
+      expect(chip.top, greaterThanOrEqualTo(271));
+      expect(chip.top, lessThanOrEqualTo(271 + 31));
 
-      // Transactions card at (24, 376); title rel (22, 17).
+      // Transactions card at (24, 320); title rel (22, 17).
       final cardTitle = rectOf(find.text('Transactions').last);
       expect(cardTitle.left, closeTo(24 + 22, 1));
-      expect(cardTitle.top, closeTo(376 + 17, 2));
+      expect(cardTitle.top, closeTo(320 + 17, 2));
 
       // Row 1: tile top rel 55, title rel 58.5, date rel 74.5, amount rel 70
-      // — all card-rel, card origin (24, 376).
+      // - all card-rel, card origin (24, 320).
       final rowTitle = rectOf(find.text('Order #NX4852  Akash Stores'));
       expect(rowTitle.left, closeTo(24 + 67, 1));
-      expect(rowTitle.top, closeTo(376 + 58.5, 2));
+      expect(rowTitle.top, closeTo(320 + 58.5, 2));
       final date = rectOf(find.text('12 Mar 2024'));
-      expect(date.top, closeTo(376 + 74.5, 2));
-      final credit = rectOf(find.text('+₹12,480'));
+      expect(date.top, closeTo(320 + 74.5, 2));
+      final credit = rectOf(find.text('+\u20B912,480'));
       expect(credit.right, closeTo(24 + 364 - 21, 1.5));
-      expect(credit.top, closeTo(376 + 70, 2));
+      expect(credit.top, closeTo(320 + 70, 2));
 
       // Row 4 sits 174 lower (3 pitches).
       final row4 = rectOf(find.text('Order #NX4578  Daily Store'));
-      expect(row4.top, closeTo(376 + 58.5 + 174, 2));
+      expect(row4.top, closeTo(320 + 58.5 + 174, 2));
     });
 
     testWidgets('Business Wallet row opens the Wallet page and back pops', (
@@ -609,32 +656,32 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header title at (68, 76).
+      // Header title at (68, 20).
       final header = rectOf(find.text('Review & Ratings'));
       expect(header.left, closeTo(68, 1));
-      expect(header.top, closeTo(76, 1));
+      expect(header.top, closeTo(20, 1));
 
-      // Summary card at (24, 121); label rel (21, 20), amount rel (22, 44).
+      // Summary card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Average rating'));
       expect(label.left, closeTo(24 + 21, 1));
-      expect(label.top, closeTo(121 + 20, 2));
+      expect(label.top, closeTo(65 + 20, 2));
       final amount = rectOf(find.text('4.8'));
       expect(amount.left, closeTo(24 + 22, 1));
-      expect(amount.top, closeTo(121 + 44, 2));
+      expect(amount.top, closeTo(65 + 44, 2));
       final sub = rectOf(find.text('125 reviews'));
-      expect(sub.top, closeTo(121 + 100, 2));
+      expect(sub.top, closeTo(65 + 100, 2));
 
-      // Reviews card title rel (22, 17); card origin (24, 321).
+      // Reviews card title rel (22, 17); card origin (24, 265).
       final cardTitle = rectOf(find.text('Reviews'));
       expect(cardTitle.left, closeTo(24 + 22, 1));
-      expect(cardTitle.top, closeTo(321 + 17, 2));
+      expect(cardTitle.top, closeTo(265 + 17, 2));
 
       // Row 1 name rel (70, 10), row 4 sits 336 lower (3 pitches of 112).
       final row1 = rectOf(find.text('Lakshmi Priya'));
       expect(row1.left, closeTo(24 + 70, 1));
-      expect(row1.top, closeTo(321 + 55 + 10, 2));
+      expect(row1.top, closeTo(265 + 55 + 10, 2));
       final row4 = rectOf(find.text('Mohamed Rafi'));
-      expect(row4.top, closeTo(321 + 55 + 10 + 336, 2));
+      expect(row4.top, closeTo(265 + 55 + 10 + 336, 2));
     });
 
     testWidgets('Business Review & Ratings row opens the page and back pops', (
@@ -683,6 +730,8 @@ void main() {
   });
 
   group('AddProductsScreen (Zeplin 124)', () {
+    setUp(ProductStore.instance.clear);
+
     testWidgets('renders all sections', (tester) async {
       await pumpAddProducts(tester);
 
@@ -691,8 +740,9 @@ void main() {
       expect(find.text('of 5 • Product Photos'), findsOneWidget);
       expect(find.text('Product Photos'), findsOneWidget);
       expect(find.text('Add clear photos of your product'), findsOneWidget);
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('0/5'), findsOneWidget);
       expect(find.text('Add photo'), findsOneWidget);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsOneWidget);
       expect(find.text('Basic Information'), findsOneWidget);
       expect(find.text('Tell us about your product'), findsWidgets);
       expect(find.text('Product Name'), findsOneWidget);
@@ -720,6 +770,514 @@ void main() {
       expect(find.text('Draft'), findsOneWidget);
       // Bottom nav is pinned (no FAB tab selected).
       expect(find.byType(BottomNavBar), findsOneWidget);
+    });
+
+    testWidgets('Continue adds the product with the entered details', (
+      tester,
+    ) async {
+      await pumpAddProducts(tester);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('product-name')),
+        'Mango',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('product-price')),
+        '120',
+      );
+      await tester.tap(find.text('Fruits'));
+      await tester.pump();
+
+      await tester.dragUntilVisible(
+        find.text('Draft'),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Draft'));
+      await tester.pump();
+
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-product-continue')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-product-continue')));
+      await tester.pumpAndSettle();
+
+      final product = ProductStore.instance.products.single;
+      expect(product.name, 'Mango');
+      expect(product.category, 'Fruits');
+      expect(product.price, 120);
+      expect(product.unit, 'kg');
+      expect(product.quantity, 50);
+      expect(product.status, ProductStatus.draft);
+      expect(product.photos, isEmpty);
+    });
+
+    testWidgets('Continue includes the selected photos', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('product-name')),
+        'Tomato',
+      );
+      await tester.enterText(find.byKey(const ValueKey('product-price')), '48');
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-product-continue')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-product-continue')));
+      await tester.pumpAndSettle();
+
+      final product = ProductStore.instance.products.single;
+      expect(product.photos, hasLength(1));
+      expect(product.photos.single.bytes, same(_photoBytes));
+    });
+
+    testWidgets('Continue requires a product name', (tester) async {
+      await pumpAddProducts(tester);
+
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-product-continue')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-product-continue')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a product name.'), findsOneWidget);
+      expect(ProductStore.instance.products, isEmpty);
+    });
+
+    testWidgets('Continue requires a valid price', (tester) async {
+      await pumpAddProducts(tester);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('product-name')),
+        'Beans',
+      );
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-product-continue')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-product-continue')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a valid price.'), findsOneWidget);
+      expect(ProductStore.instance.products, isEmpty);
+    });
+
+    testWidgets('keeps the original photo strip geometry', (tester) async {
+      await pumpAddProducts(tester);
+
+      final tomato = tester.getRect(find.byKey(const ValueKey('photo-tomato')));
+      expect(tomato.left, closeTo(0, 0.5));
+      expect(tomato.top, closeTo(219, 0.5));
+      expect(tomato.size, const Size(127, 127));
+
+      final add = tester.getRect(find.byKey(const ValueKey('add-photo')));
+      expect(add.left, closeTo(112, 0.5));
+      expect(add.top, closeTo(219, 0.5));
+      expect(add.size, const Size(188, 127));
+
+      final next = tester.getRect(find.byKey(const ValueKey('photo-next')));
+      expect(next.left, closeTo(356, 0.5));
+      expect(next.top, closeTo(269, 0.5));
+      expect(next.size, const Size(24, 24));
+
+      final dot = tester.getRect(find.byKey(const ValueKey('photo-dot-0')));
+      expect(dot.top, closeTo(362, 0.5));
+      expect(dot.size, const Size(13, 7));
+      for (var i = 0; i < 5; i++) {
+        expect(find.byKey(ValueKey('photo-dot-$i')), findsOneWidget);
+      }
+      expect(find.text('0/5'), findsOneWidget);
+    });
+
+    testWidgets('adds a photo in place of the tomato', (tester) async {
+      var picks = 0;
+      Future<ProductPhoto?> picker() async {
+        picks++;
+        return ProductPhoto(bytes: _photoBytes);
+      }
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      expect(picks, 1);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsNothing);
+      expect(find.byKey(const ValueKey('product-photo-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('add-photo')), findsOneWidget);
+      expect(find.text('1/5'), findsOneWidget);
+
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const ValueKey('product-photo-0')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(image.image, isA<MemoryImage>());
+    });
+
+    testWidgets('puts the remove button at the active image top-right', (
+      tester,
+    ) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      final photo = tester.getRect(
+        find.byKey(const ValueKey('product-photo-0')),
+      );
+      final remove = tester.getRect(find.byKey(const ValueKey('photo-remove')));
+      expect(remove.size, const Size(20, 20));
+      expect(remove.top, closeTo(photo.top + 4, 0.5));
+      expect(remove.right, closeTo(photo.right - 4, 0.5));
+    });
+
+    testWidgets('right arrow reveals the add photo box', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-0'))).center.dx,
+        closeTo(206, 0.5),
+      );
+      expect(find.byKey(const ValueKey('photo-remove')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+
+      final add = tester.getRect(find.byKey(const ValueKey('add-photo')));
+      expect(add.center.dx, closeTo(206, 0.5));
+      expect(add.size, const Size(188, 127));
+      expect(find.text('Add photo'), findsOneWidget);
+      expect(find.byKey(const ValueKey('photo-remove')), findsNothing);
+    });
+
+    testWidgets('updates the counter and active dot across transitions', (
+      tester,
+    ) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      Color dotColor(int index) {
+        final dot = tester.widget<Container>(
+          find.byKey(ValueKey('photo-dot-$index')),
+        );
+        return (dot.decoration! as BoxDecoration).color!;
+      }
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      expect(find.text('0/5'), findsOneWidget);
+      expect(dotColor(0), AppColors.darkGreenInk);
+      expect(dotColor(1), AppColors.dotInactive);
+
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      expect(find.text('1/5'), findsOneWidget);
+      expect(dotColor(0), AppColors.darkGreenInk);
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      expect(find.text('1/5'), findsOneWidget);
+      expect(dotColor(1), AppColors.darkGreenInk);
+
+      await tester.tap(find.byKey(const ValueKey('photo-previous')));
+      await tester.pumpAndSettle();
+      expect(dotColor(0), AppColors.darkGreenInk);
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      expect(find.text('2/5'), findsOneWidget);
+      expect(dotColor(1), AppColors.darkGreenInk);
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      expect(find.text('2/5'), findsOneWidget);
+      expect(dotColor(2), AppColors.darkGreenInk);
+    });
+
+    testWidgets('previews an uploaded photo from the carousel', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('product-photo-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-preview-image')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('photo-preview-close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-preview-image')), findsNothing);
+      expect(find.byKey(const ValueKey('product-photo-0')), findsOneWidget);
+    });
+
+    testWidgets('shows a loading state while the picker is open', (
+      tester,
+    ) async {
+      final completer = Completer<ProductPhoto?>();
+      await pumpAddProducts(tester, photoPicker: () => completer.future);
+
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('photo-loading')), findsOneWidget);
+
+      completer.complete(ProductPhoto(bytes: _photoBytes));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-loading')), findsNothing);
+      expect(find.byKey(const ValueKey('product-photo-0')), findsOneWidget);
+      expect(find.text('1/5'), findsOneWidget);
+    });
+
+    testWidgets('ignores rapid arrow taps during an animation', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-previous')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-1'))).center.dx,
+        closeTo(206, 0.5),
+      );
+    });
+
+    testWidgets('adds up to five photos and hides the add tile', (
+      tester,
+    ) async {
+      var picks = 0;
+      Future<ProductPhoto?> picker() async {
+        picks++;
+        return ProductPhoto(bytes: _photoBytes);
+      }
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      for (var i = 0; i < AddProductsScreen.maxPhotos; i++) {
+        await tester.tap(find.byKey(const ValueKey('add-photo')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(ValueKey('product-photo-$i')), findsOneWidget);
+        expect(find.text('${i + 1}/5'), findsOneWidget);
+
+        if (i < AddProductsScreen.maxPhotos - 1) {
+          await tester.tap(find.byKey(const ValueKey('photo-next')));
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.byKey(const ValueKey('add-photo'))).center.dx,
+            closeTo(206, 0.5),
+          );
+        }
+      }
+
+      expect(picks, AddProductsScreen.maxPhotos);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsNothing);
+      expect(find.byKey(const ValueKey('add-photo')), findsNothing);
+      expect(find.text('Add photo'), findsNothing);
+      expect(find.byKey(const ValueKey('product-photo-4')), findsOneWidget);
+      expect(find.text('5/5'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('photo-remove')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('product-photo-4')), findsNothing);
+      expect(find.byKey(const ValueKey('add-photo')), findsOneWidget);
+      expect(find.text('4/5'), findsOneWidget);
+    });
+
+    testWidgets('cancelling the gallery keeps the tomato', (tester) async {
+      var picks = 0;
+      Future<ProductPhoto?> picker() async {
+        picks++;
+        return null;
+      }
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      expect(picks, 1);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsOneWidget);
+      expect(find.byKey(const ValueKey('product-photo-0')), findsNothing);
+      expect(find.text('0/5'), findsOneWidget);
+    });
+
+    testWidgets('shows an error when the gallery picker fails', (tester) async {
+      Future<ProductPhoto?> picker() async {
+        throw Exception('gallery unavailable');
+      }
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not open the photo picker.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsOneWidget);
+      expect(find.text('0/5'), findsOneWidget);
+    });
+
+    testWidgets('animates between centered photos', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+
+      const cardCenterX = 206.0;
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-1'))).center.dx,
+        closeTo(cardCenterX, 0.5),
+      );
+
+      final before = tester
+          .getRect(find.byKey(const ValueKey('product-photo-0')))
+          .center
+          .dx;
+      await tester.tap(find.byKey(const ValueKey('photo-previous')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final mid = tester
+          .getRect(find.byKey(const ValueKey('product-photo-0')))
+          .center
+          .dx;
+      expect(mid, greaterThan(before));
+
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-0'))).center.dx,
+        closeTo(cardCenterX, 0.5),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-1'))).center.dx,
+        closeTo(cardCenterX, 0.5),
+      );
+
+      await tester.flingFrom(
+        const Offset(200, 280),
+        const Offset(140, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-0'))).center.dx,
+        closeTo(cardCenterX, 0.5),
+      );
+    });
+
+    testWidgets('centers the active photo with side slivers', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-previous')));
+      await tester.pumpAndSettle();
+
+      final active = tester.getRect(
+        find.byKey(const ValueKey('product-photo-1')),
+      );
+      final previous = tester.getRect(
+        find.byKey(const ValueKey('product-photo-0')),
+      );
+      final next = tester.getRect(
+        find.byKey(const ValueKey('product-photo-2')),
+      );
+
+      expect(active.center.dx, closeTo(206, 0.5));
+      expect(active.size, const Size(188, 127));
+      expect(previous.right, lessThan(active.left));
+      expect(next.left, greaterThan(active.right));
+    });
+
+    testWidgets('removes a photo and restores the tomato', (tester) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-tomato')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('photo-remove')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('photo-tomato')), findsOneWidget);
+      expect(find.byKey(const ValueKey('product-photo-0')), findsNothing);
+      expect(find.text('0/5'), findsOneWidget);
+    });
+
+    testWidgets('keeps carousel indices correct after a middle removal', (
+      tester,
+    ) async {
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const ValueKey('add-photo')));
+        await tester.pumpAndSettle();
+        if (i < 2) {
+          await tester.tap(find.byKey(const ValueKey('photo-next')));
+          await tester.pumpAndSettle();
+        }
+      }
+      expect(find.text('3/5'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('photo-previous')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-remove')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('product-photo-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('product-photo-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('product-photo-2')), findsNothing);
+      expect(find.text('2/5'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('product-photo-1'))).center.dx,
+        closeTo(206, 0.5),
+      );
     });
 
     testWidgets('bottom nav tabs all fit inside the 412-wide artboard', (
@@ -862,8 +1420,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AddProductsScreen), findsOneWidget);
 
-      // FAB (last Icons.add — the nav's) pops back to the stub home.
-      await tester.tap(find.byIcon(Icons.add).last);
+      // The nav FAB pops back to the stub home.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomNavBar),
+          matching: find.byIcon(Icons.add),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(AddProductsScreen), findsNothing);
 
@@ -945,8 +1508,9 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Add Products'), findsOneWidget);
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('0/5'), findsOneWidget);
       expect(find.text('Add photo'), findsOneWidget);
+      expect(find.byKey(const ValueKey('photo-tomato')), findsOneWidget);
 
       // The 412-wide artboard scales to the 360 viewport (no horizontal
       // overflow exception above); the form stays scrollable vertically.
