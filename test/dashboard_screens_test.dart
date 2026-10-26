@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
+import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
+import 'package:seller_app/screens/report_problem_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
@@ -391,6 +393,37 @@ void main() {
       expect(find.byType(SettingsScreen), findsNothing);
       expect(find.text('Help & Suppport'), findsOneWidget);
       expect(find.text('Log out'), findsOneWidget);
+    });
+
+    testWidgets('Help row opens the Help & Support screen', (tester) async {
+      await pumpProfile(tester, const ProfileAppScreen());
+
+      await tester.tap(find.text('Help & Suppport'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('How can we help?'), findsOneWidget);
+
+      await tester.tap(find.text('Report a problem'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportProblemScreen), findsOneWidget);
+      expect(find.text('Submit'), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsNothing);
+      expect(find.text('Help & Suppport'), findsOneWidget);
     });
   });
 

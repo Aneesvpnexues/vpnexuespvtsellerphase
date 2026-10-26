@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/help_support_screen.dart';
+import 'package:seller_app/screens/report_problem_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 
@@ -62,12 +64,12 @@ void main() {
     expect(rectOf(find.text('Stock alerts').first).top, closeTo(315, 5));
     expect(rectOf(find.text('Stock alerts').last).left, closeTo(89, 3));
     expect(rectOf(find.text('Stock alerts').last).top, closeTo(373, 5));
-    expect(rectOf(find.text('Help & Support')).left, closeTo(91, 3));
-    expect(rectOf(find.text('Help & Support')).top, closeTo(500, 5));
-    expect(rectOf(find.text('Talk to our team')).top, closeTo(515, 4));
     expect(rectOf(find.text('About VP NEXUES')).left, closeTo(91, 3));
-    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(558, 5));
-    expect(rectOf(find.text('version 1.0')).top, closeTo(573, 4));
+    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(500, 5));
+    expect(rectOf(find.text('version 1.0')).top, closeTo(515, 4));
+    expect(rectOf(find.text('Help & Support')).left, closeTo(91, 3));
+    expect(rectOf(find.text('Help & Support')).top, closeTo(558, 5));
+    expect(rectOf(find.text('Talk to our team')).top, closeTo(573, 4));
     expect(rectOf(find.text('Log out')).left, closeTo(92, 3));
     expect(rectOf(find.text('Log out')).top, closeTo(656, 5));
   });
@@ -104,5 +106,31 @@ void main() {
 
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.text('Hello,'), findsOneWidget);
+  });
+
+  testWidgets('Help row opens the Help & Support screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Help & Support'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+    expect(find.text('How can we help?'), findsOneWidget);
+
+    await tester.tap(find.text('Report a problem'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReportProblemScreen), findsOneWidget);
+    expect(find.text('Submit'), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HelpSupportScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
   });
 }

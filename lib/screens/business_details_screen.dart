@@ -40,11 +40,11 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _address = TextEditingController();
 
   bool get _allFilled =>
-      _name.text.isNotEmpty &&
-      _business.text.isNotEmpty &&
-      _phone.text.isNotEmpty &&
-      _location.text.isNotEmpty &&
-      _address.text.isNotEmpty;
+      _name.text.trim().isNotEmpty &&
+      _business.text.trim().isNotEmpty &&
+      _phone.text.trim().isNotEmpty &&
+      _location.text.trim().isNotEmpty &&
+      _address.text.trim().isNotEmpty;
 
   @override
   void initState() {

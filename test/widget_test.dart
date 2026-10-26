@@ -12,8 +12,16 @@ Future<void> pumpApp(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('app boots into the Welcome Seller screen', (tester) async {
+  testWidgets('app boots into the splash, then taps through to Welcome', (
+    tester,
+  ) async {
     await pumpApp(tester);
+
+    expect(find.byKey(const Key('splashTap')), findsOneWidget);
+    expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+
+    await tester.tap(find.byKey(const Key('splashTap')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
     expect(find.text('Send OTP'), findsOneWidget);

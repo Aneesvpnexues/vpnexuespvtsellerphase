@@ -75,6 +75,7 @@ flutter:
     - assets/kyc/
     - assets/bank/
     - assets/settings/
+    - assets/help/
     - assets/order_accepted/
     - assets/order_ready/
     - assets/order_delivery/
@@ -82,6 +83,8 @@ flutter:
     - assets/product_details/
     - assets/step03/
     - assets/verify/
+    - assets/language/
+    - assets/splash/splash.png
 
   # Inter is the Zeplin design font, bundled so every screen renders with the
   # exact same text metrics on all platforms and never fetches fonts from
@@ -99,6 +102,11 @@ flutter:
           weight: 700
         - asset: assets/fonts/Inter-ExtraBold.ttf
           weight: 800
+
+    - family: Inder
+      fonts:
+        - asset: assets/fonts/Inder-Regular.ttf
+          weight: 400
 
     # The design uses a monospace face for the masked account digits in the
     # bank details screen ('3421' at 24/700), so the digits keep the design's

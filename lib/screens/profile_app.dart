@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
 import 'personal_details_screen.dart';
 import 'profile_business.dart';
+import 'help_support_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'welcome_seller_screen.dart';
@@ -125,21 +126,38 @@ class _AppListCard extends StatelessWidget {
           const Positioned(left: 16, right: 16, top: 66, child: _Divider()),
 
           // Help & Suppport (design: cap top y706.5, title only).
-          const Positioned(
-            left: 22,
-            top: 78,
-            child: _AppIconTile(
-              icon: Icons.help_outline,
-              tileColor: AppColors.listIconTile,
-              ink: AppColors.appIconInk,
+          Positioned(
+            left: 16,
+            top: 66,
+            width: 332,
+            height: 56,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+              ),
+              child: const Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 6,
+                    top: 12,
+                    child: _AppIconTile(
+                      icon: Icons.help_outline,
+                      tileColor: AppColors.listIconTile,
+                      ink: AppColors.appIconInk,
+                    ),
+                  ),
+                  Positioned(
+                    left: 52,
+                    top: 23,
+                    child: Text('Help & Suppport', style: _title),
+                  ),
+                  Positioned(left: 316, top: 21, child: _AppChevron()),
+                ],
+              ),
             ),
           ),
-          const Positioned(
-            left: 68,
-            top: 89,
-            child: Text('Help & Suppport', style: _title),
-          ),
-          const Positioned(left: 332, top: 87, child: _AppChevron()),
           const Positioned(left: 16, right: 16, top: 122, child: _Divider()),
 
           // Log out (design: cap top y761, pink tile, no chevron) — returns

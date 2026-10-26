@@ -4,6 +4,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
+import 'app_language_screen.dart';
+import 'help_support_screen.dart';
 
 /// Settings — static replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -29,14 +31,34 @@ class SettingsScreen extends StatelessWidget {
           designWidth: designWidth,
           designHeight: designHeight,
           trimTop: trimTop,
-          child: const Stack(
+          child: Stack(
             children: [
-              Positioned(left: 25, top: 127, child: _PreferencesCard()),
-              Positioned(left: 25, top: 253, child: _NotificationsCard()),
-              Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(left: 25, top: 678, child: _LogoutCard()),
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
+                left: 25,
+                top: 127,
+                child: _PreferencesCard(
+                  onLanguageTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AppLanguageScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const Positioned(left: 25, top: 253, child: _NotificationsCard()),
+              Positioned(
+                left: 25,
+                top: 496,
+                child: _SupportCard(
+                  onHelpTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const HelpSupportScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const Positioned(left: 25, top: 678, child: _LogoutCard()),
+              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(
                 left: 68,
                 top: 73,
                 child: LabelText(
@@ -86,14 +108,16 @@ class _BackCircle extends StatelessWidget {
 }
 
 class _PreferencesCard extends StatelessWidget {
-  const _PreferencesCard();
+  const _PreferencesCard({required this.onLanguageTap});
+
+  final VoidCallback onLanguageTap;
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 112,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
@@ -113,6 +137,7 @@ class _PreferencesCard extends StatelessWidget {
             subtitle: 'English',
             subtitleWidth: 35,
             chevron: true,
+            onTap: onLanguageTap,
           ),
         ),
       ],
@@ -184,14 +209,16 @@ class _NotificationsCard extends StatelessWidget {
 }
 
 class _SupportCard extends StatelessWidget {
-  const _SupportCard();
+  const _SupportCard({required this.onHelpTap});
+
+  final VoidCallback onHelpTap;
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 168,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
@@ -200,23 +227,9 @@ class _SupportCard extends StatelessWidget {
             width: 86,
           ),
         ),
-        Positioned(
+        const Positioned(
           left: 21,
           top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_help.png',
-            iconSize: 16,
-            title: 'Help & Support',
-            titleWidth: 90,
-            subtitle: 'Talk to our team',
-            subtitleWidth: 78,
-            chevron: true,
-          ),
-        ),
-        Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
-          left: 21,
-          top: 111,
           child: _MenuRow(
             icon: 'assets/settings/ic_alert.png',
             iconSize: 16,
@@ -225,6 +238,21 @@ class _SupportCard extends StatelessWidget {
             subtitle: 'version 1.0',
             subtitleWidth: 52,
             chevron: true,
+          ),
+        ),
+        const Positioned(left: 21, top: 102, child: _Divider()),
+        Positioned(
+          left: 21,
+          top: 111,
+          child: _MenuRow(
+            icon: 'assets/settings/ic_help.png',
+            iconSize: 16,
+            title: 'Help & Support',
+            titleWidth: 90,
+            subtitle: 'Talk to our team',
+            subtitleWidth: 78,
+            chevron: true,
+            onTap: onHelpTap,
           ),
         ),
       ],
@@ -328,6 +356,7 @@ class _MenuRow extends StatelessWidget {
     required this.subtitleWidth,
     this.toggle,
     this.chevron = false,
+    this.onTap,
   });
 
   final String icon;
@@ -338,54 +367,59 @@ class _MenuRow extends StatelessWidget {
   final double subtitleWidth;
   final bool? toggle;
   final bool chevron;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 324,
-      height: 40,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 3,
-            child: _Tile(
-              icon: icon,
-              iconSize: iconSize,
-              color: AppColors.orderTile,
-            ),
-          ),
-          Positioned(
-            left: 45,
-            top: 0,
-            child: LabelText(
-              title,
-              AppTextStyles.profileMenuTitle,
-              width: titleWidth,
-            ),
-          ),
-          Positioned(
-            left: 45,
-            top: 15,
-            child: LabelText(
-              subtitle,
-              AppTextStyles.profileMenuSub,
-              width: subtitleWidth,
-            ),
-          ),
-          if (toggle != null)
-            Positioned(left: 283, top: 11, child: _Toggle(on: toggle!)),
-          if (chevron)
-            const Positioned(
-              left: 312,
-              top: 11,
-              child: Image(
-                image: AssetImage('assets/settings/ic_chevron.png'),
-                width: 18,
-                height: 18,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: 324,
+        height: 40,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 3,
+              child: _Tile(
+                icon: icon,
+                iconSize: iconSize,
+                color: AppColors.orderTile,
               ),
             ),
-        ],
+            Positioned(
+              left: 45,
+              top: 0,
+              child: LabelText(
+                title,
+                AppTextStyles.profileMenuTitle,
+                width: titleWidth,
+              ),
+            ),
+            Positioned(
+              left: 45,
+              top: 15,
+              child: LabelText(
+                subtitle,
+                AppTextStyles.profileMenuSub,
+                width: subtitleWidth,
+              ),
+            ),
+            if (toggle != null)
+              Positioned(left: 283, top: 11, child: _Toggle(on: toggle!)),
+            if (chevron)
+              const Positioned(
+                left: 312,
+                top: 11,
+                child: Image(
+                  image: AssetImage('assets/settings/ic_chevron.png'),
+                  width: 18,
+                  height: 18,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

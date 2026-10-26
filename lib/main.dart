@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/welcome_seller_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +24,7 @@ class SellerApp extends StatelessWidget {
       title: 'Seller App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Inter'),
-      home: const WelcomeSellerScreen(),
+      home: const SplashScreen(),
     );
   }
 }

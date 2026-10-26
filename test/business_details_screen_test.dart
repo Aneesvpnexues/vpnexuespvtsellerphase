@@ -236,6 +236,33 @@ void main() {
     expect(find.text('Verification Details'), findsNothing);
   });
 
+  testWidgets('whitespace-only input does not count as filled', (tester) async {
+    await pumpScreen(tester);
+
+    // Spaces-only name / business / address must not enable Continue.
+    await tester.enterText(find.byKey(const Key('businessName')), '   ');
+    await tester.enterText(find.byKey(const Key('businessFarm')), '  ');
+    await tester.enterText(find.byKey(const Key('businessAddress')), '   ');
+    await tester.pump();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Business Details'), findsOneWidget);
+    expect(find.text('Verification Details'), findsNothing);
+
+    // Real values on all three rows let the flow continue.
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(
+        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(
+        find.byKey(const Key('businessAddress')), '12 Main Street');
+    await tester.pump();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verification Details'), findsOneWidget);
+  });
+
   testWidgets('Continue opens the verify details screen', (tester) async {
     await pumpScreen(tester);
 
