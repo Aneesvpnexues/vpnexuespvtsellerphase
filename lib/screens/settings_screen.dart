@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'app_language_screen.dart';
+import 'help_support_screen.dart';
 
 /// Settings — static replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -35,50 +38,13 @@ class SettingsScreen extends StatelessWidget {
               Positioned(left: 25, top: 253, child: _NotificationsCard()),
               Positioned(left: 25, top: 496, child: _SupportCard()),
               Positioned(left: 25, top: 678, child: _LogoutCard()),
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText(
-                  'Settings',
-                  AppTextStyles.productsTitle,
-                  width: 83,
-                ),
+                child: PageHeader(title: 'Settings'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );
@@ -90,29 +56,38 @@ class _PreferencesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 112,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
             'Preferences',
             AppTextStyles.orderCardTitle,
-            width: 86,
+            width: 100,
           ),
         ),
         Positioned(
           left: 21,
           top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_globe.png',
-            iconSize: 16,
-            title: 'Language',
-            titleWidth: 59,
-            subtitle: 'English',
-            subtitleWidth: 35,
-            chevron: true,
+          child: GestureDetector(
+            key: const Key('settings-language'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AppLanguageScreen(),
+              ),
+            ),
+            child: const _MenuRow(
+              icon: 'assets/settings/ic_globe.png',
+              iconSize: 16,
+              title: 'Language',
+              titleWidth: 59,
+              subtitle: 'English',
+              subtitleWidth: 35,
+              chevron: true,
+            ),
           ),
         ),
       ],
@@ -134,7 +109,7 @@ class _NotificationsCard extends StatelessWidget {
           child: LabelText(
             'Notifications',
             AppTextStyles.orderCardTitle,
-            width: 92,
+            width: 104,
           ),
         ),
         Positioned(
@@ -188,33 +163,42 @@ class _SupportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 168,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
             'Preferences',
             AppTextStyles.orderCardTitle,
-            width: 86,
+            width: 100,
           ),
         ),
         Positioned(
           left: 21,
           top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_help.png',
-            iconSize: 16,
-            title: 'Help & Support',
-            titleWidth: 90,
-            subtitle: 'Talk to our team',
-            subtitleWidth: 78,
-            chevron: true,
+          child: GestureDetector(
+            key: const Key('settings-help'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const HelpSupportScreen(),
+              ),
+            ),
+            child: const _MenuRow(
+              icon: 'assets/settings/ic_help.png',
+              iconSize: 16,
+              title: 'Help & Support',
+              titleWidth: 90,
+              subtitle: 'Talk to our team',
+              subtitleWidth: 78,
+              chevron: true,
+            ),
           ),
         ),
-        Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
+        const Positioned(left: 21, top: 102, child: _Divider()),
+        const Positioned(
           left: 21,
           top: 111,
           child: _MenuRow(

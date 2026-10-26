@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/product_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 
 typedef ProductShare = Future<void> Function(Product product);
 
@@ -449,12 +450,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ),
               ),
-              const _Text(
-                'Product Details',
-                _Styles.header,
-                left: 67.5,
-                top: 71.6,
-              ),
               if (product == null) ...[
                 const _Text(
                   'Fresh Tomatoes',
@@ -687,7 +682,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 isOn: _deliveryEnabled,
                 onTap: _toggleDelivery,
               ),
-              Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(
+                left: 0,
+                top: 73,
+                child: PageHeader(title: 'Product Details'),
+              ),
             ],
           ),
         ),
@@ -737,14 +736,6 @@ class _DynamicPrice extends StatelessWidget {
 }
 
 class _Styles {
-  static const TextStyle header = TextStyle(
-    fontFamily: 'Roboto',
-    fontSize: 22,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0,
-    color: Color(0xFF000000),
-  );
-
   static const TextStyle productName = TextStyle(
     fontFamily: 'Roboto',
     fontSize: 22,
@@ -993,39 +984,6 @@ class _Toggle extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );

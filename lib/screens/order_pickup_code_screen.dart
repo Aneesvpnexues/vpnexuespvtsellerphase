@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
 /// Order Details ├óΓé¼” pickup code entry state. Static replica of Zeplin
@@ -29,21 +30,10 @@ class OrderPickupCodeScreen extends StatelessWidget {
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
               children: [
-                const Positioned(left: 24, top: 73, child: _BackCircle()),
-                Positioned(
-                  left: 68,
+                const Positioned(
+                  left: 0,
                   top: 73,
-                  width: 200,
-                  height: 25,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Order Details',
-                      style: AppTextStyles.orderTitle.copyWith(
-                        letterSpacing: 1.05,
-                      ),
-                    ),
-                  ),
+                  child: PageHeader(title: 'Order Details'),
                 ),
                 const Positioned(left: 24, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
@@ -74,39 +64,6 @@ class _Label extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(text, style: style),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
-        ),
       ),
     );
   }

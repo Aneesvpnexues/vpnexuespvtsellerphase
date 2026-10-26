@@ -207,30 +207,30 @@ void main() {
     expect(accent.style?.color, AppColors.verifyAccent);
 
     final subtitle = tester.widget<Text>(find.text('A quick verification'));
-    expect(subtitle.style?.fontSize, 15.5);
+    expect(subtitle.style?.fontSize, 14);
     expect(subtitle.style?.color, AppColors.verifySubtitle);
 
     final pcLabel = tester.widget<Text>(find.text('Profile Completion'));
-    expect(pcLabel.style?.fontSize, 13.5);
+    expect(pcLabel.style?.fontSize, 14);
     expect(pcLabel.style?.color, AppColors.pcLabel);
 
     final pcPercent = tester.widget<Text>(find.text('75%'));
-    expect(pcPercent.style?.fontSize, 13.5);
+    expect(pcPercent.style?.fontSize, 14);
     expect(pcPercent.style?.color, AppColors.pcPercent);
 
     final section = tester.widget<Text>(find.text('Verification Details'));
-    expect(section.style?.fontSize, 17.5);
+    expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.verifyInk);
 
     final note = tester.widget<Text>(find.text('All fiedls are required'));
     expect(note.style?.fontSize, 11);
 
     final title = tester.widget<Text>(find.text('Aadhaar card'));
-    expect(title.style?.fontSize, 15);
+    expect(title.style?.fontSize, 16);
     expect(title.style?.color, AppColors.verifyInk);
 
     final sub = tester.widget<Text>(find.text('For individual farmers'));
-    expect(sub.style?.fontSize, 13);
+    expect(sub.style?.fontSize, 14);
     expect(sub.style?.color, AppColors.docCardSubtitle);
 
     final button = tester.widget<Text>(find.text('Continue'));

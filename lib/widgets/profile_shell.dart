@@ -6,6 +6,7 @@ import '../theme/app_text_styles.dart';
 import 'app_navigation.dart';
 import 'artboard.dart';
 import 'bottom_nav_bar.dart';
+import 'page_header.dart';
 
 /// Shared chrome for the seller Profile screens — Zeplin "Android Compact -
 /// 151" (Account tab), "Android Compact - 152" (Business tab) and "Android
@@ -57,83 +58,51 @@ class ProfileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
-      body: Artboard(
-        designWidth: designWidth,
-        designHeight: designHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Zeplin 151/152/153 header: white circle back button at
-            // (24, 72) d26 and "Profile" title with cap top y78.5,
-            // shifted up 56px (design top-padding trim -> button y16).
-            Positioned(left: 24, top: 16, child: _HeaderBack()),
-            const Positioned(
-              left: 68,
-              top: 20,
-              child: Text('Profile', style: AppTextStyles.profileHeaderTitle),
-            ),
-            const Positioned(left: 24, top: 65, child: _BalanceCard()),
-            Positioned(
-              left: 24,
-              top: 336,
-              child: _SellerCard(onPersonalDetails: onPersonalDetails),
-            ),
-            const Positioned(left: 24, top: 427, child: _StatsRow()),
-            Positioned(
-              left: 24,
-              top: 502,
-              child: _TabBar(
-                selectedTab: selectedTab,
-                onAccountTab: onAccountTab,
-                onBusinessTab: onBusinessTab,
-                onAppTab: onAppTab,
+      body: SafeArea(
+        bottom: false,
+        child: Artboard(
+          designWidth: designWidth,
+          designHeight: designHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Positioned(
+                left: 0,
+                top: 24,
+                child: PageHeader(title: 'Profile'),
               ),
-            ),
-            Positioned(left: 24, top: 560, child: listCard),
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: BottomNavBar(
-                selectedIndex: 3,
-                onHomeTap: () => goToHome(context),
-                onProductsTap: () => goToProducts(context),
-                onAddTap: () => goToAddProduct(context),
-                onOrdersTap: () => goToOrders(context),
-                onProfileTap: () => goToProfile(context),
+              const Positioned(left: 24, top: 65, child: _BalanceCard()),
+              Positioned(
+                left: 24,
+                top: 336,
+                child: _SellerCard(onPersonalDetails: onPersonalDetails),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderBack extends StatelessWidget {
-  const _HeaderBack();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.arrow_back,
-          size: 14,
-          color: AppColors.textPrimary,
+              const Positioned(left: 24, top: 427, child: _StatsRow()),
+              Positioned(
+                left: 24,
+                top: 502,
+                child: _TabBar(
+                  selectedTab: selectedTab,
+                  onAccountTab: onAccountTab,
+                  onBusinessTab: onBusinessTab,
+                  onAppTab: onAppTab,
+                ),
+              ),
+              Positioned(left: 24, top: 560, child: listCard),
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: BottomNavBar(
+                  selectedIndex: 3,
+                  onHomeTap: () => goToHome(context),
+                  onProductsTap: () => goToProducts(context),
+                  onAddTap: () => goToAddProduct(context),
+                  onOrdersTap: () => goToOrders(context),
+                  onProfileTap: () => goToProfile(context),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

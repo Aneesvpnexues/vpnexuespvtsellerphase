@@ -354,11 +354,11 @@ void main() {
     expect(accent.style?.fontSize, 35);
 
     final subtitle = tester.widget<Text>(find.text('To receive your earnings'));
-    expect(subtitle.style?.fontSize, 15.5);
+    expect(subtitle.style?.fontSize, 14);
     expect(subtitle.style?.color, AppColors.bankSubtitle);
 
     final section = tester.widget<Text>(find.text('Fill Your Bank Details'));
-    expect(section.style?.fontSize, 17);
+    expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.bankSectionTitle);
 
     final note = tester.widget<Text>(find.text('All fiedls are required'));

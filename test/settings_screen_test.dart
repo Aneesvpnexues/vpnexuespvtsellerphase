@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/app_language_screen.dart';
+import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 
@@ -82,6 +84,32 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
+  });
+
+  testWidgets('Language opens the app language screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('settings-language')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLanguageScreen), findsOneWidget);
+    expect(find.text('Apply language'), findsOneWidget);
+
+    await tester.tapAt(const Offset(36, 36));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLanguageScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+
+  testWidgets('Help & Support opens the help screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('settings-help')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+    expect(find.text('Help & Support'), findsOneWidget);
   });
 
   testWidgets('the settings icon of the home opens this screen', (

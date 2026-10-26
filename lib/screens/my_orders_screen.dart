@@ -5,6 +5,7 @@ import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import 'order_details_screen.dart';
 import 'order_privew.dart';
 
@@ -97,13 +98,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 trimTop: MyOrdersScreen.trimTop,
                 child: Stack(
                   children: [
-                    const Positioned(left: 24, top: 73, child: _BackCircle()),
                     const Positioned(
-                      left: 74,
+                      left: 0,
                       top: 73,
-                      child: Text(
-                        'My Orders',
-                        style: AppTextStyles.productsTitle,
+                      child: PageHeader(
+                        title: 'My Orders',
+                        backButtonKey: ValueKey<String>('my-orders-back'),
+                        titleKey: ValueKey<String>('my-orders-title'),
                       ),
                     ),
                     Positioned(
@@ -293,27 +294,6 @@ enum _OrderSort {
 
   final String label;
   final IconData icon;
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.arrow_back, size: 15, color: Colors.black),
-      ),
-    );
-  }
 }
 
 class _SearchSort extends StatelessWidget {

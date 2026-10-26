@@ -5,6 +5,7 @@ import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
 /// Personal Details - editable replica of Zeplin "Android Compact - 159"
@@ -97,16 +98,12 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
           trimTop: PersonalDetailsScreen.trimTop,
           child: Stack(
             children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                width: 200,
-                height: 25,
-                child: LabelText(
-                  'Personal Details',
-                  AppTextStyles.orderTitle,
-                  width: 200,
+                child: PageHeader(
+                  title: 'Personal Details',
+                  backButtonKey: ValueKey<String>('personal-details-back'),
                 ),
               ),
               Positioned(
@@ -133,40 +130,6 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
               Positioned(left: 25, top: 850, child: _SaveBar(onTap: _save)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const ValueKey('personal-details-back'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );

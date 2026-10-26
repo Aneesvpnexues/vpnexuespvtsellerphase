@@ -77,8 +77,8 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('My Products')).left, closeTo(58, 2));
-    expect(rectOf(find.text('My Products')).top, closeTo(24, 3));
+    expect(rectOf(find.text('My Products')).left, closeTo(68, 2));
+    expect(rectOf(find.text('My Products')).top, closeTo(28, 3));
     expect(
       rectOf(find.byKey(const ValueKey('products-empty'))).left,
       closeTo(24, 2),

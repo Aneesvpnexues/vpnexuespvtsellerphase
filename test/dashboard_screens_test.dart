@@ -8,6 +8,7 @@ import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
+import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
@@ -22,6 +23,7 @@ import 'package:seller_app/screens/wallet_page.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
+import 'package:seller_app/widgets/page_header.dart';
 import 'package:seller_app/widgets/profile_shell.dart';
 
 /// Pumps [widget] on the 412x924 artboard the profile design was drawn for
@@ -198,8 +200,8 @@ void main() {
     testWidgets('Business & Farm, Verification and Bank rows navigate', (
       tester,
     ) async {
-      // All three anees screens share the same asset-image back circle.
-      final back = find.image(const AssetImage('assets/order/ic_back.png'));
+      // All three profile screens share the PageHeader back circle.
+      final back = find.byKey(PageHeader.backKey);
 
       // Business & Farm -> BusinessFarmScreen.
       await pumpProfile(tester, const ProfileScreen());
@@ -355,10 +357,10 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header: back circle (24,16) d26, title cap top y18.5 -> Text top 20.
+      // Header: back circle (24,24) d26, title Text top 28.
       final header = rectOf(find.text('Profile').first);
       expect(header.left, closeTo(68, 1));
-      expect(header.top, closeTo(20, 1));
+      expect(header.top, closeTo(28, 1));
 
       // List card top at y560; Settings title Text at card-rel (68,23).
       final settings = rectOf(find.text('Settings'));
@@ -428,14 +430,22 @@ void main() {
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Language'), findsOneWidget);
 
-      // Back (asset circle) returns to the profile App tab.
-      await tester.tap(
-        find.image(const AssetImage('assets/order/ic_back.png')),
-      );
+      // Header back returns to the profile App tab.
+      await tester.tap(find.byKey(PageHeader.backKey));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsNothing);
       expect(find.text('Help & Suppport'), findsOneWidget);
       expect(find.text('Log out'), findsOneWidget);
+    });
+
+    testWidgets('Help & Suppport row opens the help screen', (tester) async {
+      await pumpProfile(tester, const ProfileAppScreen());
+
+      await tester.tap(find.byKey(const Key('profile-help')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
     });
   });
 
@@ -489,10 +499,10 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header title at (68, 20).
+      // Header title at (68, 28).
       final header = rectOf(find.text('Wallet'));
       expect(header.left, closeTo(68, 1));
-      expect(header.top, closeTo(20, 1));
+      expect(header.top, closeTo(28, 1));
 
       // Balance card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Available balance'));
@@ -656,10 +666,10 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header title at (68, 20).
+      // Header title at (68, 28).
       final header = rectOf(find.text('Review & Ratings'));
       expect(header.left, closeTo(68, 1));
-      expect(header.top, closeTo(20, 1));
+      expect(header.top, closeTo(28, 1));
 
       // Summary card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Average rating'));

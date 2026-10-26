@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
 /// Language — static replica of Zeplin "Android Compact - 197"
@@ -227,15 +228,10 @@ class _AppLanguageScreenState extends State<AppLanguageScreen> {
                 ),
               ),
               for (final row in _rows) ..._rowWidgets(row),
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText(
-                  'Language',
-                  AppTextStyles.productsTitle,
-                  width: 97,
-                ),
+                child: PageHeader(title: 'Language'),
               ),
               Positioned(
                 left: 25,
@@ -306,49 +302,6 @@ class _AppLanguageScreenState extends State<AppLanguageScreen> {
         ),
       ),
     ];
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Color(0x1A000000), blurRadius: 1),
-            BoxShadow(
-              color: Color(0x17000000),
-              offset: Offset(0, 1),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x0D000000),
-              offset: Offset(1, 2),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x03000000),
-              offset: Offset(1, 3),
-              blurRadius: 1,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
-        ),
-      ),
-    );
   }
 }
 

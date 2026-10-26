@@ -65,7 +65,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 2));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24.8, 3));
+    expect(rectOf(find.text('Order Details')).top, closeTo(28, 3));
     expect(rectOf(find.text('Ready for Pickup')).left, closeTo(41, 2));
     expect(rectOf(find.text('Ready for Pickup')).top, closeTo(153.6, 3));
     expect(rectOf(find.text('Total Amount')).center.dx, closeTo(205.5, 3));

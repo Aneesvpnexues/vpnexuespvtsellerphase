@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'artboard.dart';
+
 /// Scales a fixed-size Zeplin artboard to the available width and trims the
 /// artboard's own status-bar strip so the design padding below it stays as the
 /// gap at the top of the screen. The real platform status bar is handled by
@@ -24,15 +26,15 @@ class DesignCanvas extends StatelessWidget {
       builder: (context, constraints) {
         final double scale = (constraints.maxWidth / designWidth).clamp(
           0.4,
-          1.0,
+          Artboard.defaultMaxScale,
         );
         return SingleChildScrollView(
           child: Center(
             child: SizedBox(
-              width: constraints.maxWidth,
+              width: designWidth * scale,
               height: (designHeight - trimTop) * scale,
               child: FittedBox(
-                fit: BoxFit.fill,
+                fit: BoxFit.contain,
                 alignment: Alignment.topCenter,
                 child: SizedBox(
                   width: designWidth,

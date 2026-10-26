@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
 class ReportProblemScreen extends StatelessWidget {
@@ -11,16 +12,9 @@ class ReportProblemScreen extends StatelessWidget {
   static const double designHeight = 917;
   static const double trimTop = 49;
 
-  static const _titleStyle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.2,
-    color: Colors.black,
-  );
   static const _sectionStyle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.12,
     color: Colors.black,
@@ -34,7 +28,7 @@ class ReportProblemScreen extends StatelessWidget {
   );
   static const _placeholderStyle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.12,
     color: Color(0x7D000000),
@@ -48,7 +42,7 @@ class ReportProblemScreen extends StatelessWidget {
   );
   static const _heroMutedStyle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.12,
     color: Color(0xFFB6C5BC),
@@ -98,11 +92,10 @@ class ReportProblemScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText('Report a problem', _titleStyle, width: 170),
+                child: PageHeader(title: 'Report a problem'),
               ),
               const Positioned(left: 25, top: 121, child: _SupportHero()),
               const Positioned(left: 24, top: 255, child: _FormCard()),
@@ -281,52 +274,6 @@ class ReportProblemScreen extends StatelessWidget {
               const Positioned(left: 25, top: 850, child: _SubmitButton()),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Color(0x1A000000), blurRadius: 1),
-            BoxShadow(
-              color: Color(0x17000000),
-              offset: Offset(0, 1),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x0D000000),
-              offset: Offset(1, 2),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x03000000),
-              offset: Offset(1, 3),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x00000000),
-              offset: Offset(2, 5),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: Center(
-          child: Image.asset('assets/order/ic_back.png', width: 15, height: 15),
         ),
       ),
     );

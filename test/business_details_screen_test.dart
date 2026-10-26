@@ -146,7 +146,7 @@ void main() {
     expect(subtitle.style?.fontSize, 16);
 
     final section = tester.widget<Text>(find.text('Business Details'));
-    expect(section.style?.fontSize, 17.5);
+    expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.sectionTitle);
 
     final note = tester.widget<Text>(find.text('All fiedls are required'));
@@ -169,22 +169,22 @@ void main() {
     );
 
     final label = tester.widget<Text>(find.text('Your name'));
-    expect(label.style?.fontSize, 13);
+    expect(label.style?.fontSize, 14);
 
     final placeholder = tester.widget<Text>(find.text('Enter your name..'));
-    expect(placeholder.style?.fontSize, 15);
+    expect(placeholder.style?.fontSize, 14);
 
     // The phone row holds its value in a TextField, so assert the field style.
     final phoneField = tester.widget<TextField>(
       find.byKey(const Key('businessPhone')),
     );
-    expect(phoneField.style?.fontSize, 15);
+    expect(phoneField.style?.fontSize, 14);
 
     final verified = tester.widget<Text>(find.text('Verified'));
     expect(verified.style?.fontSize, 11.5);
 
     final change = tester.widget<Text>(find.text('Change'));
-    expect(change.style?.fontSize, 11.5);
+    expect(change.style?.fontSize, 14);
   });
 
   testWidgets('renders the field icons and tile colors', (tester) async {

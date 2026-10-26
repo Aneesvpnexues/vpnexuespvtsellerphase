@@ -43,8 +43,14 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('My Orders')).left, closeTo(74, 2));
-    expect(rectOf(find.text('My Orders')).top, closeTo(24, 3));
+    final back = rectOf(find.byKey(const ValueKey('my-orders-back')));
+    expect(back.left, closeTo(24, 1));
+    expect(back.top, closeTo(24, 1));
+    expect(back.size, const Size(26, 26));
+    final title = rectOf(find.text('My Orders'));
+    expect(title.left, closeTo(68, 2));
+    expect(title.top, closeTo(28, 2));
+    expect(title.height, closeTo(20, 1));
     expect(rectOf(find.text('Akash Stores')).left, closeTo(89, 2));
     expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
   });

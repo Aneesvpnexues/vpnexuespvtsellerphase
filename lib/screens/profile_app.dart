@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
+import 'help_support_screen.dart';
 import 'personal_details_screen.dart';
 import 'profile_business.dart';
 import 'profile_screen.dart';
@@ -47,19 +48,19 @@ class _AppListCard extends StatelessWidget {
   const _AppListCard();
 
   static const _title = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.0,
     color: AppColors.textPrimary,
   );
   static const _subtitle = TextStyle(
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.listSubtitle,
   );
   static const _logoutText = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.0,
     color: AppColors.logoutInk,
@@ -125,21 +126,41 @@ class _AppListCard extends StatelessWidget {
           const Positioned(left: 16, right: 16, top: 66, child: _Divider()),
 
           // Help & Suppport (design: cap top y706.5, title only).
-          const Positioned(
-            left: 22,
-            top: 78,
-            child: _AppIconTile(
-              icon: Icons.help_outline,
-              tileColor: AppColors.listIconTile,
-              ink: AppColors.appIconInk,
+          Positioned(
+            left: 16,
+            top: 66,
+            width: 332,
+            height: 56,
+            child: GestureDetector(
+              key: const Key('profile-help'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const HelpSupportScreen(),
+                ),
+              ),
+              child: const Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 6,
+                    top: 12,
+                    child: _AppIconTile(
+                      icon: Icons.help_outline,
+                      tileColor: AppColors.listIconTile,
+                      ink: AppColors.appIconInk,
+                    ),
+                  ),
+                  Positioned(
+                    left: 52,
+                    top: 23,
+                    child: Text('Help & Suppport', style: _title),
+                  ),
+                  Positioned(left: 316, top: 21, child: _AppChevron()),
+                ],
+              ),
             ),
           ),
-          const Positioned(
-            left: 68,
-            top: 89,
-            child: Text('Help & Suppport', style: _title),
-          ),
-          const Positioned(left: 332, top: 87, child: _AppChevron()),
           const Positioned(left: 16, right: 16, top: 122, child: _Divider()),
 
           // Log out (design: cap top y761, pink tile, no chevron) — returns

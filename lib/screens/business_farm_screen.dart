@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
 /// Business & Farm — static replica of Zeplin "Android Compact - 160"
@@ -30,17 +31,10 @@ class BusinessFarmScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                width: 200,
-                height: 25,
-                child: LabelText(
-                  'Business & Farm',
-                  AppTextStyles.orderTitle,
-                  width: 200,
-                ),
+                child: PageHeader(title: 'Business & Farm'),
               ),
               Positioned(left: 24, top: 132, child: _HeroCard()),
               Positioned(left: 24, top: 307, child: _FormCard()),
@@ -49,38 +43,6 @@ class BusinessFarmScreen extends StatelessWidget {
               Positioned(left: 24, top: 1036, child: _SaveBar()),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );
