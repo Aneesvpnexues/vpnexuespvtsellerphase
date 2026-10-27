@@ -1,0 +1,1 @@
+package com.vpnexues.seller.product; import org.springframework.web.bind.annotation.*; @RestController @RequestMapping("/api/v1/products") public class ProductController { @GetMapping("/{id}") public ProductDto get(@PathVariable Long id){ return new ProductService().get(id); } }

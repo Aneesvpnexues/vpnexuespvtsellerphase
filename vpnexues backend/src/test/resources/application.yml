@@ -1,0 +1,9 @@
+supabase:
+  url: https://example.supabase.co
+  anon-key: test-anon
+  jwks-url: https://example.supabase.co/auth/v1/.well-known/jwks.json
+  issuer: https://example.supabase.co/auth/v1
+
+spring:
+  main:
+    banner-mode: off
