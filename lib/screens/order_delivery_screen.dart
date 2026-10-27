@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import '../widgets/slide_drag_detector.dart';
 
@@ -35,16 +36,10 @@ class OrderDeliveryScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText(
-                  'Order Details',
-                  AppTextStyles.orderTitle,
-                  width: 200,
-                  height: 25,
-                ),
+                child: PageHeader(title: 'Order Details'),
               ),
               Positioned(left: 24, top: 117, child: _SegmentTabs()),
               Positioned(left: 25, top: 172, child: _OrderHero()),
@@ -54,39 +49,6 @@ class OrderDeliveryScreen extends StatelessWidget {
               Positioned(left: 24, top: 847, child: _SlideDelivery()),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );
@@ -845,7 +807,7 @@ class _DeliveryCard extends StatelessWidget {
             child: LabelText(
               'Delivery Details',
               AppTextStyles.orderCardTitle,
-              width: 112,
+              width: 128,
               height: 25,
             ),
           ),

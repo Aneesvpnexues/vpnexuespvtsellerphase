@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
 import '../screens/add_products_screen.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
@@ -157,12 +158,12 @@ void goToOrderPrivew(BuildContext context) {
   );
 }
 
-/// Opens the product details page (Zeplin 171) from My Products.
-void goToProductDetails(BuildContext context) {
+/// Opens the product details page (Zeplin 171) for [product].
+void goToProductDetails(BuildContext context, {Product? product}) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.productDetails),
-      builder: (_) => const ProductDetailsScreen(),
+      builder: (_) => ProductDetailsScreen(product: product),
     ),
   );
 }

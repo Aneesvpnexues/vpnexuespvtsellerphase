@@ -117,7 +117,7 @@ void main() {
     // rel x68 -> 691 + 68*1.5 = 793.
     final header = tester.getRect(find.text('Profile').first);
     expect(header.left, closeTo(793, 2));
-    expect(header.top, closeTo(20 * 1.5, 2));
+    expect(header.top, closeTo(28 * 1.5, 2));
   });
 
   testWidgets('Add Products nav scales with the scrollable artboard', (

@@ -199,7 +199,8 @@ abstract final class AppColors {
   static const Color docDivider = Color(0xFFE3E3E3);
   static const Color docCardBorder = Color(0xFFE0E0E0);
   static const Color docCardSubtitle = Color(0xFF969696);
-  static const Color bankPageBg = Color(0xFFFBF8EF);
+  static const Color bankPageBg = Color(0xFFFAFDF7);
+  static const Color bankPageBgEnd = Color(0xFFF3F9F0);
   static const Color bankHeadingGreenStart = Color(0xFF00B013);
   static const Color bankHeadingGreenEnd = Color(0xFF02590B);
   static const Color bankSubtitle = Color(0xFF8F8E8C);

@@ -164,7 +164,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('About VPNEXUES'));
+    await tester.tap(find.byKey(const Key('settings-about')));
     await tester.pumpAndSettle();
 
     expect(find.byType(AboutVpnexuesScreen), findsOneWidget);

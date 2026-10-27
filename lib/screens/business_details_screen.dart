@@ -304,12 +304,8 @@ class _PillNote extends StatelessWidget {
       height: 27,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.pillNoteGradientStart,
-            AppColors.pillNoteGradientEnd,
-          ],
-        ),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.verifyPillBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       // Scales the note down under the Ahem test font (glyphs render one em

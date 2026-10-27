@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -14,7 +16,7 @@ import 'my_products_screen.dart';
 /// Built against a 412x1071 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only — no network, no state.
+/// The product strip reads the shared in-memory [ProductStore].
 class SellerHomeScreen extends StatelessWidget {
   const SellerHomeScreen({super.key});
 
@@ -24,159 +26,168 @@ class SellerHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.homeBg,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DesignCanvas(
-                designWidth: designWidth,
-                designHeight: designHeight,
-                trimTop: trimTop,
-                child: Stack(
-                  children: [
-                    const Positioned(left: 24, top: 68, child: _Greeting()),
-                    const Positioned(
-                      left: 331,
-                      top: 74,
-                      child: _HeaderIcon(icon: Icons.notifications_outlined),
-                    ),
-                    Positioned(
-                      left: 363,
-                      top: 74,
-                      child: _HeaderIcon(
-                        icon: Icons.settings_outlined,
-                        onTap: () => goToSettings(context),
-                      ),
-                    ),
-                    const Positioned(
-                      left: 25,
-                      top: 143,
-                      child: _ActiveOrdersCard(),
-                    ),
-                    const Positioned(
-                      left: 25,
-                      top: 361,
-                      child: _SectionTitle('My Products'),
-                    ),
-                    const Positioned(left: 349, top: 365, child: _ViewAll()),
-                    Positioned(
-                      left: 25,
-                      top: 355,
-                      width: 130,
-                      height: 30,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            settings: const RouteSettings(
-                              name: AppRoutes.products,
-                            ),
-                            builder: (_) => const MyProductsScreen(),
+    return AnimatedBuilder(
+      animation: ProductStore.instance,
+      builder: (context, _) {
+        final products = ProductStore.instance.products;
+        Product? lowStock;
+        for (final product in products) {
+          if (product.quantity <= 10) {
+            lowStock = product;
+            break;
+          }
+        }
+        return Scaffold(
+          backgroundColor: AppColors.homeBg,
+          body: SafeArea(
+            bottom: false,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DesignCanvas(
+                    designWidth: designWidth,
+                    designHeight: designHeight,
+                    trimTop: trimTop,
+                    child: Stack(
+                      children: [
+                        const Positioned(left: 24, top: 68, child: _Greeting()),
+                        const Positioned(
+                          left: 331,
+                          top: 74,
+                          child: _HeaderIcon(
+                            icon: Icons.notifications_outlined,
                           ),
                         ),
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                    const Positioned(
-                      left: 25,
-                      top: 389,
-                      child: _ProductCard(
-                        name: 'Tomatoes',
-                        qty: '50 kg available',
-                        color: Color(0xFF7BAE5A),
-                        image: 'assets/products/tomato.jpg',
-                      ),
-                    ),
-                    const Positioned(
-                      left: 187,
-                      top: 389,
-                      child: _ProductCard(
-                        name: 'Spinach',
-                        qty: '50 kg available',
-                        color: Color(0xFF4E8A3E),
-                        image: 'assets/products/spinach.jpg',
-                      ),
-                    ),
-                    const Positioned(
-                      left: 350,
-                      top: 389,
-                      child: _ProductCardSmall(
-                        image: 'assets/products/carrots.jpg',
-                      ),
-                    ),
-                    const Positioned(
-                      left: 25,
-                      top: 597,
-                      child: _SectionTitle('Sales Overview'),
-                    ),
-                    const Positioned(left: 318, top: 594, child: _MonthChip()),
-                    const Positioned(left: 25, top: 628, child: _SalesCard()),
-                    const Positioned(
-                      left: 25,
-                      top: 793,
-                      child: _SectionTitle('Needs Attention'),
-                    ),
-                    const Positioned(
-                      left: 24,
-                      top: 818,
-                      child: _AttentionRow(
-                        title: '2 New orders',
-                        subtitle: 'Hurry up',
-                        barColor: AppColors.attentionAmber,
-                        boxColor: AppColors.attentionAmberBg,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 24,
-                      top: 892,
-                      child: _AttentionRow(
-                        title: 'Tomatoes low',
-                        subtitle: 'Only 10kg remaining',
-                        barColor: AppColors.attentionRed,
-                        boxColor: AppColors.attentionRedBg,
-                      ),
-                    ),
-                    Positioned(
-                      left: 330,
-                      top: 358,
-                      width: 60,
-                      height: 28,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            settings: const RouteSettings(
-                              name: AppRoutes.products,
-                            ),
-                            builder: (_) => const MyProductsScreen(),
+                        Positioned(
+                          left: 363,
+                          top: 74,
+                          child: _HeaderIcon(
+                            icon: Icons.settings_outlined,
+                            onTap: () => goToSettings(context),
                           ),
                         ),
-                        child: const SizedBox.expand(),
-                      ),
+                        const Positioned(
+                          left: 25,
+                          top: 143,
+                          child: _ActiveOrdersCard(),
+                        ),
+                        const Positioned(
+                          left: 25,
+                          top: 361,
+                          child: _SectionTitle('My Products'),
+                        ),
+                        const Positioned(
+                          left: 349,
+                          top: 365,
+                          child: _ViewAll(),
+                        ),
+                        Positioned(
+                          left: 25,
+                          top: 355,
+                          width: 130,
+                          height: 30,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: AppRoutes.products,
+                                ),
+                                builder: (_) => const MyProductsScreen(),
+                              ),
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                        Positioned(
+                          left: 25,
+                          top: 389,
+                          width: 362,
+                          height: 188,
+                          child: _HomeProducts(products: products),
+                        ),
+                        const Positioned(
+                          left: 25,
+                          top: 597,
+                          child: _SectionTitle('Sales Overview'),
+                        ),
+                        const Positioned(
+                          left: 318,
+                          top: 594,
+                          child: _MonthChip(),
+                        ),
+                        const Positioned(
+                          left: 25,
+                          top: 628,
+                          child: _SalesCard(),
+                        ),
+                        const Positioned(
+                          left: 25,
+                          top: 793,
+                          child: _SectionTitle('Needs Attention'),
+                        ),
+                        const Positioned(
+                          left: 24,
+                          top: 818,
+                          child: _AttentionRow(
+                            title: '2 New orders',
+                            subtitle: 'Hurry up',
+                            barColor: AppColors.attentionAmber,
+                            boxColor: AppColors.attentionAmberBg,
+                          ),
+                        ),
+                        if (lowStock != null)
+                          Positioned(
+                            left: 24,
+                            top: 892,
+                            child: _AttentionRow(
+                              title: '${lowStock.name} low',
+                              subtitle:
+                                  'Only ${lowStock.quantity}${lowStock.unit} remaining',
+                              barColor: AppColors.attentionRed,
+                              boxColor: AppColors.attentionRedBg,
+                            ),
+                          ),
+                        Positioned(
+                          left: 330,
+                          top: 358,
+                          width: 60,
+                          height: 28,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: AppRoutes.products,
+                                ),
+                                builder: (_) => const MyProductsScreen(),
+                              ),
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: PinnedBottomNav(
+                    selectedIndex: 0,
+                    onHomeTap: () => goToHome(context),
+                    onProductsTap: () => goToProducts(context),
+                    onAddTap: () => goToAddProduct(context),
+                    onOrdersTap: () => goToOrders(context),
+                    onProfileTap: () => goToProfile(context),
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: PinnedBottomNav(
-                selectedIndex: 0,
-                onHomeTap: () => goToHome(context),
-                onProductsTap: () => goToProducts(context),
-                onAddTap: () => goToAddProduct(context),
-                onOrdersTap: () => goToOrders(context),
-                onProfileTap: () => goToProfile(context),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -197,7 +208,17 @@ class _Greeting extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Ramesh Kumar', style: AppTextStyles.homeName),
+              Flexible(
+                child: AnimatedBuilder(
+                  animation: SellerProfileStore.instance,
+                  builder: (context, _) => Text(
+                    SellerProfileStore.instance.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.homeName,
+                  ),
+                ),
+              ),
               const SizedBox(width: 6),
               Container(
                 width: 21,
@@ -447,113 +468,109 @@ class _ViewAll extends StatelessWidget {
   }
 }
 
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({
-    required this.name,
-    required this.qty,
-    required this.color,
-    required this.image,
-  });
+class _HomeProducts extends StatelessWidget {
+  const _HomeProducts({required this.products});
 
-  final String name;
-  final String qty;
-  final Color color;
-  final String image;
+  final List<Product> products;
+
+  @override
+  Widget build(BuildContext context) {
+    if (products.isEmpty) {
+      return const _EmptyHomeProducts();
+    }
+    return ListView.separated(
+      key: const ValueKey('home-products'),
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      itemCount: products.length,
+      separatorBuilder: (context, index) => const SizedBox(width: 18),
+      itemBuilder: (context, index) => _ProductCard(product: products[index]),
+    );
+  }
+}
+
+class _EmptyHomeProducts extends StatelessWidget {
+  const _EmptyHomeProducts();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 144,
-      height: 188,
-      clipBehavior: Clip.antiAlias,
+      key: const ValueKey('home-empty-products'),
+      width: 362,
+      height: 144,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: const BorderRadius.all(Radius.circular(26)),
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
-      child: Stack(
+      child: Row(
         children: [
-          Positioned.fill(child: Image.asset(image, fit: BoxFit.cover)),
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: <double>[0.45, 1],
-                  colors: <Color>[Colors.transparent, Color(0xB3000000)],
-                ),
-              ),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: AppColors.iconCircle,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.eco_outlined,
+              size: 24,
+              color: AppColors.iconDark,
             ),
           ),
-          Positioned(
-            left: 84,
-            top: 7,
-            child: Container(
-              width: 52,
-              height: 17,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(30)),
-                border: Border.all(color: const Color(0x12000000)),
-              ),
-              child: const Center(
-                child: Text(
-                  'Active',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No products yet',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.darkGreenInk,
+                    ),
                   ),
                 ),
-              ),
+                SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Start selling today',
+                    style: TextStyle(fontSize: 11, color: AppColors.tabGray),
+                  ),
+                ),
+              ],
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
+          const SizedBox(width: 8),
+          GestureDetector(
+            key: const ValueKey('home-empty-add'),
+            onTap: () => goToAddProduct(context),
             child: Container(
-              height: 47,
-              padding: const EdgeInsets.only(
-                left: 13,
-                right: 6,
-                top: 2,
-                bottom: 2,
-              ),
+              width: 92,
+              height: 34,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: const BoxDecoration(
-                color: Color(0x1A000000),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(26),
-                  bottomRight: Radius.circular(26),
-                ),
+                color: AppColors.darkCard,
+                borderRadius: BorderRadius.all(Radius.circular(17)),
               ),
-              child: FittedBox(
+              child: const FittedBox(
                 fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.0,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      qty,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xDBFFFFFF),
-                        height: 1.0,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Add product',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.limeLight,
+                  ),
                 ),
               ),
             ),
@@ -564,80 +581,131 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _ProductCardSmall extends StatelessWidget {
-  const _ProductCardSmall({required this.image});
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({required this.product});
 
-  final String image;
+  final Product product;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 62,
-      height: 188,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Color(0xFF8FBF6E),
-        borderRadius: BorderRadius.all(Radius.circular(26)),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(child: Image.asset(image, fit: BoxFit.cover)),
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: <double>[0.45, 1],
-                  colors: <Color>[Colors.transparent, Color(0xB3000000)],
+    final ProductPhoto? photo = product.coverPhoto;
+    return GestureDetector(
+      key: ValueKey('home-product-${product.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => goToProductDetails(context, product: product),
+      child: Container(
+        width: 144,
+        height: 188,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: _categoryColor(product.category),
+          borderRadius: const BorderRadius.all(Radius.circular(26)),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (photo != null) Image.memory(photo.bytes, fit: BoxFit.cover),
+            Positioned(
+              right: 8,
+              top: 7,
+              child: Container(
+                width: 58,
+                height: 17,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(30)),
+                  border: Border.all(color: const Color(0x12000000)),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    product.status.label,
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: _statusColor(product.status),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 47,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: const BoxDecoration(
-                color: Color(0x1A000000),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(26),
-                  bottomRight: Radius.circular(26),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 52,
+                padding: const EdgeInsets.only(
+                  left: 13,
+                  right: 6,
+                  top: 2,
+                  bottom: 2,
                 ),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Carrots',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.0,
+                decoration: const BoxDecoration(
+                  color: Color(0x66000000),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(26),
+                    bottomRight: Radius.circular(26),
+                  ),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        product.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.0,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '50 kg',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Color(0xDBFFFFFF),
-                        height: 1.0,
+                      const SizedBox(height: 2),
+                      Text(
+                        product.quantityLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xDBFFFFFF),
+                          height: 1.0,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+}
+
+Color _categoryColor(String category) {
+  switch (category) {
+    case 'Fruits':
+      return const Color(0xFFE2A84B);
+    case 'Grains & pulses':
+      return const Color(0xFFB89B5E);
+    default:
+      return const Color(0xFF7BAE5A);
+  }
+}
+
+Color _statusColor(ProductStatus status) {
+  switch (status) {
+    case ProductStatus.active:
+      return AppColors.primary;
+    case ProductStatus.outOfStock:
+      return AppColors.attentionRed;
+    case ProductStatus.draft:
+      return AppColors.tabGray;
   }
 }
 
@@ -868,11 +936,14 @@ class _AttentionRow extends StatelessWidget {
           Positioned(
             left: 76,
             top: 12,
+            width: 260,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -881,6 +952,8 @@ class _AttentionRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10,
                     color: Color(0x8A000000),

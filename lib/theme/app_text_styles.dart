@@ -3,6 +3,51 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 abstract final class AppTextStyles {
+  /// Standard page-title treatment used by every screen header.
+  static const TextStyle pageHeader = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  /// Standard sub-heading used for section/card titles.
+  static const TextStyle sectionHeader = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    color: AppColors.textPrimary,
+  );
+
+  /// Standard normal/body copy.
+  static const TextStyle body = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.textSecondary,
+  );
+
+  /// Standard emphasised body copy.
+  static const TextStyle bodyStrong = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    color: AppColors.textPrimary,
+  );
+
+  /// Compact supporting copy for metadata and captions.
+  static const TextStyle caption = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    color: AppColors.textMuted,
+  );
+
   static const TextStyle title = TextStyle(
     fontSize: 36,
     fontWeight: FontWeight.w800,
@@ -210,14 +255,14 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle homeHeroDesc = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.5,
     color: Color(0xFF386738),
   );
 
   static const TextStyle homeSection = TextStyle(
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: FontWeight.w800,
     color: AppColors.textPrimary,
   );
@@ -353,14 +398,14 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle orderCardTitle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w800,
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
     letterSpacing: 0.14,
     color: AppColors.textPrimary,
   );
 
   static const TextStyle orderItemName = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.12,
     color: AppColors.textPrimary,
@@ -381,7 +426,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle orderRowLabel = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.12,
     color: AppColors.orderItemMeta,
@@ -409,7 +454,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle orderSubTitle = TextStyle(
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.14,
     color: AppColors.textPrimary,
@@ -559,7 +604,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle personalLabel = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.12,
     color: AppColors.textPrimary,
@@ -573,14 +618,14 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle personalValue = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.12,
     color: AppColors.textPrimary,
   );
 
   static const TextStyle personalPlaceholder = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.12,
     color: AppColors.personalPlaceholder,
@@ -615,7 +660,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle businessLabel = TextStyle(
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: AppColors.textPrimary,
@@ -749,7 +794,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle bankUpiSub = TextStyle(
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.1,
     height: 25 / 10,
@@ -780,7 +825,7 @@ abstract final class AppTextStyles {
   );
 
   static const TextStyle addSectionTitle = TextStyle(
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 16 / 20,
     color: AppColors.orderDark,
@@ -881,7 +926,7 @@ abstract final class AppTextStyles {
     color: AppColors.stepSubtitleAlt,
   );
   static const TextStyle sectionTitle = TextStyle(
-    fontSize: 17.5,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.sectionTitle,
@@ -893,31 +938,31 @@ abstract final class AppTextStyles {
     color: AppColors.pillNoteText,
   );
   static const TextStyle fieldLabel = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.fieldLabel,
   );
   static const TextStyle fieldLabelMuted = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.0,
     color: AppColors.fieldPlaceholderAlt,
   );
   static const TextStyle fieldPlaceholder = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.fieldPlaceholder,
   );
   static const TextStyle fieldValue = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.fieldValue,
   );
   static const TextStyle changeLink = TextStyle(
-    fontSize: 11.5,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.0,
     color: AppColors.changeText,
@@ -942,25 +987,25 @@ abstract final class AppTextStyles {
     color: AppColors.verifyAccent,
   );
   static const TextStyle verifySubtitle = TextStyle(
-    fontSize: 15.5,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.verifySubtitle,
   );
   static const TextStyle pcLabel = TextStyle(
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.pcLabel,
   );
   static const TextStyle pcPercent = TextStyle(
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.pcPercent,
   );
   static const TextStyle verifySectionTitle = TextStyle(
-    fontSize: 17.5,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.verifyInk,
@@ -972,25 +1017,25 @@ abstract final class AppTextStyles {
     color: AppColors.verifyPillText,
   );
   static const TextStyle docCardTitle = TextStyle(
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.verifyInk,
   );
   static const TextStyle docCardSubtitle = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.docCardSubtitle,
   );
   static const TextStyle bankSubtitle = TextStyle(
-    fontSize: 15.5,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.bankSubtitle,
   );
   static const TextStyle bankSectionTitle = TextStyle(
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.bankSectionTitle,
@@ -1038,7 +1083,7 @@ abstract final class AppTextStyles {
     color: AppColors.limeAccent,
   );
   static const TextStyle balanceSub = TextStyle(
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.balanceSub,
@@ -1074,7 +1119,7 @@ abstract final class AppTextStyles {
     color: AppColors.textPrimary,
   );
   static const TextStyle sellerSub = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.dashboardSubtitle,
@@ -1120,13 +1165,13 @@ abstract final class AppTextStyles {
     height: 1.0,
   );
   static const TextStyle dashboardTitle = TextStyle(
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
   );
   static const TextStyle dashboardSubtitle = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.dashboardSubtitle,
@@ -1156,19 +1201,19 @@ abstract final class AppTextStyles {
     color: AppColors.stepSoftLabel,
   );
   static const TextStyle fieldLabelSoft = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.0,
     color: AppColors.textPrimary,
   );
   static const TextStyle inputHintSoft = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.inputHintSoft,
   );
   static const TextStyle inputInkSoft = TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.0,
     color: AppColors.inputInkSoft,
