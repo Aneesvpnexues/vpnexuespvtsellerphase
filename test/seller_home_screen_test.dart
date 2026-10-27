@@ -27,6 +27,18 @@ void main() {
     expect(find.text('View orders'), findsOneWidget);
     expect(find.text('Waiting for your response'), findsOneWidget);
     expect(find.text('My Products'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/products/tomato.jpg')),
+      findsOneWidget,
+    );
+    expect(
+      find.image(const AssetImage('assets/products/spinach.jpg')),
+      findsOneWidget,
+    );
+    expect(
+      find.image(const AssetImage('assets/products/carrots.jpg')),
+      findsOneWidget,
+    );
     expect(find.text('Tomatoes'), findsOneWidget);
     expect(find.text('Spinach'), findsOneWidget);
     expect(find.text('Sales Overview'), findsOneWidget);

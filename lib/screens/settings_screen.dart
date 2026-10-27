@@ -4,8 +4,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
+import 'about_vpnexues_screen.dart';
 import 'app_language_screen.dart';
-import 'help_support_screen.dart';
 
 /// Settings — static replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -45,18 +45,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               const Positioned(left: 25, top: 253, child: _NotificationsCard()),
-              Positioned(
-                left: 25,
-                top: 496,
-                child: _SupportCard(
-                  onHelpTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const HelpSupportScreen(),
-                    ),
-                  ),
-                ),
-              ),
-              const Positioned(left: 25, top: 678, child: _LogoutCard()),
+              const Positioned(left: 25, top: 496, child: _SupportCard()),
+              const Positioned(left: 25, top: 612, child: _LogoutCard()),
               const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
                 left: 68,
@@ -150,7 +140,7 @@ class _NotificationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 229,
       children: [
         Positioned(
@@ -209,16 +199,14 @@ class _NotificationsCard extends StatelessWidget {
 }
 
 class _SupportCard extends StatelessWidget {
-  const _SupportCard({required this.onHelpTap});
-
-  final VoidCallback onHelpTap;
+  const _SupportCard();
 
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 168,
+      height: 102,
       children: [
-        const Positioned(
+        Positioned(
           left: 22,
           top: 13,
           child: LabelText(
@@ -227,32 +215,22 @@ class _SupportCard extends StatelessWidget {
             width: 86,
           ),
         ),
-        const Positioned(
+        Positioned(
           left: 21,
           top: 53,
           child: _MenuRow(
             icon: 'assets/settings/ic_alert.png',
             iconSize: 16,
-            title: 'About VP NEXUES',
+            title: 'About VPNEXUES',
             titleWidth: 108,
-            subtitle: 'version 1.0',
-            subtitleWidth: 52,
+            subtitle: '',
+            subtitleWidth: 0,
             chevron: true,
-          ),
-        ),
-        const Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
-          left: 21,
-          top: 111,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_help.png',
-            iconSize: 16,
-            title: 'Help & Support',
-            titleWidth: 90,
-            subtitle: 'Talk to our team',
-            subtitleWidth: 78,
-            chevron: true,
-            onTap: onHelpTap,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AboutVpnexuesScreen(),
+              ),
+            ),
           ),
         ),
       ],
@@ -347,7 +325,7 @@ class _Card extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({
+  _MenuRow({
     required this.icon,
     required this.iconSize,
     required this.title,

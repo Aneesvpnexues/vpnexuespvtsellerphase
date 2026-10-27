@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
+import 'account_verification_help_screen.dart';
+import 'orders_delivery_help_screen.dart';
+import 'payments_wallet_help_screen.dart';
+import 'products_stock_help_screen.dart';
 import 'report_problem_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
@@ -198,7 +202,7 @@ class HelpSupportScreen extends StatelessWidget {
                     color: const Color(0x12000000),
                   ),
                 ),
-              const Positioned(
+              Positioned(
                 left: 46,
                 top: 505,
                 child: _TopicRow(
@@ -206,10 +210,14 @@ class HelpSupportScreen extends StatelessWidget {
                   title: 'Orders & delivery',
                   titleWidth: 103,
                   subtitle: '3 articles',
-                  onTap: null,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const OrdersDeliveryHelpScreen(),
+                    ),
+                  ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 46,
                 top: 563,
                 child: _TopicRow(
@@ -217,10 +225,14 @@ class HelpSupportScreen extends StatelessWidget {
                   title: 'Products & stock',
                   titleWidth: 101,
                   subtitle: '3 articles',
-                  onTap: null,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ProductsStockHelpScreen(),
+                    ),
+                  ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 46,
                 top: 621,
                 child: _TopicRow(
@@ -228,10 +240,14 @@ class HelpSupportScreen extends StatelessWidget {
                   title: 'Payments & wallet',
                   titleWidth: 109,
                   subtitle: '3 articles',
-                  onTap: null,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PaymentsWalletHelpScreen(),
+                    ),
+                  ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 46,
                 top: 679,
                 child: _TopicRow(
@@ -239,7 +255,11 @@ class HelpSupportScreen extends StatelessWidget {
                   title: 'Account & verification',
                   titleWidth: 131,
                   subtitle: '3 articles',
-                  onTap: null,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AccountVerificationHelpScreen(),
+                    ),
+                  ),
                 ),
               ),
               Positioned(

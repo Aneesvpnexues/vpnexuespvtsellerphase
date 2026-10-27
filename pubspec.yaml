@@ -68,7 +68,7 @@ flutter:
     - assets/welcome/wave.png
     - assets/welcome/send.png
     - assets/order/
-    - assets/products/tomato.png
+    - assets/products/
     - assets/profile/
     - assets/personal/
     - assets/business/

@@ -16,7 +16,6 @@ import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/wallet_page.dart';
-import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
 import 'package:seller_app/widgets/profile_shell.dart';
@@ -287,13 +286,12 @@ void main() {
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Language, notifications'), findsOneWidget);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
-      // Design keeps the typo in "Supppport" (three p's) — string above
-      // uses it; also assert no Account/Business rows leak in.
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('Log out'), findsNothing);
+      // Assert no Account/Business rows leak in.
       expect(find.text('Personal Details'), findsNothing);
       expect(find.text('Wallet & Transactions'), findsNothing);
-      // Chevrons on Settings/Help only — Log out has none.
+      // Chevrons on Settings/Help.
       expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
       // Shared chrome + App tab selected.
       expect(find.text('Withdrawal balance'), findsOneWidget);
@@ -322,12 +320,9 @@ void main() {
       expect(settings.left, closeTo(24 + 68, 1));
       expect(settings.top, closeTo(560 + 23, 3));
 
-      // Help title at card-rel (68,89); Log out at (68,143).
-      final help = rectOf(find.text('Help & Suppport'));
+      // Help title at card-rel (68,89).
+      final help = rectOf(find.text('Help & Support'));
       expect(help.top, closeTo(560 + 89, 3));
-      final logout = rectOf(find.text('Log out'));
-      expect(logout.top, closeTo(560 + 143, 3));
-      expect(logout.left, closeTo(24 + 68, 1));
 
       // Subtitle below Settings.
       final sub = rectOf(find.text('Language, notifications'));
@@ -364,16 +359,6 @@ void main() {
       expect(find.text('Personal Details'), findsNothing);
     });
 
-    testWidgets('Log out returns to the login screen', (tester) async {
-      await pumpProfile(tester, const ProfileAppScreen());
-
-      await tester.tap(find.text('Log out'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(WelcomeSellerScreen), findsOneWidget);
-      expect(find.text('Withdrawal balance'), findsNothing);
-    });
-
     testWidgets('Settings row opens the settings page', (tester) async {
       await pumpProfile(tester, const ProfileAppScreen());
 
@@ -391,14 +376,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsNothing);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('Log out'), findsNothing);
     });
 
     testWidgets('Help row opens the Help & Support screen', (tester) async {
       await pumpProfile(tester, const ProfileAppScreen());
 
-      await tester.tap(find.text('Help & Suppport'));
+      await tester.tap(find.text('Help & Support'));
       await tester.pumpAndSettle();
 
       expect(find.byType(HelpSupportScreen), findsOneWidget);
@@ -423,7 +408,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HelpSupportScreen), findsNothing);
-      expect(find.text('Help & Suppport'), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
     });
   });
 

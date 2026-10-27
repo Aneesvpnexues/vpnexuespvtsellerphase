@@ -87,6 +87,7 @@ class SellerHomeScreen extends StatelessWidget {
                         name: 'Tomatoes',
                         qty: '50 kg available',
                         color: Color(0xFF7BAE5A),
+                        image: 'assets/products/tomato.jpg',
                       ),
                     ),
                     const Positioned(
@@ -96,12 +97,15 @@ class SellerHomeScreen extends StatelessWidget {
                         name: 'Spinach',
                         qty: '50 kg available',
                         color: Color(0xFF4E8A3E),
+                        image: 'assets/products/spinach.jpg',
                       ),
                     ),
                     const Positioned(
                       left: 350,
                       top: 389,
-                      child: _ProductCardSmall(),
+                      child: _ProductCardSmall(
+                        image: 'assets/products/carrots.jpg',
+                      ),
                     ),
                     const Positioned(
                       left: 25,
@@ -448,23 +452,39 @@ class _ProductCard extends StatelessWidget {
     required this.name,
     required this.qty,
     required this.color,
+    required this.image,
   });
 
   final String name;
   final String qty;
   final Color color;
+  final String image;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 144,
       height: 188,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: color,
         borderRadius: const BorderRadius.all(Radius.circular(26)),
       ),
       child: Stack(
         children: [
+          Positioned.fill(child: Image.asset(image, fit: BoxFit.cover)),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: <double>[0.45, 1],
+                  colors: <Color>[Colors.transparent, Color(0xB3000000)],
+                ),
+              ),
+            ),
+          ),
           Positioned(
             left: 84,
             top: 7,
@@ -545,19 +565,35 @@ class _ProductCard extends StatelessWidget {
 }
 
 class _ProductCardSmall extends StatelessWidget {
-  const _ProductCardSmall();
+  const _ProductCardSmall({required this.image});
+
+  final String image;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 62,
       height: 188,
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         color: Color(0xFF8FBF6E),
         borderRadius: BorderRadius.all(Radius.circular(26)),
       ),
       child: Stack(
         children: [
+          Positioned.fill(child: Image.asset(image, fit: BoxFit.cover)),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: <double>[0.45, 1],
+                  colors: <Color>[Colors.transparent, Color(0xB3000000)],
+                ),
+              ),
+            ),
+          ),
           Positioned(
             left: 0,
             right: 0,

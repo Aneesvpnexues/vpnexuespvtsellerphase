@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/account_verification_help_screen.dart';
 import 'package:seller_app/screens/help_support_screen.dart';
+import 'package:seller_app/screens/orders_delivery_help_screen.dart';
+import 'package:seller_app/screens/payments_wallet_help_screen.dart';
+import 'package:seller_app/screens/products_stock_help_screen.dart';
 import 'package:seller_app/screens/report_problem_screen.dart';
 
 Future<void> _loadFonts() async {
@@ -92,10 +96,7 @@ void main() {
     expect(rectOf(find.text('Payments & wallet')).top, closeTo(572, 4));
     expect(rectOf(find.text('Account & verification')).top, closeTo(630, 4));
     expect(rectOf(find.text('Report a problem')).top, closeTo(688, 4));
-    expect(
-      rectOf(find.text('Tell us what went wrong')).top,
-      closeTo(703, 4),
-    );
+    expect(rectOf(find.text('Tell us what went wrong')).top, closeTo(703, 4));
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
@@ -123,6 +124,72 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReportProblemScreen), findsNothing);
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+  });
+
+  testWidgets('Orders & delivery row opens the articles page', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Orders & delivery'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrdersDeliveryHelpScreen), findsOneWidget);
+    expect(find.text('How do I track my order?'), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrdersDeliveryHelpScreen), findsNothing);
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+  });
+
+  testWidgets('Products & stock row opens the articles page', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Products & stock'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProductsStockHelpScreen), findsOneWidget);
+    expect(find.text('How do I add a product?'), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProductsStockHelpScreen), findsNothing);
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+  });
+
+  testWidgets('Payments & wallet row opens the articles page', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Payments & wallet'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PaymentsWalletHelpScreen), findsOneWidget);
+    expect(find.text('When will I get paid?'), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PaymentsWalletHelpScreen), findsNothing);
+    expect(find.byType(HelpSupportScreen), findsOneWidget);
+  });
+
+  testWidgets('Account & verification row opens the articles page', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Account & verification'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountVerificationHelpScreen), findsOneWidget);
+    expect(find.text('How do I verify my account?'), findsOneWidget);
+
+    await tester.tap(find.image(const AssetImage('assets/order/ic_back.png')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountVerificationHelpScreen), findsNothing);
     expect(find.byType(HelpSupportScreen), findsOneWidget);
   });
 
