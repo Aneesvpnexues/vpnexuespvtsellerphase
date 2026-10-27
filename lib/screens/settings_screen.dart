@@ -8,13 +8,14 @@ import '../widgets/label_text.dart';
 import 'app_language_screen.dart';
 import 'help_support_screen.dart';
 
-/// Settings — static replica of Zeplin "Android Compact - 164"
+/// Settings — replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
 ///
 /// Built against a 412x917 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only — no network, no state.
+/// Notification toggles are functional (tap to flip) and persist while the
+/// screen is mounted; no network.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -32,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
           designWidth: designWidth,
           designHeight: designHeight,
           trimTop: trimTop,
-          child: const Stack(
+          child: Stack(
             children: [
               Positioned(left: 25, top: 127, child: _PreferencesCard()),
               Positioned(left: 25, top: 253, child: _NotificationsCard()),
@@ -95,12 +96,23 @@ class _PreferencesCard extends StatelessWidget {
   }
 }
 
-class _NotificationsCard extends StatelessWidget {
+class _NotificationsCard extends StatefulWidget {
   const _NotificationsCard();
 
   @override
+  State<_NotificationsCard> createState() => _NotificationsCardState();
+}
+
+class _NotificationsCardState extends State<_NotificationsCard> {
+  final List<bool> _toggleStates = [true, false, false];
+
+  void _onToggleChanged(int index) {
+    setState(() => _toggleStates[index] = !_toggleStates[index]);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 229,
       children: [
         Positioned(
@@ -122,7 +134,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 68,
             subtitle: 'Alert me the moment an order arrives',
             subtitleWidth: 181,
-            toggle: true,
+            toggle: _toggleStates[0],
+            onToggleChanged: () => _onToggleChanged(0),
           ),
         ),
         Positioned(left: 21, top: 102, child: _Divider()),
@@ -136,7 +149,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 71,
             subtitle: 'When a product is running low',
             subtitleWidth: 146,
-            toggle: false,
+            toggle: _toggleStates[1],
+            onToggleChanged: () => _onToggleChanged(1),
           ),
         ),
         Positioned(left: 21, top: 160, child: _Divider()),
@@ -150,7 +164,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 71,
             subtitle: 'When a product is running low',
             subtitleWidth: 146,
-            toggle: false,
+            toggle: _toggleStates[2],
+            onToggleChanged: () => _onToggleChanged(2),
           ),
         ),
       ],
@@ -312,6 +327,7 @@ class _MenuRow extends StatelessWidget {
     required this.subtitleWidth,
     this.toggle,
     this.chevron = false,
+    this.onToggleChanged,
   });
 
   final String icon;
@@ -322,6 +338,7 @@ class _MenuRow extends StatelessWidget {
   final double subtitleWidth;
   final bool? toggle;
   final bool chevron;
+  final VoidCallback? onToggleChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +375,15 @@ class _MenuRow extends StatelessWidget {
             ),
           ),
           if (toggle != null)
-            Positioned(left: 283, top: 11, child: _Toggle(on: toggle!)),
+            Positioned(
+              left: 283,
+              top: 11,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onToggleChanged?.call(),
+                child: _Toggle(on: toggle!),
+              ),
+            ),
           if (chevron)
             const Positioned(
               left: 312,

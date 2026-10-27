@@ -135,6 +135,16 @@ void main() {
       expect(find.byType(ProfileShell), findsOneWidget);
     });
 
+    testWidgets('header back opens the home page', (tester) async {
+      await pumpProfile(tester, const ProfileScreen());
+
+      await tester.tap(find.byKey(PageHeader.backKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProfileScreen), findsNothing);
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
+    });
+
     testWidgets('Business tab pushes the Business screen', (tester) async {
       await pumpProfile(tester, const ProfileScreen());
 
@@ -1340,10 +1350,40 @@ void main() {
       expect(find.text('e.g. 50 kg'), findsOneWidget);
       await tester.tap(find.byKey(const Key('qty-plus')));
       await tester.pump();
-      expect(find.text('e.g. 51 kg'), findsOneWidget);
+      expect(find.text('51 kg'), findsOneWidget);
       await tester.tap(find.byKey(const Key('qty-minus')));
       await tester.pump();
-      expect(find.text('e.g. 50 kg'), findsOneWidget);
+      expect(find.text('50 kg'), findsOneWidget);
+    });
+
+    testWidgets('tapping the quantity display opens the kg input dialog', (
+      tester,
+    ) async {
+      await pumpAddProducts(tester);
+      await tester.dragUntilVisible(
+        find.byKey(const Key('qty-display')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('qty-display')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('qty-dialog')), findsOneWidget);
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('qty-dialog-input')),
+      );
+      expect(field.controller?.text, '50');
+
+      await tester.enterText(find.byKey(const Key('qty-dialog-input')), '137');
+      await tester.tap(find.byKey(const Key('qty-dialog-set')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('qty-dialog')), findsNothing);
+      expect(find.text('137 kg'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('qty-plus')));
+      await tester.pump();
+      expect(find.text('138 kg'), findsOneWidget);
     });
 
     testWidgets('category and status chips select', (tester) async {
@@ -1381,8 +1421,8 @@ void main() {
       expect(find.text('22/500'), findsOneWidget);
     });
 
-    testWidgets('back arrow pops', (tester) async {
-      // Push from a stub home so maybePop has somewhere to go.
+    testWidgets('back arrow opens the home page', (tester) async {
+      // Push from a stub route to prove the header back is not a plain pop.
       tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -1405,6 +1445,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back).first);
       await tester.pumpAndSettle();
       expect(find.byType(AddProductsScreen), findsNothing);
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
     });
 
     testWidgets('bottom nav FAB pops and Profile tab opens ProfileScreen', (

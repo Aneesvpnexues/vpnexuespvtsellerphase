@@ -71,10 +71,13 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                     trimTop: MyProductsScreen.trimTop,
                     child: Stack(
                       children: [
-                        const Positioned(
+                        Positioned(
                           left: 0,
                           top: 68,
-                          child: PageHeader(title: 'My Products'),
+                          child: PageHeader(
+                            title: 'My Products',
+                            onBack: () => goToHome(context),
+                          ),
                         ),
                         Positioned(
                           left: 24,

@@ -138,12 +138,13 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    // Illustration: x 190..412, y 26..288 (STEP 04 is baked into the crop).
-    final illustration = rectOf(find.byType(Image).first);
-    expect(illustration.left, closeTo(190, 1));
-    expect(illustration.top, closeTo(26, 1));
-    expect(illustration.width, closeTo(222, 1));
-    expect(illustration.height, closeTo(262, 1));
+    // Header art: full width, top 0, down past the sheet seam so the rounded
+    // corners reveal it. STEP 04 lives inside this 2x asset.
+    final headerArt = rectOf(find.byType(Image).first);
+    expect(headerArt.left, closeTo(0, 1));
+    expect(headerArt.top, closeTo(0, 1));
+    expect(headerArt.width, closeTo(412, 1));
+    expect(headerArt.height, closeTo(327.5, 1));
 
     // Back arrow.
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
@@ -317,12 +318,12 @@ void main() {
       closeTo(827.99, 1),
     );
 
-    // Continue button: bottom-anchored, x 10..402, y 866..920 on the 936
+    // Continue button: bottom-anchored, x 20..392, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(10, 1));
+    expect(button.left, closeTo(20, 1));
     expect(button.top, closeTo(866, 1));
-    expect(button.width, closeTo(392, 1));
+    expect(button.width, closeTo(372, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -575,15 +576,84 @@ void main() {
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
   });
 
-  testWidgets('uses the bank illustration asset', (tester) async {
+  testWidgets('uses the composited bank header artwork', (tester) async {
     await pumpScreen(tester);
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
     expect(
       (image.image as AssetImage).assetName,
-      BankDetaileScreen.illustrationAsset,
+      BankDetaileScreen.headerAsset,
     );
-    expect(BankDetaileScreen.illustrationAsset, 'assets/bank/illustration.png');
+    expect(BankDetaileScreen.headerAsset, 'assets/bank/header.png');
+  });
+
+  testWidgets('header backdrop reaches both edges on a wide viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 936);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
+    await tester.pumpAndSettle();
+
+    final backdrop = tester.getRect(find.byKey(const Key('bank-backdrop')));
+    expect(backdrop.left, closeTo(0, 1));
+    expect(backdrop.right, closeTo(800, 1));
+    expect(backdrop.top, closeTo(0, 1));
+    expect(backdrop.height, closeTo(327.5, 1));
+
+    final decoration = tester.widget<DecoratedBox>(
+      find.descendant(
+        of: find.byKey(const Key('bank-backdrop')),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(
+      (decoration.decoration as BoxDecoration).gradient,
+      BankDetaileScreen.headerGradient,
+    );
+
+    // scaleY = 1; scaleX capped at 1.25 -> artboard 412*1.25=515 wide,
+    // centered at x142.5..657.5 while the backdrop still spans full width.
+    final headerArt = tester.getRect(find.byType(Image).first);
+    expect(headerArt.left, closeTo(142.5, 1));
+    expect(headerArt.right, closeTo(657.5, 1));
+  });
+
+  testWidgets('fills width and aligns content on a phone viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
+    await tester.pumpAndSettle();
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    final scaleX = 390 / BankDetaileScreen.designWidth;
+
+    // Header art and sheet span the full screen width; header STEP 04 pill
+    // reaches both edges like the reference.
+    final headerArt = tester.getRect(find.byType(Image).first);
+    expect(headerArt.left, closeTo(0, 1));
+    expect(headerArt.right, closeTo(390, 1));
+    expect(headerArt.top, closeTo(0, 1));
+
+    final sheet = rectOf(_sheet());
+    expect(sheet.left, closeTo(0, 1));
+    expect(sheet.right, closeTo(390, 1));
+
+    // Cards and Continue button share the same horizontal margin the design
+    // scaled to the phone width: 25/412 * 390 and 20/412 * 390.
+    expect(rectOf(_docCards().first).left, closeTo(25 * scaleX, 1));
+
+    final button = rectOf(_continueButton());
+    expect(button.left, closeTo(20 * scaleX, 1));
+    expect(button.right, closeTo(390 - 20 * scaleX, 1));
+    expect(button.height, closeTo(54, 1));
   });
 }

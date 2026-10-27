@@ -10,6 +10,7 @@ import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
+import 'package:seller_app/widgets/page_header.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 1008);
@@ -87,6 +88,16 @@ void main() {
       rectOf(find.byKey(const ValueKey('products-empty'))).top,
       closeTo(203, 3),
     );
+  });
+
+  testWidgets('the header back opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(PageHeader.backKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyProductsScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
   });
 
   testWidgets('renders store products and removes dummy rows', (tester) async {

@@ -66,10 +66,13 @@ class ProfileShell extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Positioned(
+              Positioned(
                 left: 0,
                 top: 24,
-                child: PageHeader(title: 'Profile'),
+                child: PageHeader(
+                  title: 'Profile',
+                  onBack: () => goToHome(context),
+                ),
               ),
               const Positioned(left: 24, top: 65, child: _BalanceCard()),
               Positioned(

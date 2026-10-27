@@ -98,13 +98,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 trimTop: MyOrdersScreen.trimTop,
                 child: Stack(
                   children: [
-                    const Positioned(
+                    Positioned(
                       left: 0,
                       top: 73,
                       child: PageHeader(
                         title: 'My Orders',
-                        backButtonKey: ValueKey<String>('my-orders-back'),
-                        titleKey: ValueKey<String>('my-orders-title'),
+                        backButtonKey: const ValueKey<String>('my-orders-back'),
+                        titleKey: const ValueKey<String>('my-orders-title'),
+                        onBack: () => goToHome(context),
                       ),
                     ),
                     Positioned(

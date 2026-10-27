@@ -55,6 +55,16 @@ void main() {
     expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
   });
 
+  testWidgets('the header back opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const ValueKey('my-orders-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyOrdersScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
   testWidgets('status tabs filter the order list', (tester) async {
     await pumpScreen(tester);
 

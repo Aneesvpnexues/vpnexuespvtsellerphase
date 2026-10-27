@@ -12,11 +12,14 @@ Future<void> pumpApp(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('app boots into the splash, then taps through to Welcome', (
-    tester,
-  ) async {
+  testWidgets('only the splash arrow continues to Welcome', (tester) async {
     await pumpApp(tester);
 
+    expect(find.byKey(const Key('splashTap')), findsOneWidget);
+    expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+
+    await tester.tapAt(const Offset(40, 120));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('splashTap')), findsOneWidget);
     expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
 

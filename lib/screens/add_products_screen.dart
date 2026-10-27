@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/product_store.dart';
@@ -23,7 +24,7 @@ typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
 /// exactly like [ProfileShell]). Category
 /// and status chips select, the quantity stepper adjusts local state, the
 /// description counts characters to 500, the photos strip accepts up to five
-/// gallery images, and the back arrow pops.
+/// gallery images, and the back arrow returns home.
 ///
 /// Design copy quirks kept verbatim: "et your price and available quantity"
 /// (missing leading "S") and "Product Descrption" (used for both the
@@ -49,6 +50,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   int _category = -1;
   int _status = 0;
   int _quantity = 50;
+  bool _quantityChosen = false;
   final TextEditingController _name = TextEditingController();
   final TextEditingController _price = TextEditingController();
   final TextEditingController _description = TextEditingController();
@@ -181,6 +183,28 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     );
   }
 
+  Future<void> _editQuantity() async {
+    FocusScope.of(context).unfocus();
+    final int? value = await showDialog<int>(
+      context: context,
+      builder: (_) => _QuantityDialog(quantity: _quantity),
+    );
+    if (!mounted || value == null) return;
+    setState(() {
+      _quantity = value;
+      _quantityChosen = true;
+    });
+  }
+
+  void _adjustQuantity(int delta) {
+    final int next = _quantity + delta;
+    if (next < 0) return;
+    setState(() {
+      _quantity = next;
+      _quantityChosen = true;
+    });
+  }
+
   void _saveProduct() {
     if (_isSaving) return;
     final String name = _name.text.trim();
@@ -249,10 +273,13 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                     scrollable: true,
                     child: Stack(
                       children: [
-                        const Positioned(
+                        Positioned(
                           left: 0,
                           top: 24,
-                          child: PageHeader(title: 'Add Products'),
+                          child: PageHeader(
+                            title: 'Add Products',
+                            onBack: () => goToHome(context),
+                          ),
                         ),
                         const Positioned(
                           left: 24,
@@ -470,11 +497,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                                   top: 195,
                                   child: _QtyStepper(
                                     quantity: _quantity,
-                                    onDecrement: () => setState(() {
-                                      if (_quantity > 0) _quantity--;
-                                    }),
-                                    onIncrement: () =>
-                                        setState(() => _quantity++),
+                                    showExample: !_quantityChosen,
+                                    onEdit: _editQuantity,
+                                    onDecrement: () => _adjustQuantity(-1),
+                                    onIncrement: () => _adjustQuantity(1),
                                   ),
                                 ),
                               ],
@@ -1361,11 +1387,15 @@ class _Chip extends StatelessWidget {
 class _QtyStepper extends StatelessWidget {
   const _QtyStepper({
     required this.quantity,
+    required this.showExample,
+    required this.onEdit,
     required this.onDecrement,
     required this.onIncrement,
   });
 
   final int quantity;
+  final bool showExample;
+  final VoidCallback onEdit;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
 
@@ -1400,8 +1430,16 @@ class _QtyStepper extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Center(
-              child: Text('e.g. $quantity kg', style: AppTextStyles.qtyValue),
+            child: GestureDetector(
+              key: const Key('qty-display'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onEdit,
+              child: Center(
+                child: Text(
+                  '${showExample ? 'e.g. ' : ''}$quantity kg',
+                  style: AppTextStyles.qtyValue,
+                ),
+              ),
             ),
           ),
           GestureDetector(
@@ -1423,6 +1461,188 @@ class _QtyStepper extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuantityDialog extends StatefulWidget {
+  const _QuantityDialog({required this.quantity});
+
+  final int quantity;
+
+  @override
+  State<_QuantityDialog> createState() => _QuantityDialogState();
+}
+
+class _QuantityDialogState extends State<_QuantityDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final String text = '${widget.quantity}';
+    _controller = TextEditingController(text: text)
+      ..selection = TextSelection(baseOffset: 0, extentOffset: text.length);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final int? value = int.tryParse(_controller.text.trim());
+    if (value == null) {
+      setState(() => _error = 'Enter a quantity.');
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      key: const Key('qty-dialog'),
+      backgroundColor: AppColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.addFieldBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.scale_outlined,
+                    size: 18,
+                    color: AppColors.darkGreenInk,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Available Quantity',
+                    style: AppTextStyles.sectionHeader,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Enter the quantity in kg.',
+              style: AppTextStyles.dashboardSubtitle,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              key: const Key('qty-dialog-input'),
+              controller: _controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              style: AppTextStyles.fieldLabelSoft.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              cursorColor: AppColors.darkGreenInk,
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: 'e.g. 50',
+                hintStyle: AppTextStyles.inputHintSoft,
+                suffixText: 'kg',
+                suffixStyle: AppTextStyles.fieldLabelSoft,
+                errorText: _error,
+                filled: true,
+                fillColor: AppColors.addFieldBg,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 15,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.darkGreenInk,
+                    width: 1.2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.attentionRed),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.attentionRed),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  key: const Key('qty-dialog-cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.inputInkSoft,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: AppTextStyles.fieldLabelSoft,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('qty-dialog-set'),
+                  onPressed: _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.darkGreenInk,
+                    foregroundColor: AppColors.limeAccent,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    'Set',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

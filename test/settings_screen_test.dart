@@ -4,6 +4,7 @@ import 'package:seller_app/screens/app_language_screen.dart';
 import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
+import 'package:seller_app/theme/app_colors.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -84,6 +85,54 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
+  });
+
+  testWidgets('notification toggles flip on tap', (tester) async {
+    await pumpScreen(tester);
+
+    final toggles = find.byWidgetPredicate(
+      (w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).borderRadius ==
+              BorderRadius.circular(9) &&
+          [AppColors.businessToggle, AppColors.settingsToggleOff]
+              .contains((w.decoration as BoxDecoration).color),
+    );
+    expect(toggles, findsNWidgets(3));
+
+    // New orders starts on (green), tap it -> off (gray).
+    final first = toggles.at(0);
+    expect(
+      (tester.widget<Container>(first).decoration! as BoxDecoration).color,
+      AppColors.businessToggle,
+    );
+    await tester.tap(first);
+    await tester.pumpAndSettle();
+    expect(
+      (tester.widget<Container>(first).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
+
+    // First Stock alerts starts off (gray), tap it -> on (green).
+    final second = toggles.at(1);
+    expect(
+      (tester.widget<Container>(second).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
+    await tester.tap(second);
+    await tester.pumpAndSettle();
+    expect(
+      (tester.widget<Container>(second).decoration! as BoxDecoration).color,
+      AppColors.businessToggle,
+    );
+
+    // Second Stock alerts unchanged (still off).
+    final third = toggles.at(2);
+    expect(
+      (tester.widget<Container>(third).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
   });
 
   testWidgets('Language opens the app language screen', (tester) async {
