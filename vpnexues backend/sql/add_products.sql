@@ -1,1 +1,0 @@
-ALTER TABLE products ADD COLUMN si_no INTEGER, ADD COLUMN category TEXT, ADD COLUMN price_per_unit NUMERIC, ADD COLUMN available_quantity INTEGER, ADD COLUMN description TEXT, ADD COLUMN image_url TEXT, ADD COLUMN seller_id UUID REFERENCES auth.users(id);

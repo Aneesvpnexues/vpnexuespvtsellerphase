@@ -1,1 +1,0 @@
-CREATE TABLE IF NOT EXISTS seller_app (si_no INTEGER PRIMARY KEY, name TEXT, category TEXT, price_per_unit NUMERIC, available_quantity INTEGER, description TEXT, image_url TEXT, seller_id UUID REFERENCES auth.users(id));
