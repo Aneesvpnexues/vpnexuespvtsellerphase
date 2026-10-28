@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 15 (API 35): opt out of enforced edge-to-edge so the white
+         navigationBarColor below is honored instead of the system scrim. -->
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>
