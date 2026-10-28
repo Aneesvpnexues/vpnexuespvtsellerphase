@@ -1,8 +1,9 @@
 HELP.md
 target/
 .env
-.env.*
+.env*
 !.env.example
+Superbase DB API keys.txt
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

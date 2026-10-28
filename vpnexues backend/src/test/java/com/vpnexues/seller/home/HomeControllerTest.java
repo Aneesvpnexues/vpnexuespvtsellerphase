@@ -11,6 +11,7 @@ import com.vpnexues.seller.home.HomeDtos.OrderSummary;
 import com.vpnexues.seller.home.HomeDtos.SalesSummary;
 import com.vpnexues.seller.home.HomeDtos.SellerProduct;
 import com.vpnexues.seller.home.HomeDtos.SellerProfile;
+import com.vpnexues.seller.supabase.SupabaseUpstreamException;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,6 +83,17 @@ class HomeControllerTest {
 						.with(authenticatedJwt("seller-a", "user-token")))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.title").value("Seller profile required"));
+	}
+
+	@Test
+	void returnsBadGatewayWhenSupabaseIsUnavailable() throws Exception {
+		when(this.homeService.load("seller-a", "user-token"))
+				.thenThrow(new SupabaseUpstreamException(new RuntimeException("upstream")));
+
+		this.mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/home")
+						.with(authenticatedJwt("seller-a", "user-token")))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.title").value("Seller data unavailable"));
 	}
 
 	private static SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor authenticatedJwt(
