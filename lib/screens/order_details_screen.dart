@@ -4,10 +4,11 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details â€” static replica of Zeplin "Android Compact - 135"
+/// Order Details — static replica of Zeplin "Android Compact - 135"
 /// (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae16aa9fda71b12bf121).
 ///
@@ -1271,67 +1272,69 @@ class _SlideAcceptState extends State<_SlideAccept>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => goToOrderReady(context),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          gradient: const LinearGradient(
-            colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: () => goToOrderReady(context),
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          width: 364,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            gradient: const LinearGradient(
+              colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+            ),
+            border: Border.all(color: const Color(0x14000000)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                offset: Offset(0, 10),
+                blurRadius: 22,
+              ),
+              BoxShadow(
+                color: Color(0x17000000),
+                offset: Offset(0, 40),
+                blurRadius: 40,
+              ),
+              BoxShadow(
+                color: Color(0x0D000000),
+                offset: Offset(0, 90),
+                blurRadius: 54,
+              ),
+            ],
           ),
-          border: Border.all(color: const Color(0x14000000)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 10),
-              blurRadius: 22,
-            ),
-            BoxShadow(
-              color: Color(0x17000000),
-              offset: Offset(0, 40),
-              blurRadius: 40,
-            ),
-            BoxShadow(
-              color: Color(0x0D000000),
-              offset: Offset(0, 90),
-              blurRadius: 54,
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderSlideLime,
-                  shape: BoxShape.circle,
-                ),
-                child: const Image(
-                  image: AssetImage('assets/order/ic_slide.png'),
-                  width: 26,
-                  height: 26,
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 4,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
+                  ),
                 ),
               ),
-            ),
-            const Positioned(
-              left: 112,
-              top: 15,
-              child: _Label(
-                'Slide to accept order',
-                AppTextStyles.orderSlideLabel,
-                width: 180,
+              const Positioned(
+                left: 112,
+                top: 15,
+                child: _Label(
+                  'Slide to accept order',
+                  AppTextStyles.orderSlideLabel,
+                  width: 180,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

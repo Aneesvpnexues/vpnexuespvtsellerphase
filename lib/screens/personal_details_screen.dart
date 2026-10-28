@@ -5,6 +5,7 @@ import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
@@ -462,22 +463,24 @@ class _SellerTypePill extends StatelessWidget {
         key: pillKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: width,
-          height: 31,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orderDark : AppColors.homeBg,
-            borderRadius: const BorderRadius.all(Radius.circular(14)),
-            border: selected
-                ? null
-                : Border.all(color: const Color(0x12000000)),
-          ),
-          child: Text(
-            label,
-            style: selected
-                ? AppTextStyles.personalPillActive
-                : AppTextStyles.personalPillIdle,
+        child: HoverPress.chip(
+          child: Container(
+            width: width,
+            height: 31,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.orderDark : AppColors.homeBg,
+              borderRadius: const BorderRadius.all(Radius.circular(14)),
+              border: selected
+                  ? null
+                  : Border.all(color: const Color(0x12000000)),
+            ),
+            child: Text(
+              label,
+              style: selected
+                  ? AppTextStyles.personalPillActive
+                  : AppTextStyles.personalPillIdle,
+            ),
           ),
         ),
       ),
@@ -499,15 +502,20 @@ class _SaveBar extends StatelessWidget {
         key: const ValueKey('save-personal-details'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: 362,
-          height: 53,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: AppColors.orderDark,
-            borderRadius: BorderRadius.all(Radius.circular(26)),
+        child: HoverPress.button(
+          child: Container(
+            width: 362,
+            height: 53,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.orderDark,
+              borderRadius: BorderRadius.all(Radius.circular(26)),
+            ),
+            child: const Text(
+              'Save changes',
+              style: AppTextStyles.personalSave,
+            ),
           ),
-          child: const Text('Save changes', style: AppTextStyles.personalSave),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../data/country_codes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/keyboard_aware_canvas.dart';
 import 'otp_screen.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
@@ -62,16 +63,11 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.welcomeBg,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: WelcomeSellerScreen.designWidth,
-              height: WelcomeSellerScreen.designHeight,
-              child: Stack(
-                children: [
+      body: KeyboardAwareCanvas(
+        designWidth: WelcomeSellerScreen.designWidth,
+        designHeight: WelcomeSellerScreen.designHeight,
+        child: Stack(
+          children: [
                   const Positioned(left: 0, top: 64, child: _Leaf()),
                   const Positioned(left: 0, top: 225, child: _Hero()),
                   const Positioned(
@@ -238,10 +234,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     top: 859,
                     child: _Footer(),
                   ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -517,6 +510,7 @@ class _PhoneBoxState extends State<_PhoneBox> {
         borderRadius: BorderRadius.all(Radius.circular(27)),
       ),
       child: TextField(
+        key: const Key('loginPhone'),
         controller: _controller,
         focusNode: _focusNode,
         maxLength: widget.maxLength,

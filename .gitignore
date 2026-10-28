@@ -50,3 +50,7 @@ app.*.map.json
 
 # opencode tooling
 .opencode/
+
+# Local runtime config (use assets/config/*.example.json)
+assets/config/supabase.json
+assets/config/cloudinary.json

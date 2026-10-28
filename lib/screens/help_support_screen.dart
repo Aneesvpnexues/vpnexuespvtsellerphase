@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import 'report_problem_screen.dart';
@@ -196,39 +197,6 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 child: const _SelectedTab(),
               ),
               Positioned(
-                left: 64,
-                top: 443,
-                child: LabelText(
-                  'Topics',
-                  _tab == _HelpTab.topics
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 40,
-                ),
-              ),
-              Positioned(
-                left: 182,
-                top: 442,
-                child: LabelText(
-                  'Questions',
-                  _tab == _HelpTab.questions
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 61,
-                ),
-              ),
-              Positioned(
-                left: 314,
-                top: 442,
-                child: LabelText(
-                  'Tickets',
-                  _tab == _HelpTab.tickets
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 44,
-                ),
-              ),
-              Positioned(
                 left: 28,
                 top: 433,
                 width: 112,
@@ -237,7 +205,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   key: const Key('help-tab-topics'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _selectTab(_HelpTab.topics),
-                  child: const SizedBox.expand(),
+                  child: HoverPress.chip(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 36,
+                          top: 10,
+                          child: LabelText(
+                            'Topics',
+                            _tab == _HelpTab.topics
+                                ? HelpSupportScreen._tabSelected
+                                : HelpSupportScreen._tabIdle,
+                            width: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -249,7 +233,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   key: const Key('help-tab-questions'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _selectTab(_HelpTab.questions),
-                  child: const SizedBox.expand(),
+                  child: HoverPress.chip(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 25,
+                          top: 9,
+                          child: LabelText(
+                            'Questions',
+                            _tab == _HelpTab.questions
+                                ? HelpSupportScreen._tabSelected
+                                : HelpSupportScreen._tabIdle,
+                            width: 61,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -261,7 +261,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   key: const Key('help-tab-tickets'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _selectTab(_HelpTab.tickets),
-                  child: const SizedBox.expand(),
+                  child: HoverPress.chip(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 34,
+                          top: 9,
+                          child: LabelText(
+                            'Tickets',
+                            _tab == _HelpTab.tickets
+                                ? HelpSupportScreen._tabSelected
+                                : HelpSupportScreen._tabIdle,
+                            width: 44,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -467,21 +483,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 builder: (_) => const ReportProblemScreen(),
               ),
             ),
-            child: Container(
-              width: 184,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: HelpSupportScreen._darkGreen,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Text(
-                'Report a problem',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: HelpSupportScreen._lime,
+            child: HoverPress.button(
+              child: Container(
+                width: 184,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: HelpSupportScreen._darkGreen,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Text(
+                  'Report a problem',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: HelpSupportScreen._lime,
+                  ),
                 ),
               ),
             ),
@@ -528,7 +546,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   IconButton(
                     key: const Key('help-answer-close'),
                     onPressed: () => Navigator.of(sheetContext).pop(),
-                    icon: const Icon(Icons.close, size: 20),
+                    icon: const HoverPress.icon(
+                      child: Icon(Icons.close, size: 20),
+                    ),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -556,21 +576,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     ),
                   );
                 },
-                child: Container(
-                  width: double.infinity,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: HelpSupportScreen._darkGreen,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Text(
-                    'Report a problem',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: HelpSupportScreen._lime,
+                child: HoverPress.button(
+                  child: Container(
+                    width: double.infinity,
+                    height: 46,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: HelpSupportScreen._darkGreen,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Text(
+                      'Report a problem',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: HelpSupportScreen._lime,
+                      ),
                     ),
                   ),
                 ),

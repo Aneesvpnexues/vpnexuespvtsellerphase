@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import 'app_language_screen.dart';
+import 'about_vpnexues_screen.dart';
 import 'help_support_screen.dart';
 
 /// Settings — replica of Zeplin "Android Compact - 164"
@@ -213,17 +215,22 @@ class _SupportCard extends StatelessWidget {
           ),
         ),
         const Positioned(left: 21, top: 102, child: _Divider()),
-        const Positioned(
+        Positioned(
           left: 21,
           top: 111,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_alert.png',
-            iconSize: 16,
-            title: 'About VP NEXUES',
-            titleWidth: 108,
-            subtitle: 'version 1.0',
-            subtitleWidth: 52,
-            chevron: true,
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AboutVpnexuesScreen()),
+            ),
+            child: _MenuRow(
+              icon: 'assets/settings/ic_alert.png',
+              iconSize: 16,
+              title: 'About VP NEXUES',
+              titleWidth: 108,
+              subtitle: 'version 1.0',
+              subtitleWidth: 52,
+              chevron: true,
+            ),
           ),
         ),
       ],
@@ -381,7 +388,10 @@ class _MenuRow extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onToggleChanged?.call(),
-                child: _Toggle(on: toggle!),
+                child: HoverPress.control(
+                  enabled: onToggleChanged != null,
+                  child: _Toggle(on: toggle!),
+                ),
               ),
             ),
           if (chevron)

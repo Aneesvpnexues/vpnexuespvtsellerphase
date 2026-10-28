@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/order_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
@@ -63,6 +64,21 @@ void main() {
 
     expect(find.byType(MyOrdersScreen), findsNothing);
     expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
+  testWidgets('every order row opens the order process', (tester) async {
+    await pumpScreen(tester);
+
+    for (final String store in ['Akash Stores', 'Hotel Green Leaf']) {
+      await tester.tap(find.text(store));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderDetailsScreen), findsOneWidget);
+      expect(find.text('ORDER #NX4582'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('page-header-back')));
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('status tabs filter the order list', (tester) async {

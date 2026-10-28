@@ -44,6 +44,8 @@ Future<void> pumpProductDetails(
 Future<void> pumpPushedProductDetails(
   WidgetTester tester, {
   Product? product,
+  ProductUpdater? productUpdater,
+  ProductDeleter? productDeleter,
 }) async {
   tester.view.physicalSize = const Size(412, 1515);
   tester.view.devicePixelRatio = 1;
@@ -56,7 +58,20 @@ Future<void> pumpPushedProductDetails(
             child: TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => ProductDetailsScreen(product: product),
+                  builder: (_) => ProductDetailsScreen(
+                    product: product,
+                    productUpdater:
+                        productUpdater ??
+                        (Product updated) async {
+                          ProductStore.instance.updateProduct(updated);
+                          return updated;
+                        },
+                    productDeleter:
+                        productDeleter ??
+                        (String id) async {
+                          ProductStore.instance.removeProduct(id);
+                        },
+                  ),
                 ),
               ),
               child: const Text('Open details'),

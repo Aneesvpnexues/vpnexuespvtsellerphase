@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
+import '../data/seller_product_repository.dart';
 import 'welcome_seller_screen.dart';
 
 /// First screen shown when the app opens — static replica of Zeplin
@@ -15,8 +17,9 @@ import 'welcome_seller_screen.dart';
 /// cover the area below the status bar, so the bottom of the photo still
 /// bleeds off the screen like the design.
 ///
-/// Only the arrow in the artwork continues to [WelcomeSellerScreen]; taps
-/// elsewhere on the splash do nothing.
+/// Only the arrow in the artwork continues to the login flow; taps elsewhere
+/// on the splash do nothing. The product catalog is public, so it is loaded
+/// before the seller signs in.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -30,7 +33,13 @@ class SplashScreen extends StatelessWidget {
   /// artwork. The visible disc is 36px, padded to a 56px tap target.
   static const Rect arrowHitArea = Rect.fromLTWH(340, 794, 56, 56);
 
-  void _continue(BuildContext context) {
+  Future<void> _continue(BuildContext context) async {
+    try {
+      await SellerProductRepository().refresh(ProductStore.instance);
+    } catch (_) {
+      // Home still opens with whatever products are cached locally.
+    }
+    if (!context.mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
     );

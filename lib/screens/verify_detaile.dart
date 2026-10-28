@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
@@ -88,6 +90,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
           Artboard(
             designWidth: VerifyDetaileScreen.designWidth,
             designHeight: VerifyDetaileScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
             child: Stack(
               children: [
                 const Positioned(left: 0, top: 0, child: _HeaderBackground()),
@@ -217,14 +220,12 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
               ],
             ),
           ),
-          // Anchored to the physical screen bottom so it stays there on
-          // taller devices; on the 873-tall artboard this matches the
-          // design offset (873 - 54 - 16 = 803).
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
-              child: SizedBox(height: 54, child: const _ContinueButton()),
+          ContinueButton(
+            buttonKey: const Key('verify-continue'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const BankDetaileScreen(),
+              ),
             ),
           ),
         ],
@@ -267,10 +268,12 @@ class _BackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
-      child: const Icon(
-        Icons.arrow_back,
-        size: 22,
-        color: AppColors.textPrimary,
+      child: HoverPress.icon(
+        child: const Icon(
+          Icons.arrow_back,
+          size: 22,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -489,7 +492,7 @@ class _PillNote extends StatelessWidget {
       child: const FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fiedls are required',
+          'All fields are required',
           style: AppTextStyles.verifyPillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -763,40 +766,6 @@ class _Chevron extends StatelessWidget {
       selected ? Icons.check_circle : Icons.keyboard_arrow_down,
       size: 18,
       color: AppColors.verifiedText,
-    );
-  }
-}
-
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-      ),
-      child: Container(
-        height: 54,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: const Text('Continue', style: AppTextStyles.button),
-      ),
     );
   }
 }

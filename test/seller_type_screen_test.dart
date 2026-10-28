@@ -20,12 +20,7 @@ Finder _pills() => find.byWidgetPredicate(
       (w.decoration as BoxDecoration).border != null,
 );
 
-Finder _continueButton() => find.byWidgetPredicate(
-  (w) =>
-      w is Container &&
-      w.decoration is BoxDecoration &&
-      (w.decoration as BoxDecoration).color == AppColors.primary,
-);
+Finder _continueButton() => find.byKey(const Key('seller-type-continue'));
 
 void main() {
   testWidgets('renders the STEP 02 content', (tester) async {
@@ -102,10 +97,10 @@ void main() {
       expect(rect.height, closeTo(50, 1), reason: 'pill $i height');
     }
 
-    // Continue button: x 24..388, y 866..920, radius 18.
+    // Continue button: x 24..388, y 873..927, radius 18, gradient fill.
     final button = rectOf(_continueButton());
     expect(button.left, closeTo(24, 1));
-    expect(button.top, closeTo(866, 1));
+    expect(button.top, closeTo(873, 1));
     expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -115,6 +110,11 @@ void main() {
       decoration.borderRadius,
       const BorderRadius.all(Radius.circular(18)),
     );
+    final gradient = decoration.gradient! as LinearGradient;
+    expect(gradient.colors, const [
+      AppColors.continueGradientStart,
+      AppColors.continueGradientEnd,
+    ]);
   });
 
   testWidgets('text styles follow the design', (tester) async {

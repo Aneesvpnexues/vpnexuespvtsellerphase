@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 
 /// "Wallet" — replica of Zeplin "Android Compact - 156"
@@ -247,30 +248,32 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: width,
-        height: 31,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.chipActive : AppColors.dashboardBg,
-          borderRadius: BorderRadius.circular(15.5),
-          boxShadow: [
-            BoxShadow(
-              color: selected
-                  ? const Color(0x4D000000)
-                  : const Color(0x1A000000),
-              blurRadius: selected ? 13 : 16,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: selected
-              ? AppTextStyles.chipActiveLabel
-              : AppTextStyles.chipLabel.copyWith(
-                  color: AppColors.tabUnselectedText,
-                ),
+      child: HoverPress.chip(
+        child: Container(
+          width: width,
+          height: 31,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.chipActive : AppColors.dashboardBg,
+            borderRadius: BorderRadius.circular(15.5),
+            boxShadow: [
+              BoxShadow(
+                color: selected
+                    ? const Color(0x4D000000)
+                    : const Color(0x1A000000),
+                blurRadius: selected ? 13 : 16,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: selected
+                ? AppTextStyles.chipActiveLabel
+                : AppTextStyles.chipLabel.copyWith(
+                    color: AppColors.tabUnselectedText,
+                  ),
+          ),
         ),
       ),
     );

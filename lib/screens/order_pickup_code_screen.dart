@@ -1,20 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details ├óΓé¼” pickup code entry state. Static replica of Zeplin
+/// Order Details - pickup code entry state. Static replica of Zeplin
 /// "Android Compact - 154".
-class OrderPickupCodeScreen extends StatelessWidget {
+class OrderPickupCodeScreen extends StatefulWidget {
   const OrderPickupCodeScreen({super.key});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
   static const double trimTop = 49;
+
+  @override
+  State<OrderPickupCodeScreen> createState() => _OrderPickupCodeScreenState();
+}
+
+class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
+  bool _codeComplete = false;
+
+  void _onCodeCompleteChanged(bool complete) {
+    if (complete == _codeComplete) {
+      return;
+    }
+    setState(() => _codeComplete = complete);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +39,9 @@ class OrderPickupCodeScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: OrderPickupCodeScreen.designWidth,
+          designHeight: OrderPickupCodeScreen.designHeight,
+          trimTop: OrderPickupCodeScreen.trimTop,
           child: DefaultTextStyle(
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
@@ -37,8 +53,16 @@ class OrderPickupCodeScreen extends StatelessWidget {
                 ),
                 const Positioned(left: 24, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
-                const Positioned(left: 25, top: 359, child: _CodeCard()),
-                const Positioned(left: 24, top: 847, child: _ContinueButton()),
+                Positioned(
+                  left: 25,
+                  top: 359,
+                  child: _CodeCard(onCompleteChanged: _onCodeCompleteChanged),
+                ),
+                Positioned(
+                  left: 24,
+                  top: 847,
+                  child: _ContinueButton(ready: _codeComplete),
+                ),
               ],
             ),
           ),
@@ -480,8 +504,140 @@ class _DashedLine extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _CodeCard extends StatelessWidget {
-  const _CodeCard();
+class _CodeCard extends StatefulWidget {
+  const _CodeCard({required this.onCompleteChanged});
+
+  final ValueChanged<bool> onCompleteChanged;
+
+  @override
+  State<_CodeCard> createState() => _CodeCardState();
+}
+
+class _CodeCardState extends State<_CodeCard> {
+  final List<TextEditingController> _controllers =
+      List<TextEditingController>.generate(4, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List<FocusNode>.generate(
+    4,
+    (_) => FocusNode(),
+  );
+
+  int _activeIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    for (int i = 0; i < _focusNodes.length; i++) {
+      _focusNodes[i].addListener(() {
+        if (_focusNodes[i].hasFocus && _activeIndex != i) {
+          setState(() => _activeIndex = i);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final TextEditingController controller in _controllers) {
+      controller.dispose();
+    }
+    for (final FocusNode focusNode in _focusNodes) {
+      focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onDigitChanged(int index, String value) {
+    widget.onCompleteChanged(
+      _controllers.every(
+        (TextEditingController controller) => controller.text.isNotEmpty,
+      ),
+    );
+    if (value.isEmpty) {
+      return;
+    }
+    if (index < _focusNodes.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+      return;
+    }
+    FocusScope.of(context).unfocus();
+  }
+
+  Widget _digitField(int index, double left, double top) {
+    final TextEditingController controller = _controllers[index];
+    final bool active = index == _activeIndex;
+    return Positioned(
+      left: left,
+      top: top,
+      width: 54,
+      height: 60,
+      child: HoverPress.cell(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              key: Key('pickup_code_box_$index'),
+              decoration: active
+                  ? BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                      border: Border.all(
+                        color: const Color(0xFF2E8B4B),
+                        width: 2,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFFDDECE2), spreadRadius: 4.5),
+                      ],
+                    )
+                  : const BoxDecoration(
+                      color: Color(0xFFF3F6E6),
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                    ),
+            ),
+            TextField(
+              controller: controller,
+              focusNode: _focusNodes[index],
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              textAlignVertical: TextAlignVertical.center,
+              showCursor: false,
+              cursorColor: Colors.transparent,
+              style: const TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.transparent,
+              ),
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(1),
+              ],
+              decoration: const InputDecoration.collapsed(hintText: ''),
+              onChanged: (String value) => _onDigitChanged(index, value),
+            ),
+            IgnorePointer(
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (BuildContext context, TextEditingValue value, _) {
+                  return Center(
+                    child: Text(
+                      value.text,
+                      key: Key('pickup_code_digit_$index'),
+                      style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -664,58 +820,10 @@ class _CodeCard extends StatelessWidget {
               height: 16,
             ),
           ),
-          Positioned(
-            left: 53,
-            top: 189,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                border: Border.all(color: const Color(0xFF2E8B4B), width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Color(0xFFDDECE2), spreadRadius: 4.5),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 122,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 190,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 258,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
+          _digitField(0, 53, 189),
+          _digitField(1, 122, 190),
+          _digitField(2, 190, 190),
+          _digitField(3, 258, 190),
         ],
       ),
     );
@@ -723,7 +831,9 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _ContinueButton extends StatefulWidget {
-  const _ContinueButton();
+  const _ContinueButton({required this.ready});
+
+  final bool ready;
 
   @override
   State<_ContinueButton> createState() => _ContinueButtonState();
@@ -778,58 +888,65 @@ class _ContinueButtonState extends State<_ContinueButton>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => goToOrderPickupSuccess(context),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(29)),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF607E6A), Color(0xFF71CA93)],
+    final List<Color> colors = widget.ready
+        ? const [AppColors.orderSlideStart, AppColors.orderSlideEnd]
+        : const [Color(0xFF607E6A), Color(0xFF71CA93)];
+    final Color knobColor = widget.ready
+        ? AppColors.orderSlideLime
+        : const Color(0xFF9EC463);
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: () => goToOrderPickupSuccess(context),
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          key: const Key('pickup_code_continue_bar'),
+          width: 364,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(29)),
+            gradient: LinearGradient(colors: colors),
+            border: Border.all(color: const Color(0x14000000)),
           ),
-          border: Border.all(color: const Color(0x14000000)),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF9EC463),
-                  shape: BoxShape.circle,
-                ),
-                child: const CustomPaint(
-                  size: Size(17, 11),
-                  painter: _ArrowPainter(),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 65,
-              top: -1,
-              width: 250,
-              height: 58,
-              child: Align(
-                alignment: Alignment.center,
-                child: Text(
-                  'Enter the code to continus',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.25,
-                    color: Colors.white,
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 4,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: knobColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const CustomPaint(
+                    size: Size(17, 11),
+                    painter: _ArrowPainter(),
                   ),
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                left: 65,
+                top: -1,
+                width: 250,
+                height: 58,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Enter the code to continus',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.25,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

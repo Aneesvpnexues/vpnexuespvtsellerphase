@@ -53,7 +53,7 @@ void main() {
     expect(find.text('Profile Completion'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
     expect(find.text('Verification Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
+    expect(find.text('All fields are required'), findsOneWidget);
     expect(find.text('Aadhaar card'), findsOneWidget);
     expect(find.text('For individual farmers'), findsOneWidget);
     expect(find.text('PAN Card'), findsOneWidget);
@@ -144,7 +144,7 @@ void main() {
     // Section tick + title + pill + divider.
     expect(rectOf(find.text('Verification Details')).left, closeTo(40.5, 1));
     expect(rectOf(find.text('Verification Details')).top, closeTo(452.07, 1));
-    final pill = rectOf(find.text('All fiedls are required'));
+    final pill = rectOf(find.text('All fields are required'));
     expect(pill.center.dx, closeTo((260 + 387) / 2, 2));
     expect(pill.top, greaterThanOrEqualTo(447));
     expect(pill.bottom, lessThanOrEqualTo(474));
@@ -171,11 +171,11 @@ void main() {
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 10..402, y 803..857 (10px side padding), radius 18.
+    // Continue button: x 24..388, y 803..857, radius 18.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(10, 1));
+    expect(button.left, closeTo(24, 1));
     expect(button.top, closeTo(803, 1));
-    expect(button.width, closeTo(392, 1));
+    expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -222,7 +222,7 @@ void main() {
     expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.verifyInk);
 
-    final note = tester.widget<Text>(find.text('All fiedls are required'));
+    final note = tester.widget<Text>(find.text('All fields are required'));
     expect(note.style?.fontSize, 11);
 
     final title = tester.widget<Text>(find.text('Aadhaar card'));

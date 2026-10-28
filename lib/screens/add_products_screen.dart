@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/api_error.dart';
 import '../data/product_store.dart';
+import '../data/seller_product_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/artboard.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import 'my_orders_screen.dart';
 import 'profile_screen.dart';
@@ -15,6 +18,10 @@ import 'profile_screen.dart';
 export '../data/product_store.dart' show ProductPhoto;
 
 typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
+typedef ProductSaver = Future<Product> Function(
+  ProductDraft draft,
+  List<ProductPhoto> photos,
+);
 
 /// "Add Products" — replica of Zeplin "Android Compact - 124"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1ae18783597fd3b9a332f).
@@ -30,9 +37,10 @@ typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
 /// (missing leading "S") and "Product Descrption" (used for both the
 /// description and status section titles).
 class AddProductsScreen extends StatefulWidget {
-  const AddProductsScreen({super.key, this.photoPicker});
+  const AddProductsScreen({super.key, this.photoPicker, this.productSaver});
 
   final ProductPhotoPicker? photoPicker;
+  final ProductSaver? productSaver;
 
   static const int maxPhotos = 5;
   static const String tomatoAsset = 'assets/products/tomato.png';
@@ -117,7 +125,11 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       imageQuality: 85,
     );
     if (file == null) return null;
-    return ProductPhoto(bytes: await file.readAsBytes());
+    return ProductPhoto(
+      bytes: await file.readAsBytes(),
+      mimeType: file.mimeType ?? _mimeTypeFor(file.name),
+      filename: file.name,
+    );
   }
 
   Future<void> _animateToPage(int target) async {
@@ -205,7 +217,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     });
   }
 
-  void _saveProduct() {
+  Future<void> _saveProduct() async {
     if (_isSaving) return;
     final String name = _name.text.trim();
     if (name.isEmpty) {
@@ -224,9 +236,9 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       return;
     }
 
-    _isSaving = true;
+    setState(() => _isSaving = true);
     FocusScope.of(context).unfocus();
-    ProductStore.instance.addProduct(
+    final ProductDraft draft = ProductDraft(
       name: name,
       category: _category >= 0 ? _categories[_category] : 'Vegetables',
       price: price,
@@ -234,11 +246,44 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       quantity: _quantity,
       description: _description.text.trim(),
       status: ProductStatus.values[_status],
-      photos: _photos,
     );
+    try {
+      await (widget.productSaver ?? _saveToSupabase)(draft, _photos);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Product added')));
+      Navigator.of(context).maybePop();
+    } on ApiException catch (error) {
+      if (mounted) _showSaveError(error.message);
+    } catch (_) {
+      if (mounted) {
+        _showSaveError('Could not save the product. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<Product> _saveToSupabase(
+    ProductDraft draft,
+    List<ProductPhoto> photos,
+  ) {
+    return SellerProductRepository().addProduct(draft, photos);
+  }
+
+  void _showSaveError(String message) {
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Product added')));
-    Navigator.of(context).maybePop();
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  static String _mimeTypeFor(String filename) {
+    final String lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.heif')) return 'image/heif';
+    return 'image/jpeg';
   }
 
   @override
@@ -271,6 +316,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                     designWidth: AddProductsScreen.designWidth,
                     designHeight: AddProductsScreen.designHeight,
                     scrollable: true,
+                    keyboardBottomInset: BottomNavBar.barHeight * scale,
                     child: Stack(
                       children: [
                         Positioned(
@@ -751,25 +797,27 @@ class _ContinueButton extends StatelessWidget {
       key: const ValueKey('add-product-continue'),
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
+      child: HoverPress.button(
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                AppColors.continueGradientStart,
+                AppColors.continueGradientEnd,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.continueGlow,
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
+          child: const Text('Continue', style: AppTextStyles.button),
         ),
-        child: const Text('Continue', style: AppTextStyles.button),
       ),
     );
   }
@@ -829,7 +877,10 @@ class _ProgressCard extends StatelessWidget {
             children: const [
               Text('Step1', style: AppTextStyles.stepSoftStrong),
               SizedBox(width: 4),
-              Text('of 5 • Product Photos', style: AppTextStyles.stepSoftLabel),
+              Text(
+                'of 5 \u2022 Product Photos',
+                style: AppTextStyles.stepSoftLabel,
+              ),
             ],
           ),
         ],
@@ -1116,14 +1167,20 @@ class _PhotoRemoveButton extends StatelessWidget {
       key: const ValueKey('photo-remove'),
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
+      child: HoverPress.icon(
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.close,
+            size: 12,
+            color: AppColors.textPrimary,
+          ),
         ),
-        child: const Icon(Icons.close, size: 12, color: AppColors.textPrimary),
       ),
     );
   }
@@ -1165,17 +1222,19 @@ class _PhotoPreviewDialog extends StatelessWidget {
                     key: const ValueKey('photo-preview-close'),
                     onTap: () => Navigator.of(context).pop(),
                     behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: AppColors.surface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 18,
-                        color: AppColors.textPrimary,
+                    child: HoverPress.icon(
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ),
@@ -1199,14 +1258,16 @@ class _PhotoNavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: const BoxDecoration(
-          color: AppColors.darkGreenInk,
-          shape: BoxShape.circle,
+      child: HoverPress.icon(
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: const BoxDecoration(
+            color: AppColors.darkGreenInk,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 14, color: AppColors.limeAccent),
         ),
-        child: Icon(icon, size: 14, color: AppColors.limeAccent),
       ),
     );
   }
@@ -1362,22 +1423,24 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.chipActive : AppColors.surface,
-          borderRadius: BorderRadius.circular(15),
-          border: selected ? null : Border.all(color: AppColors.chipBorder),
-        ),
-        child: Text(
-          label,
-          style: selected
-              ? AppTextStyles.chipActiveLabel
-              : AppTextStyles.chipLabel.copyWith(
-                  color: AppColors.tabUnselectedText,
-                ),
+      child: HoverPress.chip(
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.chipActive : AppColors.surface,
+            borderRadius: BorderRadius.circular(15),
+            border: selected ? null : Border.all(color: AppColors.chipBorder),
+          ),
+          child: Text(
+            label,
+            style: selected
+                ? AppTextStyles.chipActiveLabel
+                : AppTextStyles.chipLabel.copyWith(
+                    color: AppColors.tabUnselectedText,
+                  ),
+          ),
         ),
       ),
     );
@@ -1414,18 +1477,20 @@ class _QtyStepper extends StatelessWidget {
           GestureDetector(
             key: const Key('qty-minus'),
             onTap: onDecrement,
-            child: Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: AppColors.fabLime,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.remove,
-                size: 16,
-                color: AppColors.darkGreenInk,
+            child: HoverPress.icon(
+              child: Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.fabLime,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.remove,
+                  size: 16,
+                  color: AppColors.darkGreenInk,
+                ),
               ),
             ),
           ),
@@ -1434,10 +1499,12 @@ class _QtyStepper extends StatelessWidget {
               key: const Key('qty-display'),
               behavior: HitTestBehavior.opaque,
               onTap: onEdit,
-              child: Center(
-                child: Text(
-                  '${showExample ? 'e.g. ' : ''}$quantity kg',
-                  style: AppTextStyles.qtyValue,
+              child: HoverPress.cell(
+                child: Center(
+                  child: Text(
+                    '${showExample ? 'e.g. ' : ''}$quantity kg',
+                    style: AppTextStyles.qtyValue,
+                  ),
                 ),
               ),
             ),
@@ -1445,18 +1512,20 @@ class _QtyStepper extends StatelessWidget {
           GestureDetector(
             key: const Key('qty-plus'),
             onTap: onIncrement,
-            child: Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: AppColors.fabLime,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add,
-                size: 16,
-                color: AppColors.darkGreenInk,
+            child: HoverPress.icon(
+              child: Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.fabLime,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  size: 16,
+                  color: AppColors.darkGreenInk,
+                ),
               ),
             ),
           ),
@@ -1600,42 +1669,46 @@ class _QuantityDialogState extends State<_QuantityDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  key: const Key('qty-dialog-cancel'),
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.inputInkSoft,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
+                HoverPress.button(
+                  child: TextButton(
+                    key: const Key('qty-dialog-cancel'),
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.inputInkSoft,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: AppTextStyles.fieldLabelSoft,
+                    child: const Text(
+                      'Cancel',
+                      style: AppTextStyles.fieldLabelSoft,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  key: const Key('qty-dialog-set'),
-                  onPressed: _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.darkGreenInk,
-                    foregroundColor: AppColors.limeAccent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                HoverPress.button(
+                  child: FilledButton(
+                    key: const Key('qty-dialog-set'),
+                    onPressed: _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.darkGreenInk,
+                      foregroundColor: AppColors.limeAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text(
-                    'Set',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    child: const Text(
+                      'Set',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -1665,35 +1738,37 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.chipActive : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: selected ? null : Border.all(color: AppColors.chipBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.chipActiveText : dotColor,
-                shape: BoxShape.circle,
+      child: HoverPress.chip(
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.chipActive : AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: selected ? null : Border.all(color: AppColors.chipBorder),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.chipActiveText : dotColor,
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: selected
-                  ? AppTextStyles.chipActiveLabel
-                  : AppTextStyles.chipLabel.copyWith(
-                      color: AppColors.tabUnselectedText,
-                    ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: selected
+                    ? AppTextStyles.chipActiveLabel
+                    : AppTextStyles.chipLabel.copyWith(
+                        color: AppColors.tabUnselectedText,
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

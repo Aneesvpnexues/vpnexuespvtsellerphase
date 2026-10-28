@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/profile_shell.dart';
 import 'help_support_screen.dart';
 import 'personal_details_screen.dart';
@@ -36,16 +39,27 @@ class ProfileAppScreen extends StatelessWidget {
       onPersonalDetails: () => Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => const PersonalDetailsScreen())),
-      listCard: const _AppListCard(),
+      listCard: _AppListCard(onLogout: () => _logout(context)),
     );
   }
+}
+
+void _logout(BuildContext context) {
+  ProductStore.instance.clear();
+  SellerProfileStore.instance.reset();
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
+    (route) => false,
+  );
 }
 
 /// App-tab list card (Zeplin 153): white card x24..388, y616..803 (364x187),
 /// three content-sized rows split by dividers at y682/y738, icon tiles
 /// 34x34 at card-rel x22, no chevron on Log out.
 class _AppListCard extends StatelessWidget {
-  const _AppListCard();
+  const _AppListCard({required this.onLogout});
+
+  final VoidCallback onLogout;
 
   static const _title = TextStyle(
     fontSize: 14,
@@ -172,28 +186,27 @@ class _AppListCard extends StatelessWidget {
             height: 34,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeSellerScreen()),
-                (route) => false,
-              ),
-              child: const Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    child: _AppIconTile(
-                      icon: Icons.logout,
-                      tileColor: AppColors.logoutTile,
-                      ink: AppColors.logoutInk,
+              onTap: onLogout,
+              child: HoverPress.button(
+                child: const Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      child: _AppIconTile(
+                        icon: Icons.logout,
+                        tileColor: AppColors.logoutTile,
+                        ink: AppColors.logoutInk,
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    left: 46,
-                    top: 10,
-                    child: Text('Log out', style: _logoutText),
-                  ),
-                ],
+                    Positioned(
+                      left: 46,
+                      top: 10,
+                      child: Text('Log out', style: _logoutText),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

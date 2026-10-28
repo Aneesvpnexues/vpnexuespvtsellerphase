@@ -7,6 +7,8 @@ import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/product_image_view.dart';
 import 'my_products_screen.dart';
 
 /// Seller Home dashboard — static replica of Zeplin
@@ -75,11 +77,6 @@ class SellerHomeScreen extends StatelessWidget {
                           left: 25,
                           top: 361,
                           child: _SectionTitle('My Products'),
-                        ),
-                        const Positioned(
-                          left: 349,
-                          top: 365,
-                          child: _ViewAll(),
                         ),
                         Positioned(
                           left: 25,
@@ -163,7 +160,17 @@ class SellerHomeScreen extends StatelessWidget {
                                 builder: (_) => const MyProductsScreen(),
                               ),
                             ),
-                            child: const SizedBox.expand(),
+                            child: HoverPress.chip(
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: 19,
+                                    top: 7,
+                                    child: _ViewAll(),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -250,14 +257,17 @@ class _HeaderIcon extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: AppColors.iconCircle,
-          shape: BoxShape.circle,
+      child: HoverPress.icon(
+        enabled: onTap != null,
+        child: Container(
+          width: 25,
+          height: 25,
+          decoration: const BoxDecoration(
+            color: AppColors.iconCircle,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 17, color: AppColors.iconDark),
         ),
-        child: Icon(icon, size: 17, color: AppColors.iconDark),
       ),
     );
   }
@@ -324,20 +334,22 @@ class _ActiveOrdersCard extends StatelessWidget {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => goToOrders(context),
-                  child: Container(
-                    width: 102,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkCard,
-                      borderRadius: BorderRadius.all(Radius.circular(19)),
-                    ),
-                    child: const Text(
-                      'View orders',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                  child: HoverPress.button(
+                    child: Container(
+                      width: 102,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.darkCard,
+                        borderRadius: BorderRadius.all(Radius.circular(19)),
+                      ),
+                      child: const Text(
+                        'View orders',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -553,23 +565,25 @@ class _EmptyHomeProducts extends StatelessWidget {
           GestureDetector(
             key: const ValueKey('home-empty-add'),
             onTap: () => goToAddProduct(context),
-            child: Container(
-              width: 92,
-              height: 34,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: const BoxDecoration(
-                color: AppColors.darkCard,
-                borderRadius: BorderRadius.all(Radius.circular(17)),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'Add product',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.limeLight,
+            child: HoverPress.button(
+              child: Container(
+                width: 92,
+                height: 34,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.all(Radius.circular(17)),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Add product',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.limeLight,
+                    ),
                   ),
                 ),
               ),
@@ -588,7 +602,6 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ProductPhoto? photo = product.coverPhoto;
     return GestureDetector(
       key: ValueKey('home-product-${product.id}'),
       behavior: HitTestBehavior.opaque,
@@ -604,7 +617,10 @@ class _ProductCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (photo != null) Image.memory(photo.bytes, fit: BoxFit.cover),
+            ProductImageView(
+              product: product,
+              placeholder: const SizedBox.expand(),
+            ),
             Positioned(
               right: 8,
               top: 7,

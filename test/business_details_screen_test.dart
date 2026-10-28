@@ -37,13 +37,13 @@ void main() {
   testWidgets('renders the STEP 03 content', (tester) async {
     await pumpScreen(tester);
 
-    expect(find.text('STEP 02'), findsOneWidget);
+    expect(find.text('STEP 03'), findsOneWidget);
     expect(find.text('Tell us about'), findsOneWidget);
     expect(find.text('your'), findsOneWidget);
     expect(find.text('business'), findsOneWidget);
     expect(find.text("Let's create your profile"), findsOneWidget);
     expect(find.text('Business Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
+    expect(find.text('All fields are required'), findsOneWidget);
     // Field rows.
     expect(find.text('Your name'), findsOneWidget);
     expect(find.text('Enter your name..'), findsOneWidget);
@@ -90,7 +90,7 @@ void main() {
     expect(rectOf(find.text('Business Details')).top, closeTo(330.89, 1));
 
     // Pill note: fixed box x 261..387.5, y 326..353.
-    final pill = rectOf(find.text('All fiedls are required'));
+    final pill = rectOf(find.text('All fields are required'));
     expect(pill.center.dx, closeTo((261 + 387.5) / 2, 2));
     expect(pill.top, greaterThanOrEqualTo(326));
     expect(pill.bottom, lessThanOrEqualTo(353));
@@ -106,10 +106,10 @@ void main() {
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 24..388, y 818..872, radius 18, gradient fill.
+    // Continue button: x 24..388, y 847..901, radius 18, gradient fill.
     final button = rectOf(_continueButton());
     expect(button.left, closeTo(24, 1));
-    expect(button.top, closeTo(818, 1));
+    expect(button.top, closeTo(847, 1));
     expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -121,15 +121,16 @@ void main() {
     );
     final gradient = decoration.gradient! as LinearGradient;
     expect(gradient.colors, const [
-      AppColors.continueGradientStart,
-      AppColors.continueGradientEnd,
+      AppColors.continueDisabledGradientStart,
+      AppColors.continueDisabledGradientEnd,
     ]);
+    expect(decoration.boxShadow, isNull);
   });
 
   testWidgets('text styles follow the design', (tester) async {
     await pumpScreen(tester);
 
-    final step = tester.widget<Text>(find.text('STEP 02'));
+    final step = tester.widget<Text>(find.text('STEP 03'));
     expect(step.style?.fontSize, 15.5);
     expect(step.style?.color, AppColors.stepLabelMuted);
 
@@ -149,7 +150,7 @@ void main() {
     expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.sectionTitle);
 
-    final note = tester.widget<Text>(find.text('All fiedls are required'));
+    final note = tester.widget<Text>(find.text('All fields are required'));
     expect(note.style?.fontSize, 11.5);
 
     final notePill = tester.widget<Container>(
@@ -272,6 +273,15 @@ void main() {
       '12 Main Street',
     );
     await tester.pump();
+
+    final decoration =
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect((decoration.gradient! as LinearGradient).colors, const [
+      AppColors.continueGradientStart,
+      AppColors.continueGradientEnd,
+    ]);
+    expect(decoration.boxShadow, isNotNull);
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();

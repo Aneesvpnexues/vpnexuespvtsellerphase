@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import 'keyboard_inset.dart';
+
 /// Shared fixed-size artboard viewport for the pixel-perfect Zeplin screens.
 ///
 /// Wraps a `[designWidth] x [designHeight]` artboard and scales it uniformly
@@ -21,6 +23,11 @@ import 'package:flutter/widgets.dart';
 /// With [scrollable] the artboard is scaled by width only and placed in a
 /// vertical scroll view (for form screens taller than the viewport, e.g.
 /// Add Products); the pinned bottom navigation belongs outside this widget.
+///
+/// When the software keyboard is visible the artboard also switches to
+/// width-scaled scrolling, even if [scrollable] is false, so a shrunken
+/// viewport never scales the whole screen down. [keyboardBottomInset] reserves
+/// space above a pinned CTA/navigation bar while that mode is active.
 class Artboard extends StatelessWidget {
   const Artboard({
     super.key,
@@ -30,8 +37,10 @@ class Artboard extends StatelessWidget {
     this.scrollable = false,
     this.fillWidth = false,
     this.maxWidthStretch = defaultMaxWidthStretch,
+    this.keyboardBottomInset = 0,
     required this.child,
-  }) : assert(maxWidthStretch >= 1);
+  }) : assert(maxWidthStretch >= 1),
+       assert(keyboardBottomInset >= 0);
 
   /// Largest multiple of the design size the artboard may grow to.
   static const double defaultMaxScale = 1.5;
@@ -54,6 +63,10 @@ class Artboard extends StatelessWidget {
   final bool fillWidth;
 
   final double maxWidthStretch;
+
+  /// Bottom space reserved for a pinned CTA or navigation bar while the
+  /// keyboard is visible. Applies only to the keyboard scroll mode.
+  final double keyboardBottomInset;
 
   final Widget child;
 
@@ -111,43 +124,53 @@ class Artboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (scrollable) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final scale = (constraints.maxWidth / designWidth).clamp(
-            0.0,
-            maxScale,
+    return KeyboardInset(
+      builder: (context, keyboardInset) {
+        final keyboardVisible = keyboardInset > 0;
+        if (scrollable || keyboardVisible) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final scale = (constraints.maxWidth / designWidth).clamp(
+                0.0,
+                maxScale,
+              );
+              return Padding(
+                padding: keyboardVisible
+                    ? EdgeInsets.only(bottom: keyboardBottomInset)
+                    : EdgeInsets.zero,
+                child: SingleChildScrollView(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: _artboard(
+                      scale.toDouble(),
+                      scale.toDouble(),
+                      BoxFit.contain,
+                    ),
+                  ),
+                ),
+              );
+            },
           );
-          return SingleChildScrollView(
-            child: Align(
+        }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final metrics = Artboard.metricsFor(
+              constraints,
+              designWidth: designWidth,
+              designHeight: designHeight,
+              maxScale: maxScale,
+              fillWidth: fillWidth,
+              maxWidthStretch: maxWidthStretch,
+            );
+            return Align(
               alignment: Alignment.topCenter,
               child: _artboard(
-                scale.toDouble(),
-                scale.toDouble(),
-                BoxFit.contain,
+                metrics.xScale,
+                metrics.yScale,
+                fillWidth ? BoxFit.fill : BoxFit.contain,
               ),
-            ),
-          );
-        },
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final metrics = Artboard.metricsFor(
-          constraints,
-          designWidth: designWidth,
-          designHeight: designHeight,
-          maxScale: maxScale,
-          fillWidth: fillWidth,
-          maxWidthStretch: maxWidthStretch,
-        );
-        return Align(
-          alignment: Alignment.topCenter,
-          child: _artboard(
-            metrics.xScale,
-            metrics.yScale,
-            fillWidth ? BoxFit.fill : BoxFit.contain,
-          ),
+            );
+          },
         );
       },
     );

@@ -44,7 +44,7 @@ void main() {
     'ReviewRatingsPage': () => const ReviewRatingsPage(),
   };
   final landmarks = <String, String>{
-    'WelcomeSellerScreen': 'Phone Number',
+    'WelcomeSellerScreen': 'Send OTP',
     'OtpScreen': 'Enter OTP',
     'Step01LocationScreen': 'Choose your location',
     'Step02SellerTypeScreen': 'What best',

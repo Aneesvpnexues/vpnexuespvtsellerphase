@@ -11,8 +11,8 @@ import '../widgets/artboard.dart';
 /// hero image (pale-green card + shadow, title erased so the text can be
 /// rendered as a real widget) sits at the top, followed by the success
 /// title/subtitle, the Fresh Tomatoes product card with its Active pill,
-/// and the two action buttons. Opened from the My Orders order blocks;
-/// both buttons are inert (the design specifies no destinations).
+/// and the two action buttons. Both buttons are inert (the design specifies
+/// no destinations).
 class OrderPrivewScreen extends StatelessWidget {
   const OrderPrivewScreen({super.key});
 

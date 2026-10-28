@@ -52,6 +52,7 @@ abstract final class AppRoutes {
 /// The current tab is a no-op, any other tab replaces the current screen with
 /// the target one, so the stack never grows a duplicate of the same screen.
 void switchTab(BuildContext context, Widget screen, String routeName) {
+  FocusManager.instance.primaryFocus?.unfocus();
   final NavigatorState navigator = Navigator.of(context);
   final String? current = ModalRoute.of(context)?.settings.name;
   if (current == routeName) {
@@ -103,6 +104,18 @@ void goToOrders(BuildContext context) {
   switchTab(context, const MyOrdersScreen(), AppRoutes.orders);
 }
 
+/// Returns to the My Orders tab after the order flow finishes, dropping the
+/// completed detail/ready/delivery/pickup states from the stack.
+void goToOrdersRoot(BuildContext context) {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.orders),
+      builder: (_) => const MyOrdersScreen(),
+    ),
+    (Route<dynamic> route) => false,
+  );
+}
+
 /// Opens the Profile tab.
 void goToProfile(BuildContext context) {
   switchTab(context, const ProfileScreen(), AppRoutes.profile);
@@ -148,7 +161,7 @@ void goToOrderDelivery(BuildContext context) {
   );
 }
 
-/// Opens the order preview (Zeplin 153) from the My Orders list.
+/// Opens the product-live preview (Zeplin 172).
 void goToOrderPrivew(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(

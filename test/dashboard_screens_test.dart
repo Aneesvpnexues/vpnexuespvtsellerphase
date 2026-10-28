@@ -40,12 +40,31 @@ Future<void> pumpProfile(WidgetTester tester, Widget widget) async {
 Future<void> pumpAddProducts(
   WidgetTester tester, {
   ProductPhotoPicker? photoPicker,
+  ProductSaver? productSaver,
 }) async {
   tester.view.physicalSize = const Size(412, 917);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(home: AddProductsScreen(photoPicker: photoPicker)),
+    MaterialApp(
+      home: AddProductsScreen(
+        photoPicker: photoPicker,
+        productSaver:
+            productSaver ??
+            (ProductDraft draft, List<ProductPhoto> photos) async {
+              return ProductStore.instance.addProduct(
+                name: draft.name,
+                category: draft.category,
+                price: draft.price,
+                unit: draft.unit,
+                quantity: draft.quantity,
+                description: draft.description,
+                status: draft.status,
+                photos: photos,
+              );
+            },
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -1575,30 +1594,6 @@ void main() {
   });
 
   group('OrderPrivewScreen (Fresh Tomatoes is live!, Zeplin 172)', () {
-    testWidgets('an order block opens the product preview screen', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(412, 1154);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: MyOrdersScreen()));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(OrderPrivewScreen), findsNothing);
-
-      await tester.tap(find.text('Hotel Green Leaf'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(OrderPrivewScreen), findsOneWidget);
-      expect(find.text('Fresh Tomatoes is live!'), findsOneWidget);
-      expect(find.text('Preview product'), findsOneWidget);
-      expect(find.text('Add another product'), findsOneWidget);
-      expect(
-        find.image(const AssetImage(OrderPrivewScreen.heroAsset)),
-        findsOneWidget,
-      );
-    });
-
     testWidgets('renders at the measured 412x917 geometry', (tester) async {
       tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;

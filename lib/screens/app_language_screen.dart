@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
@@ -405,43 +406,45 @@ class _ApplyButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        key: const ValueKey('apply-language'),
-        width: 362,
-        height: 53,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.orderDark,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 5),
-              blurRadius: 12,
+      child: HoverPress.button(
+        child: Container(
+          key: const ValueKey('apply-language'),
+          width: 362,
+          height: 53,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.orderDark,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                offset: Offset(0, 5),
+                blurRadius: 12,
+              ),
+              BoxShadow(
+                color: Color(0x17000000),
+                offset: Offset(0, 22),
+                blurRadius: 22,
+              ),
+              BoxShadow(
+                color: Color(0x0D000000),
+                offset: Offset(0, 49),
+                blurRadius: 29,
+              ),
+              BoxShadow(
+                color: Color(0x03000000),
+                offset: Offset(0, 87),
+                blurRadius: 35,
+              ),
+            ],
+          ),
+          child: const Text(
+            'Apply language',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.limeAccent,
             ),
-            BoxShadow(
-              color: Color(0x17000000),
-              offset: Offset(0, 22),
-              blurRadius: 22,
-            ),
-            BoxShadow(
-              color: Color(0x0D000000),
-              offset: Offset(0, 49),
-              blurRadius: 29,
-            ),
-            BoxShadow(
-              color: Color(0x03000000),
-              offset: Offset(0, 87),
-              blurRadius: 35,
-            ),
-          ],
-        ),
-        child: const Text(
-          'Apply language',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.limeAccent,
           ),
         ),
       ),

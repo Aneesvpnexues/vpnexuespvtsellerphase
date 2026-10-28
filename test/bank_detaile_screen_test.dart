@@ -113,7 +113,7 @@ void main() {
     expect(find.text('bank details'), findsOneWidget);
     expect(find.text('To receive your earnings'), findsOneWidget);
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
+    expect(find.text('All fields are required'), findsOneWidget);
     expect(find.text('Account Holder Name'), findsOneWidget);
     expect(find.text('Bank Name'), findsOneWidget);
     expect(find.text('Account Number'), findsOneWidget);
@@ -318,12 +318,12 @@ void main() {
       closeTo(827.99, 1),
     );
 
-    // Continue button: bottom-anchored, x 20..392, y 866..920 on the 936
+    // Continue button: bottom-anchored, x 24..388, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(20, 1));
+    expect(button.left, closeTo(24, 1));
     expect(button.top, closeTo(866, 1));
-    expect(button.width, closeTo(372, 1));
+    expect(button.width, closeTo(364, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -362,7 +362,7 @@ void main() {
     expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.bankSectionTitle);
 
-    final note = tester.widget<Text>(find.text('All fiedls are required'));
+    final note = tester.widget<Text>(find.text('All fields are required'));
     expect(note.style?.fontSize, 11);
 
     final label = tester.widget<Text>(find.text('Account Holder Name'));
@@ -647,13 +647,13 @@ void main() {
     expect(sheet.left, closeTo(0, 1));
     expect(sheet.right, closeTo(390, 1));
 
-    // Cards and Continue button share the same horizontal margin the design
-    // scaled to the phone width: 25/412 * 390 and 20/412 * 390.
+    // Cards follow the scaled design margin; Continue keeps the shared
+    // onboarding 24px margin and 54px height.
     expect(rectOf(_docCards().first).left, closeTo(25 * scaleX, 1));
 
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(20 * scaleX, 1));
-    expect(button.right, closeTo(390 - 20 * scaleX, 1));
+    expect(button.left, closeTo(24, 1));
+    expect(button.right, closeTo(390 - 24, 1));
     expect(button.height, closeTo(54, 1));
   });
 }

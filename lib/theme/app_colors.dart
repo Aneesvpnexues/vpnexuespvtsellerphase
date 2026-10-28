@@ -180,6 +180,8 @@ abstract final class AppColors {
   static const Color continueGradientStart = Color(0xFF57C663);
   static const Color continueGradientEnd = Color(0xFF088F16);
   static const Color continueGlow = Color(0x2E57C663);
+  static const Color continueDisabledGradientStart = Color(0xFFAAE0AC);
+  static const Color continueDisabledGradientEnd = Color(0xFF82C586);
   static const Color verifyPageBg = Color(0xFFF3F0E9);
   static const Color verifyAccent = Color(0xFF83F38F);
   static const Color verifySubtitle = Color(0xFF8D8C8A);

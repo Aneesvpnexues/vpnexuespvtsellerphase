@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/order_pickup_code_screen.dart';
+import 'package:seller_app/theme/app_colors.dart';
 
 const List<String> _assets = [
   'assets/order/ic_back.png',
@@ -120,6 +121,124 @@ void main() {
 
     await tester.tap(find.text('Back to orders'));
     await tester.pumpAndSettle();
+    expect(find.text('Enter pickup code'), findsOneWidget);
+  });
+
+  testWidgets('four code boxes fill, close the keyboard and wait for a swipe', (
+    tester,
+  ) async {
+    await pumpPickupCode(tester);
+
+    final Finder fields = find.byType(TextField);
+    expect(fields, findsNWidgets(4));
+
+    for (int i = 0; i < 4; i++) {
+      await tester.enterText(fields.at(i), '${i + 1}');
+      await tester.pump();
+    }
+
+    for (int i = 0; i < 4; i++) {
+      final Text digit = tester.widget<Text>(
+        find.byKey(Key('pickup_code_digit_$i')),
+      );
+      expect(digit.data, '${i + 1}');
+    }
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(find.text('Back to orders'), findsNothing);
+
+    await tester.drag(
+      find.text('Enter the code to continus'),
+      const Offset(320, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back to orders'), findsOneWidget);
+    expect(find.text('Total Amount'), findsOneWidget);
+  });
+
+  testWidgets('continue bar turns green once the code is complete', (
+    tester,
+  ) async {
+    await pumpPickupCode(tester);
+
+    List<Color> barColors() {
+      final Container bar = tester.widget<Container>(
+        find.byKey(const Key('pickup_code_continue_bar')),
+      );
+      final BoxDecoration decoration = bar.decoration! as BoxDecoration;
+      return (decoration.gradient! as LinearGradient).colors;
+    }
+
+    const List<Color> muted = [Color(0xFF607E6A), Color(0xFF71CA93)];
+    expect(barColors(), muted);
+
+    final Finder fields = find.byType(TextField);
+    for (int i = 0; i < 3; i++) {
+      await tester.enterText(fields.at(i), '${i + 1}');
+      await tester.pump();
+    }
+    expect(barColors(), muted);
+
+    await tester.enterText(fields.at(3), '4');
+    await tester.pump();
+    expect(barColors(), [AppColors.orderSlideStart, AppColors.orderSlideEnd]);
+
+    await tester.enterText(fields.at(3), '');
+    await tester.pump();
+    expect(barColors(), muted);
+  });
+
+  testWidgets('the focus ring follows the digit into the next box', (
+    tester,
+  ) async {
+    await pumpPickupCode(tester);
+
+    BoxDecoration box(int index) =>
+        tester
+                .widget<Container>(find.byKey(Key('pickup_code_box_$index')))
+                .decoration!
+            as BoxDecoration;
+
+    expect(box(0).border!.top.color, const Color(0xFF2E8B4B));
+    expect(box(1).border, isNull);
+
+    final Finder fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '5');
+    await tester.pumpAndSettle();
+
+    expect(box(0).border, isNull);
+    expect(box(1).border!.top.color, const Color(0xFF2E8B4B));
+
+    await tester.enterText(fields.at(1), '6');
+    await tester.pumpAndSettle();
+
+    expect(box(1).border, isNull);
+    expect(box(2).border!.top.color, const Color(0xFF2E8B4B));
+  });
+
+  testWidgets('entered digits are centered inside their boxes', (tester) async {
+    await _loadRoboto(tester);
+    await pumpPickupCode(tester);
+
+    final Finder field = find.byType(TextField).first;
+    await tester.enterText(field, '5');
+    await tester.pump();
+
+    final Rect box = tester.getRect(field);
+    final Rect digit = tester.getRect(
+      find.byKey(const Key('pickup_code_digit_0')),
+    );
+    expect(digit.center.dx, closeTo(box.center.dx, 1));
+    expect(digit.center.dy, closeTo(box.center.dy, 1));
+  });
+
+  testWidgets('code boxes reject non-digit input', (tester) async {
+    await pumpPickupCode(tester);
+
+    await tester.enterText(find.byType(TextField).at(0), 'A');
+    await tester.pump();
+
+    expect(find.text('A'), findsNothing);
     expect(find.text('Enter pickup code'), findsOneWidget);
   });
 

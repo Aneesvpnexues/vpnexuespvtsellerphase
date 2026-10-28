@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'hover_press.dart';
 
 /// Shared top-bar used by every page: a 26px white back circle and a 20px
 /// Inter title. The caller places this widget at the page's screen-level
@@ -40,24 +41,26 @@ class PageHeader extends StatelessWidget {
                 key: backButtonKey ?? backKey,
                 behavior: HitTestBehavior.opaque,
                 onTap: onBack ?? () => Navigator.of(context).maybePop(),
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: Color(0x14000000),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    size: 14,
-                    color: AppColors.textPrimary,
+                child: HoverPress.icon(
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      size: 14,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),

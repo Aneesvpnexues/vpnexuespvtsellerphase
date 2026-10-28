@@ -5,9 +5,9 @@ import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import 'order_details_screen.dart';
-import 'order_privew.dart';
 
 /// My Orders list — replica of Zeplin
 /// "Android Compact - 132" (project 6a8d49709e27bd8b35213d35,
@@ -67,17 +67,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  void _openOrder(_Order order) {
+  void _openOrder() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        settings: RouteSettings(
-          name: order.opensDetails
-              ? AppRoutes.orderDetails
-              : AppRoutes.orderPrivew,
-        ),
-        builder: (_) => order.opensDetails
-            ? const OrderDetailsScreen()
-            : const OrderPrivewScreen(),
+        settings: const RouteSettings(name: AppRoutes.orderDetails),
+        builder: (_) => const OrderDetailsScreen(),
       ),
     );
   }
@@ -136,7 +130,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           extra: orders[i].extra,
                           price: orders[i].price,
                           status: orders[i].status,
-                          onTap: () => _openOrder(orders[i]),
+                          onTap: _openOrder,
                         ),
                       ),
                   ],
@@ -179,7 +173,6 @@ class _Order {
     required this.price,
     required this.amount,
     required this.status,
-    this.opensDetails = false,
   });
 
   final String store;
@@ -194,7 +187,6 @@ class _Order {
   final String price;
   final int amount;
   final String status;
-  final bool opensDetails;
 }
 
 const _orders = <_Order>[
@@ -210,7 +202,6 @@ const _orders = <_Order>[
     price: '\u20B92,400',
     amount: 2400,
     status: 'Accepted',
-    opensDetails: true,
   ),
   _Order(
     store: 'Hotel Green Leaf',
@@ -356,35 +347,37 @@ class _SearchSort extends StatelessWidget {
               key: const ValueKey('order-sort-button'),
               behavior: HitTestBehavior.opaque,
               onTap: onSortTap,
-              child: Container(
-                width: 103,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
-                ),
-                child: const FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.filter_list, size: 14, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        'Sort by',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+              child: HoverPress.button(
+                child: Container(
+                  width: 103,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkCard,
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.filter_list, size: 14, color: Colors.white),
+                        SizedBox(width: 6),
+                        Text(
+                          'Sort by',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 12,
                           color: Colors.white,
                         ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -448,57 +441,20 @@ class _OrderTabs extends StatelessWidget {
           Positioned(
             left: 4,
             top: 0,
-            bottom: 0,
-            width: 99,
-            child: Center(
-              child: Text(
-                _OrderFilter.all.label,
-                style: styleFor(_OrderFilter.all),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 125,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.active.label,
-                style: styleFor(_OrderFilter.active),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 200,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.pending.label,
-                style: styleFor(_OrderFilter.pending),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 282,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.confirmed.label,
-                style: styleFor(_OrderFilter.confirmed),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            top: 0,
             width: 99,
             height: 45,
             child: GestureDetector(
               key: const ValueKey('order-filter-all'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.all),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.all.label,
+                    style: styleFor(_OrderFilter.all),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -510,6 +466,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-active'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.active),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.active.label,
+                    style: styleFor(_OrderFilter.active),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -521,6 +485,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-pending'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.pending),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.pending.label,
+                    style: styleFor(_OrderFilter.pending),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -532,6 +504,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-confirmed'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.confirmed),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.confirmed.label,
+                    style: styleFor(_OrderFilter.confirmed),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -573,7 +553,9 @@ class _SortSheet extends StatelessWidget {
                 IconButton(
                   key: const ValueKey('order-sort-close'),
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: const HoverPress.icon(
+                    child: Icon(Icons.close, size: 20),
+                  ),
                 ),
               ],
             ),
