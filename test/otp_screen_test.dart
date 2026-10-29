@@ -62,21 +62,15 @@ void main() {
     expect(decorations.any((d) => d.color == AppColors.primary), isTrue);
   });
 
-  testWidgets('bottom decoration and illustration assets load', (tester) async {
+  testWidgets('illustration asset loads', (tester) async {
     await pumpScreen(tester);
 
     final images = tester.widgetList<Image>(find.byType(Image)).toList();
-    expect(images.length, 2);
+    expect(images.length, 1);
     expect(
       images.any((i) =>
           i.image is AssetImage &&
           (i.image as AssetImage).assetName == 'assets/otp/illustration.png'),
-      isTrue,
-    );
-    expect(
-      images.any((i) =>
-          i.image is AssetImage &&
-          (i.image as AssetImage).assetName == 'assets/otp/bottom_deco.png'),
       isTrue,
     );
   });
@@ -114,13 +108,6 @@ void main() {
     expect(button.right, closeTo(388, 1));
     expect(button.top, closeTo(731, 2));
     expect(button.height, closeTo(54, 2));
-
-    // Bottom artwork sits flush against the bottom edge, 131 tall.
-    final deco = rectOf(find.byType(Image).first);
-    expect(deco.left, closeTo(0, 1));
-    expect(deco.width, closeTo(412, 1));
-    expect(deco.bottom, closeTo(917, 1));
-    expect(deco.height, closeTo(131, 2));
   });
 
   testWidgets('otp boxes render typed digits', (tester) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seller_app/screens/notifications_screen.dart';
 
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
@@ -52,15 +53,20 @@ class SellerHomeScreen extends StatelessWidget {
                       children: [
                         const Positioned(left: 24, top: 68, child: _Greeting()),
                         const Positioned(
-                          left: 331,
-                          top: 74,
+                          left: 320,
+                          top: 66,
                           child: _HeaderIcon(
                             icon: Icons.notifications_outlined,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => NotificationsScreen(),
+                              ),
+                            ),
                           ),
                         ),
                         Positioned(
-                          left: 363,
-                          top: 74,
+                          left: 352,
+                          top: 66,
                           child: _HeaderIcon(
                             icon: Icons.settings_outlined,
                             onTap: () => goToSettings(context),

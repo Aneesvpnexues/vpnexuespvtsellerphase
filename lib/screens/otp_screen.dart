@@ -28,7 +28,6 @@ class OtpScreen extends StatelessWidget {
       backgroundColor: AppColors.surface,
       body: Stack(
         children: [
-          const Positioned(left: 0, right: 0, bottom: 0, child: BottomDeco()),
           SafeArea(
             top: true,
             bottom: false,
@@ -85,6 +84,12 @@ class OtpScreen extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: BottomDeco(),
           ),
         ],
       ),
