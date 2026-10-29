@@ -141,6 +141,7 @@ void main() {
   ) async {
     final product = Product(
       id: 'P1',
+      userId: '',
       name: 'Alphonso Mango',
       category: 'Fruits',
       price: 120.5,
@@ -176,6 +177,7 @@ void main() {
   ) async {
     final product = Product(
       id: 'P1',
+      userId: '',
       name: 'Alphonso Mango',
       category: 'Fruits',
       price: 120.5,
@@ -249,6 +251,7 @@ void main() {
     Product? shared;
     final product = Product(
       id: 'P1',
+      userId: '',
       name: 'Alphonso Mango',
       category: 'Fruits',
       price: 120.5,

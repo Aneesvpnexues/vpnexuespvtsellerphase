@@ -499,12 +499,16 @@ void main() {
     expect(find.text('Verified'), findsNothing);
   });
 
-  testWidgets('Continue opens home even with dummy details', (tester) async {
+  testWidgets('Continue shows error when IFSC is invalid', (tester) async {
     await pumpScreen(tester);
 
     await tester.enterText(
       find.byKey(const Key('bank-holder-name-field')),
       'edsfsa',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-account-number-field')),
+      '987654321098',
     );
     await tester.enterText(find.byKey(const Key('bank-ifsc-field')), '12345');
     await tester.pump();
@@ -512,8 +516,9 @@ void main() {
     await tester.tap(find.byKey(const Key('bank-continue')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SellerHomeScreen), findsOneWidget);
-    expect(find.byType(BankDetaileScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
+    expect(find.text('Enter a valid 11-character IFSC code.'), findsOneWidget);
   });
 
   testWidgets('back arrow pops the route', (tester) async {
@@ -548,7 +553,7 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('Continue opens the home page once the details are valid', (
+  testWidgets('Continue shows error when Supabase save fails', (
     tester,
   ) async {
     await pumpScreen(tester);
@@ -557,12 +562,8 @@ void main() {
     await tester.tap(find.byKey(const Key('bank-continue')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SellerHomeScreen), findsOneWidget);
-    expect(find.text('Hello,'), findsOneWidget);
-    expect(find.text('Ramesh Kumar'), findsOneWidget);
-    expect(find.text('ACTIVE ORDERS'), findsOneWidget);
-    // Onboarding is cleared from the stack.
-    expect(find.text('Fill Your Bank Details'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -54,13 +55,32 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class _PreferencesCard extends StatelessWidget {
+class _PreferencesCard extends StatefulWidget {
   const _PreferencesCard();
+
+  @override
+  State<_PreferencesCard> createState() => _PreferencesCardState();
+}
+
+class _PreferencesCardState extends State<_PreferencesCard> {
+  final _mobileController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _mobileController.text = ProductStore.instance.userId;
+  }
+
+  @override
+  void dispose() {
+    _mobileController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 112,
+      height: 168,
       children: [
         const Positioned(
           left: 22,
@@ -90,6 +110,32 @@ class _PreferencesCard extends StatelessWidget {
               subtitle: 'English',
               subtitleWidth: 35,
               chevron: true,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 21,
+          top: 85,
+          child: LabelText(
+            'Mobile number',
+            AppTextStyles.profileMenuTitle,
+            width: 100,
+          ),
+        ),
+        Positioned(
+          left: 21,
+          top: 107,
+          child: SizedBox(
+            width: 300,
+            child: TextField(
+              controller: _mobileController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                hintText: 'Enter your mobile number',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: (value) => ProductStore.instance.userId = value,
             ),
           ),
         ),

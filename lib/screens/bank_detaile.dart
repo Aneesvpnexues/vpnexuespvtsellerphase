@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/api_error.dart';
+import '../data/product_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -53,26 +56,32 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     'Punjab National Bank',
     'Bank of Baroda',
     'Canara Bank',
+    'Other / Manual entry',
   ];
 
   final TextEditingController _holderName = TextEditingController();
   final TextEditingController _accountNumber = TextEditingController();
   final TextEditingController _ifsc = TextEditingController();
+  final TextEditingController _manualBank = TextEditingController();
   final FocusNode _holderNameFocus = FocusNode();
   final FocusNode _accountFocus = FocusNode();
   final FocusNode _ifscFocus = FocusNode();
+  final FocusNode _manualBankFocus = FocusNode();
 
   String? _bankName = _banks.first;
   bool _ifscVerified = false;
+  bool _showManualBank = false;
 
   @override
   void dispose() {
     _holderName.dispose();
     _accountNumber.dispose();
     _ifsc.dispose();
+    _manualBank.dispose();
     _holderNameFocus.dispose();
     _accountFocus.dispose();
     _ifscFocus.dispose();
+    _manualBankFocus.dispose();
     super.dispose();
   }
 
@@ -100,7 +109,10 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       builder: (_) => _BankPickerSheet(selected: _bankName),
     );
     if (selected != null && mounted) {
-      setState(() => _bankName = selected);
+      setState(() {
+        _bankName = selected;
+        _showManualBank = selected == 'Other / Manual entry';
+      });
     }
   }
 
@@ -110,8 +122,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     }
   }
 
-  bool get _ifscIsValid =>
-      RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(_ifsc.text.trim());
+  bool get _ifscIsValid => _ifsc.text.trim().length == 11;
 
   void _verifyIfsc() {
     if (!_ifscIsValid) {
@@ -123,13 +134,52 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     setState(() => _ifscVerified = true);
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      (route) => false,
-    );
+
+    final holderName = _holderName.text.trim();
+    final bankName = _bankName == 'Other / Manual entry'
+        ? _manualBank.text.trim()
+        : (_bankName ?? '');
+    final accountNumber = _accountNumber.text.trim().replaceAll(' ', '');
+    final ifsc = _ifsc.text.trim();
+
+    if (holderName.isEmpty) {
+      _showMessage('Enter the account holder name.');
+      return;
+    }
+    if (_bankName == 'Other / Manual entry' && _manualBank.text.trim().isEmpty) {
+      _showMessage('Enter your bank name.');
+      return;
+    }
+    if (bankName.isEmpty) {
+      _showMessage('Select your bank.');
+      return;
+    }
+    if (!_ifscIsValid) {
+      _showMessage('Enter a valid 11-character IFSC code.');
+      return;
+    }
+
+    try {
+      await SupabaseProductApi().saveBankDetails(
+        userId: ProductStore.instance.userId,
+        holderName: holderName,
+        bankName: bankName,
+        accountNumber: accountNumber,
+        ifsc: ifsc,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (route) => false,
+      );
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Could not save bank details. Please try again.');
+    }
   }
 
   @override
@@ -216,6 +266,21 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                   ),
                 ),
                 const Positioned(left: 348, top: 521, child: _ChevronDown()),
+                if (_showManualBank)
+                  Positioned(
+                    left: 81,
+                    top: 562,
+                    width: 291.5,
+                    child: _BankTextField(
+                      fieldKey: const Key('bank-manual-name-field'),
+                      controller: _manualBank,
+                      focusNode: _manualBankFocus,
+                      hintText: 'Enter your bank name',
+                      textInputAction: TextInputAction.next,
+                      maxLength: 50,
+                      onSubmitted: (_) => _accountFocus.requestFocus(),
+                    ),
+                  ),
                 // Card 3 — Account Number.
                 const Positioned(left: 25, top: 571, child: _CardAccount()),
                 const Positioned(left: 36, top: 586, child: _TileAccount()),
@@ -1249,7 +1314,7 @@ class _BankPickerSheet extends StatelessWidget {
           maxHeight: MediaQuery.sizeOf(context).height * 0.7,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -1286,7 +1351,7 @@ class _BankPickerSheet extends StatelessWidget {
                 ],
               ),
             ),
-            Flexible(
+            Expanded(
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),

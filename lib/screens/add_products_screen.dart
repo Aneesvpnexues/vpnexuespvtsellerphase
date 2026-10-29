@@ -247,6 +247,12 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       description: _description.text.trim(),
       status: ProductStatus.values[_status],
     );
+    if (_photos.isEmpty) {
+      if (mounted) setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Add at least one photo before saving.')));
+      return;
+    }
     try {
       await (widget.productSaver ?? _saveToSupabase)(draft, _photos);
       if (!mounted) return;

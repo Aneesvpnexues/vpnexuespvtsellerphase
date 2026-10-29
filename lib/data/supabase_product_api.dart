@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_config.dart';
@@ -19,14 +20,17 @@ class SupabaseProductApi {
   final String _supabaseUrl;
   final String _anonKey;
 
-  Future<List<Product>> fetchProducts() async {
+  Future<List<Product>> fetchProducts({String? userId}) async {
     if (_supabaseUrl.isEmpty || _anonKey.isEmpty) {
       throw const ApiException('Supabase is not configured.');
     }
+    // No `order=` here: PostgREST rejects the request while the table still
+    // has no `id` column (008_seller_products_id_access.sql). Newest first is
+    // applied client side instead so the read never depends on it.
     final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/sellers_products').replace(
-      queryParameters: const <String, String>{
+      queryParameters: <String, String>{
         'select': '*',
-        'order': 'id.desc',
+        if (userId != null && userId.isNotEmpty) 'user_id': 'eq.$userId',
       },
     );
     final http.Response response = await _client.get(
@@ -54,7 +58,15 @@ class SupabaseProductApi {
         if (product.name.isNotEmpty) products.add(product);
       }
     }
+    products.sort(_newestFirst);
     return products;
+  }
+
+  static int _newestFirst(Product a, Product b) {
+    final int idA = int.tryParse(a.id) ?? -1;
+    final int idB = int.tryParse(b.id) ?? -1;
+    if (idA != idB) return idB.compareTo(idA);
+    return b.name.toLowerCase().compareTo(a.name.toLowerCase());
   }
 
   Future<Product> createProduct(
@@ -67,30 +79,71 @@ class SupabaseProductApi {
       headers: _writeHeaders,
       body: jsonEncode(_rowFromDraft(draft, imageUrls)),
     );
+    debugPrint('[supabase_product_api] createProduct status=${response.statusCode} body=${response.body}');
     return _productFromWriteResponse(response, 'Could not add the product.');
+  }
+
+  Future<void> saveBankDetails({
+    required String userId,
+    required String holderName,
+    required String bankName,
+    required String accountNumber,
+    required String ifsc,
+  }) async {
+    _ensureConfigured();
+    final http.Response response = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details'),
+      headers: _writeHeaders,
+      body: jsonEncode(<String, dynamic>{
+        'user_id': userId.trim(),
+        'account_houlder_name': holderName.trim(),
+        'bank_name': bankName.trim(),
+        'account_number': accountNumber.trim(),
+        'IFSC_code': ifsc.trim().toUpperCase(),
+      }),
+    );
+    debugPrint('[supabase_product_api] saveBankDetails status=${response.statusCode} body=${response.body}');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(response, 'Could not save bank details.');
+    }
+  }
+
+  Future<void> deleteBankDetails(String userId) async {
+    _ensureConfigured();
+    final http.Response response = await _client.delete(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details').replace(
+        queryParameters: <String, String>{
+          'user_id': 'eq.${userId.trim()}',
+        },
+      ),
+      headers: _headers,
+    );
+    debugPrint('[supabase_product_api] deleteBankDetails status=${response.statusCode} body=${response.body}');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(response, 'Could not delete bank details.');
+    }
   }
 
   Future<Product> updateProduct(Product product) async {
     _ensureConfigured();
+    _ensureId(product.id, 'update');
     final http.Response response = await _client.patch(
-      _productUri(product.id),
+      _productUri(product.id, userId: product.userId),
       headers: _writeHeaders,
       body: jsonEncode(_rowFromProduct(product)),
     );
     return _productFromWriteResponse(response, 'Could not update the product.');
   }
 
-  Future<void> deleteProduct(String id) async {
+  Future<void> deleteProduct(String id, {String? userId}) async {
     _ensureConfigured();
+    _ensureId(id, 'delete');
     final http.Response response = await _client.delete(
-      _productUri(id),
+      _productUri(id, userId: userId),
       headers: _headers,
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
-        apiErrorMessage(response, 'Could not delete the product.'),
-        statusCode: response.statusCode,
-      );
+      throw _serverError(response, 'Could not delete the product.');
     }
   }
 
@@ -108,9 +161,12 @@ class SupabaseProductApi {
     'Prefer': 'return=representation',
   };
 
-  Uri _productUri(String id) {
+  Uri _productUri(String id, {String? userId}) {
     return Uri.parse('$_supabaseUrl/rest/v1/sellers_products').replace(
-      queryParameters: <String, String>{'id': 'eq.$id'},
+      queryParameters: <String, String>{
+        'id': 'eq.$id',
+        if (userId != null && userId.isNotEmpty) 'user_id': 'eq.$userId',
+      },
     );
   }
 
@@ -120,12 +176,38 @@ class SupabaseProductApi {
     }
   }
 
-  Product _productFromWriteResponse(http.Response response, String fallback) {
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+  void _ensureId(String id, String action) {
+    if (id.trim().isEmpty) {
       throw ApiException(
-        apiErrorMessage(response, fallback),
+        'This product has no server id yet. Run '
+        '008_seller_products_id_access.sql in Supabase, then try to $action it.',
+      );
+    }
+  }
+
+  ApiException _serverError(http.Response response, String fallback) {
+    final String message = apiErrorMessage(response, fallback);
+    final String lower = message.toLowerCase();
+    final bool needsSchema = response.statusCode == 400 &&
+        lower.contains('could not find the column');
+    final bool needsGrant = response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        lower.contains('permission denied') ||
+        lower.contains('row-level security');
+    if (needsSchema || needsGrant) {
+      return ApiException(
+        'Supabase is not ready for writes yet. Run '
+        '008_seller_products_id_access.sql in the Supabase SQL Editor, '
+        'then try again. ($message)',
         statusCode: response.statusCode,
       );
+    }
+    return ApiException(message, statusCode: response.statusCode);
+  }
+
+  Product _productFromWriteResponse(http.Response response, String fallback) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(response, fallback);
     }
     final Object? decoded = _decode(response.body);
     if (decoded is List && decoded.isNotEmpty) {
@@ -152,6 +234,7 @@ class SupabaseProductApi {
       'quantity': draft.quantity,
       'product_descrption': draft.description,
       'product_avaliblit': draft.status.apiValue,
+      if (draft.userId.isNotEmpty) 'user_id': draft.userId,
       'product_img_1': images.isNotEmpty ? images[0] : null,
       'product_img_2': images.length > 1 ? images[1] : null,
       'product_img_3': images.length > 2 ? images[2] : null,
@@ -194,11 +277,13 @@ class SupabaseProductApi {
       final String value = (row['product_img_$index'] ?? '').toString().trim();
       if (value.isNotEmpty) imageUrls.add(value);
     }
+    debugPrint('[supabase_product_api] _productFromRow imageUrls=${imageUrls.length} keys=${row.keys.toList()}');
     final int quantity = _int(row['quantity']);
     final Object? description =
         row['product_descrption'] ?? row['product_description'];
     return Product(
       id: (row['id'] ?? '').toString(),
+      userId: (row['user_id'] ?? '').toString(),
       name: (row['product_name'] ?? '').toString().trim(),
       category: _categoryLabel(row['category']),
       price: _double(row['price']),

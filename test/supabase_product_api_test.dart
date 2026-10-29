@@ -42,8 +42,7 @@ void main() {
 
     expect(
       captured.url.toString(),
-      'https://project.supabase.co/rest/v1/sellers_products'
-      '?select=%2A&order=id.desc',
+      'https://project.supabase.co/rest/v1/sellers_products?select=%2A',
     );
     expect(captured.headers['apikey'], 'anon-key');
     expect(captured.headers['Authorization'], 'Bearer anon-key');
@@ -109,6 +108,163 @@ void main() {
             .having((e) => e.message, 'message', 'relation does not exist')
             .having((e) => e.statusCode, 'statusCode', 404),
       ),
+    );
+  });
+
+  ProductDraft draft({String name = 'Chilli'}) {
+    return ProductDraft(
+      name: name,
+      category: 'Vegetables',
+      price: 25,
+      unit: 'kg',
+      quantity: 5,
+      description: 'Spicy green chillies.',
+      status: ProductStatus.active,
+    );
+  }
+
+  test('fetchProducts sorts newest first without an order parameter', () async {
+    final client = api(
+      (_) async => http.Response(
+        jsonEncode(<Map<String, dynamic>>[
+          <String, dynamic>{'id': 3, 'product_name': 'A'},
+          <String, dynamic>{'id': 12, 'product_name': 'B'},
+          <String, dynamic>{'id': 7, 'product_name': 'C'},
+        ]),
+        200,
+      ),
+    );
+
+    final products = await client.fetchProducts();
+
+    expect(products.map((Product product) => product.id), <String>[
+      '12',
+      '7',
+      '3',
+    ]);
+  });
+
+  test('createProduct posts only the columns sellers_products has', () async {
+    late http.Request captured;
+    final client = api((request) async {
+      captured = request;
+      return http.Response(
+        jsonEncode(<Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 41,
+            'product_name': 'Chilli',
+            'category': 'vegetables',
+            'price': 25,
+            'quantity': 5,
+            'product_descrption': 'Spicy green chillies.',
+            'product_avaliblit': 'active',
+            'product_img_1': 'https://cdn.test/chilli.jpg',
+          },
+        ]),
+        201,
+      );
+    });
+
+    final product = await client.createProduct(
+      draft(),
+      imageUrls: const <String>['https://cdn.test/chilli.jpg'],
+    );
+
+    expect(captured.method, 'POST');
+    expect(captured.headers['Prefer'], 'return=representation');
+    final Map<String, dynamic> body =
+        jsonDecode(captured.body) as Map<String, dynamic>;
+    expect(body.keys.toSet().every(
+      (String key) =>
+          !const <String>['id', 'unit', 'user_id'].contains(key),
+    ), isTrue);
+    expect(body['product_name'], 'Chilli');
+    expect(body['category'], 'vegetables');
+    expect(body['product_avaliblit'], 'active');
+    expect(body['product_img_1'], 'https://cdn.test/chilli.jpg');
+    expect(body['buyer_pickup_enabled'], isTrue);
+    expect(body['delivery_enabled'], isTrue);
+    expect(product.id, '41');
+    expect(product.imageUrls, <String>['https://cdn.test/chilli.jpg']);
+  });
+
+  test('a missing column error points at the 008 migration', () async {
+    final client = api(
+      (_) async => http.Response(
+        jsonEncode(<String, dynamic>{
+          'code': 'PGRST204',
+          'message': "Could not find the column 'product_avaliblit' "
+              'in the schema cache',
+        }),
+        400,
+      ),
+    );
+
+    expect(
+      client.createProduct(draft()),
+      throwsA(
+        isA<ApiException>().having(
+          (ApiException error) => error.message,
+          'message',
+          contains('008_seller_products_id_access.sql'),
+        ),
+      ),
+    );
+  });
+
+  test('a permission denied error points at the 008 migration', () async {
+    final client = api(
+      (_) async => http.Response(
+        jsonEncode(<String, dynamic>{
+          'code': '42501',
+          'message': 'permission denied for table sellers_products',
+        }),
+        403,
+      ),
+    );
+
+    expect(
+      client.deleteProduct('41'),
+      throwsA(
+        isA<ApiException>().having(
+          (ApiException error) => error.message,
+          'message',
+          contains('008_seller_products_id_access.sql'),
+        ),
+      ),
+    );
+  });
+
+  test('update and delete need a server id', () async {
+    final client = api(
+      (_) async => http.Response('[]', 200),
+    );
+    final Product withoutId = Product(
+      id: '',
+      userId: '',
+      name: 'Tomato',
+      category: 'Vegetables',
+      price: 30,
+      unit: 'kg',
+      quantity: 12,
+      description: '',
+      status: ProductStatus.active,
+      photos: const <ProductPhoto>[],
+    );
+
+    expect(
+      client.updateProduct(withoutId),
+      throwsA(
+        isA<ApiException>().having(
+          (ApiException error) => error.message,
+          'message',
+          contains('008_seller_products_id_access.sql'),
+        ),
+      ),
+    );
+    expect(
+      client.deleteProduct(''),
+      throwsA(isA<ApiException>()),
     );
   });
 }

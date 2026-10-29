@@ -62,6 +62,7 @@ void main() {
       'quantity': 12,
       'description': 'Fresh',
       'status': 'out_of_stock',
+      'user_id': '',
       'imageUrls': <String>['a'],
     });
   });
@@ -88,6 +89,7 @@ void main() {
     store.upsert(
       const Product(
         id: 'remote-1',
+        userId: '',
         name: 'Chilli',
         category: 'Vegetables',
         price: 20,

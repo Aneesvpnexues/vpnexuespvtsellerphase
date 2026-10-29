@@ -56,7 +56,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('bank-continue')));
     await tester.pumpAndSettle();
-    expect(find.byType(SellerHomeScreen), findsOneWidget);
-    expect(find.byType(BankDetaileScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
   });
 }

@@ -55,6 +55,7 @@ class ProductPhoto {
 class Product {
   const Product({
     required this.id,
+    required this.userId,
     required this.name,
     required this.category,
     required this.price,
@@ -69,6 +70,7 @@ class Product {
   });
 
   final String id;
+  final String userId;
   final String name;
   final String category;
   final double price;
@@ -99,6 +101,7 @@ class Product {
 
   Product copyWith({
     String? id,
+    String? userId,
     String? name,
     String? category,
     double? price,
@@ -113,6 +116,7 @@ class Product {
   }) {
     return Product(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
       category: category ?? this.category,
       price: price ?? this.price,
@@ -142,6 +146,7 @@ class Product {
 
     return Product(
       id: (json['id'] ?? '').toString(),
+      userId: (json['user_id'] ?? json['userId'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       category: (json['category'] ?? '').toString(),
       price: _double(json['price']),
@@ -174,6 +179,7 @@ class ProductDraft {
     required this.quantity,
     required this.description,
     required this.status,
+    this.userId = '',
     this.buyerPickupEnabled = true,
     this.deliveryEnabled = true,
   });
@@ -185,6 +191,7 @@ class ProductDraft {
   final int quantity;
   final String description;
   final ProductStatus status;
+  final String userId;
   final bool buyerPickupEnabled;
   final bool deliveryEnabled;
 
@@ -197,8 +204,35 @@ class ProductDraft {
       'quantity': quantity,
       'description': description,
       'status': status.apiValue,
+      'user_id': userId,
       'imageUrls': imageUrls,
     };
+  }
+
+  ProductDraft copyWith({
+    String? name,
+    String? category,
+    double? price,
+    String? unit,
+    int? quantity,
+    String? description,
+    ProductStatus? status,
+    String? userId,
+    bool? buyerPickupEnabled,
+    bool? deliveryEnabled,
+  }) {
+    return ProductDraft(
+      name: name ?? this.name,
+      category: category ?? this.category,
+      price: price ?? this.price,
+      unit: unit ?? this.unit,
+      quantity: quantity ?? this.quantity,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      userId: userId ?? this.userId,
+      buyerPickupEnabled: buyerPickupEnabled ?? this.buyerPickupEnabled,
+      deliveryEnabled: deliveryEnabled ?? this.deliveryEnabled,
+    );
   }
 }
 
@@ -209,10 +243,18 @@ class ProductStore extends ChangeNotifier {
 
   final List<Product> _products = <Product>[];
   int _nextId = 1;
+  String _userId = '';
 
   List<Product> get products => List<Product>.unmodifiable(_products);
 
   int get count => _products.length;
+
+  String get userId => _userId;
+
+  set userId(String value) {
+    _userId = value.trim();
+    notifyListeners();
+  }
 
   Product addProduct({
     required String name,
@@ -222,11 +264,13 @@ class ProductStore extends ChangeNotifier {
     required int quantity,
     required String description,
     required ProductStatus status,
+    String userId = '',
     List<ProductPhoto> photos = const <ProductPhoto>[],
     List<String> imageUrls = const <String>[],
   }) {
     final Product product = Product(
       id: 'P${_nextId++}',
+      userId: userId,
       name: name,
       category: category,
       price: price,

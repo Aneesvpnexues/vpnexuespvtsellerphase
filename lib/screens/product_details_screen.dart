@@ -253,6 +253,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final Product? product = _product;
     final List<ProductPhoto> photos = product?.photos ?? const <ProductPhoto>[];
     final List<String> imageUrls = product?.imageUrls ?? const <String>[];
+    debugPrint('[product_details] build imageUrls=${imageUrls.length} photos=${photos.length} productId=${product?.id ?? "null"}');
     final int photoIndicatorCount = product == null
         ? 3
         : photos.isNotEmpty
@@ -324,12 +325,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           itemBuilder: (context, index) => Image.network(
                             imageUrls[index],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _photoFallback(category),
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                ? child
-                                : _photoFallback(category),
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('[product_details] Image.network error index=$index url=${imageUrls[index]} error=$error');
+                              return _photoFallback(category);
+                            },
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) {
+                                debugPrint('[product_details] Image.network loaded index=$index url=${imageUrls[index]}');
+                                return child;
+                              }
+                              debugPrint('[product_details] Image.network loading index=$index loaded=${progress.cumulativeBytesLoaded}/${progress.expectedTotalBytes}');
+                              return _photoFallback(category);
+                            },
                           ),
                         )
                       : Container(
