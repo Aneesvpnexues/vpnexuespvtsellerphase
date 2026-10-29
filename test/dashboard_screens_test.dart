@@ -12,6 +12,7 @@ import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
+import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -343,7 +344,8 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Language, notifications'), findsOneWidget);
       expect(find.text('Help & Support'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
+      // Log out lives in Settings, not on the App tab.
+      expect(find.text('Log out'), findsNothing);
       // Assert no Account/Business rows leak in.
       expect(find.text('Personal Details'), findsNothing);
       expect(find.text('Wallet & Transactions'), findsNothing);
@@ -431,7 +433,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsNothing);
       expect(find.text('Help & Support'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
+      expect(find.text('Log out'), findsNothing);
     });
 
     testWidgets('Help row opens the Help & Support screen', (tester) async {
@@ -1614,6 +1616,55 @@ void main() {
         find.image(const AssetImage(OrderPrivewScreen.heroAsset)),
         findsOneWidget,
       );
+
+      // The floating back circle in the empty band above the hero pops the
+      // route, so the screen is never a dead end.
+      await tester.tap(find.byKey(const Key('order-preview-back')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MyOrdersScreen), findsOneWidget);
+      expect(find.byType(OrderPrivewScreen), findsNothing);
+    });
+
+    testWidgets('Add another product opens the add product flow', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 917);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddProductsScreen), findsNothing);
+
+      await tester.tap(find.byKey(const Key('order-add-product')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddProductsScreen), findsOneWidget);
+      expect(find.text('Add Products'), findsOneWidget);
+    });
+
+    testWidgets('Preview product opens the product details page', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 1515);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Preview product'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProductDetailsScreen), findsOneWidget);
+      expect(find.text('Go back to order'), findsOneWidget);
+      expect(find.text('Fresh Tomatoes'), findsOneWidget);
+
+      await tester.tap(find.text('Go back to order'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPrivewScreen), findsOneWidget);
+      expect(find.byType(ProductDetailsScreen), findsNothing);
     });
 
     testWidgets('renders at the measured 412x917 geometry', (tester) async {
@@ -1627,6 +1678,12 @@ void main() {
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, const Color(0xFFFAFBF3));
+
+      // Floating back circle sits in the empty band above the hero.
+      final back = tester.getRect(find.byKey(const Key('order-preview-back')));
+      expect(back.left, closeTo(24, 0.6));
+      expect(back.top, closeTo(56, 0.6));
+      expect(back.size, const Size(26, 26));
 
       // Baked hero (card + shadow, baked title erased in the asset).
       final hero = tester.getRect(

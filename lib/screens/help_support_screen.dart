@@ -3,13 +3,23 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/label_text.dart';
+import 'account_help_article_screen.dart';
 import 'account_verification_help_screen.dart';
 import 'orders_delivery_help_screen.dart';
+import 'payment_help_article_screen.dart';
 import 'payments_wallet_help_screen.dart';
+import 'product_help_article_screen.dart';
 import 'products_stock_help_screen.dart';
 import 'report_problem_screen.dart';
 
-class HelpSupportScreen extends StatelessWidget {
+/// Help & Support — Zeplin "Android Compact - 199" (Topics tab),
+/// "Android Compact - 221" (Questions tab) and "Android Compact - 222"
+/// (Tickets tab), project 6a8d49709e27bd8b35213d35.
+///
+/// All tabs share the hero and the segmented control. Topics lists the five
+/// help categories; Questions lists four frequently asked articles; Tickets
+/// shows the open support ticket.
+class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
 
   static const double designWidth = 412;
@@ -103,6 +113,29 @@ class HelpSupportScreen extends StatelessWidget {
     letterSpacing: 0.1,
     color: _rowInk,
   );
+  static const _questionTitle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.1,
+    color: Colors.black,
+  );
+
+  @override
+  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
+}
+
+class _HelpSupportScreenState extends State<HelpSupportScreen> {
+  /// 0 = Topics (Zeplin 199), 1 = Questions (Zeplin 221),
+  /// 2 = Tickets (Zeplin 222).
+  int _tab = 0;
+
+  double get _pillLeft => _tab == 0 ? 28 : (_tab == 1 ? 150 : 271);
+
+  void _selectTab(int tab) {
+    if (_tab == tab) return;
+    setState(() => _tab = tab);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,16 +144,20 @@ class HelpSupportScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: HelpSupportScreen.designWidth,
+          designHeight: HelpSupportScreen.designHeight,
+          trimTop: HelpSupportScreen.trimTop,
           child: Stack(
             children: [
               const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
                 left: 68,
                 top: 73,
-                child: LabelText('Help & Support', _titleStyle, width: 149),
+                child: LabelText(
+                  'Help & Support',
+                  HelpSupportScreen._titleStyle,
+                  width: 149,
+                ),
               ),
               const Positioned(left: 25, top: 121, child: _HelpHero()),
               Positioned(
@@ -136,27 +173,72 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const Positioned(left: 28, top: 437, child: _SelectedTab()),
-              const Positioned(
-                left: 64,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _pillLeft,
+                top: 437,
+                child: const _SelectedTab(),
+              ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 0 ? 64 : 61,
                 top: 443,
-                child: LabelText('Topics', _tabSelected, width: 40),
+                child: GestureDetector(
+                  key: const Key('help-tab-topics'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _selectTab(0),
+                  child: LabelText(
+                    'Topics',
+                    _tab == 0
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 40,
+                  ),
+                ),
               ),
-              const Positioned(
-                left: 182,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 0 ? 182 : 175,
                 top: 442,
-                child: LabelText('Questions', _tabIdle, width: 61),
+                child: GestureDetector(
+                  key: const Key('help-tab-questions'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _selectTab(1),
+                  child: LabelText(
+                    'Questions',
+                    _tab == 1
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 64,
+                  ),
+                ),
               ),
-              const Positioned(
-                left: 314,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 2 ? 305 : 314,
                 top: 442,
-                child: LabelText('Tickets', _tabIdle, width: 44),
+                child: GestureDetector(
+                  key: const Key('help-tab-tickets'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _selectTab(2),
+                  child: LabelText(
+                    'Tickets',
+                    _tab == 2
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 44,
+                  ),
+                ),
               ),
               Positioned(
                 left: 25,
                 top: 492,
                 width: 362,
-                height: 300,
+                height: _tab == 0 ? 300 : (_tab == 1 ? 210 : 67),
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEFEFE),
@@ -192,92 +274,177 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final double y in <double>[554, 611, 670, 728])
+              if (_tab == 0) ...[
+                for (final double y in <double>[554, 611, 670, 728])
+                  Positioned(
+                    left: 47,
+                    top: y,
+                    child: Container(
+                      width: 324,
+                      height: 1,
+                      color: const Color(0x12000000),
+                    ),
+                  ),
                 Positioned(
-                  left: 47,
-                  top: y,
-                  child: Container(
-                    width: 324,
-                    height: 1,
-                    color: const Color(0x12000000),
-                  ),
-                ),
-              Positioned(
-                left: 46,
-                top: 505,
-                child: _TopicRow(
-                  icon: 'assets/help/tile_orders.png',
-                  title: 'Orders & delivery',
-                  titleWidth: 103,
-                  subtitle: '3 articles',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const OrdersDeliveryHelpScreen(),
+                  left: 46,
+                  top: 505,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_orders.png',
+                    title: 'Orders & delivery',
+                    titleWidth: 103,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OrdersDeliveryHelpScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 46,
-                top: 563,
-                child: _TopicRow(
-                  icon: 'assets/help/tile_products.png',
-                  title: 'Products & stock',
-                  titleWidth: 101,
-                  subtitle: '3 articles',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ProductsStockHelpScreen(),
+                Positioned(
+                  left: 46,
+                  top: 563,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_products.png',
+                    title: 'Products & stock',
+                    titleWidth: 101,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ProductsStockHelpScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 46,
-                top: 621,
-                child: _TopicRow(
-                  icon: 'assets/help/tile_payments.png',
-                  title: 'Payments & wallet',
-                  titleWidth: 109,
-                  subtitle: '3 articles',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const PaymentsWalletHelpScreen(),
+                Positioned(
+                  left: 46,
+                  top: 621,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_payments.png',
+                    title: 'Payments & wallet',
+                    titleWidth: 109,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PaymentsWalletHelpScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 46,
-                top: 679,
-                child: _TopicRow(
-                  icon: 'assets/help/tile_account.png',
-                  title: 'Account & verification',
-                  titleWidth: 131,
-                  subtitle: '3 articles',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AccountVerificationHelpScreen(),
+                Positioned(
+                  left: 46,
+                  top: 679,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_account.png',
+                    title: 'Account & verification',
+                    titleWidth: 131,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const AccountVerificationHelpScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 46,
-                top: 737,
-                child: _TopicRow(
-                  icon: 'assets/help/tile_report.png',
-                  title: 'Report a problem',
-                  titleWidth: 102,
-                  subtitle: 'Tell us what went wrong',
-                  subtitleWidth: 117,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ReportProblemScreen(),
+                Positioned(
+                  left: 46,
+                  top: 737,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_report.png',
+                    title: 'Report a problem',
+                    titleWidth: 102,
+                    subtitle: 'Tell us what went wrong',
+                    subtitleWidth: 117,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReportProblemScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ] else if (_tab == 1) ...[
+                for (final double y in <double>[549, 600, 645])
+                  Positioned(
+                    left: 42,
+                    top: y,
+                    child: Container(
+                      width: 324,
+                      height: 1,
+                      color: const Color(0x12000000),
+                    ),
+                  ),
+                Positioned(
+                  left: 25,
+                  top: 492,
+                  child: _QuestionRow(
+                    title: 'When will i get my money?',
+                    textTop: 25,
+                    chevronTop: 27.5,
+                    height: 57,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PayoutTimingHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 549,
+                  child: _QuestionRow(
+                    title: 'How do i update my stock?',
+                    textTop: 17,
+                    chevronTop: 19.5,
+                    height: 51,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const UpdateStockHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 600,
+                  child: _QuestionRow(
+                    title: 'How do i accept a new order?',
+                    textTop: 15,
+                    chevronTop: 17.5,
+                    height: 45,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OrdersDeliveryHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 645,
+                  child: _QuestionRow(
+                    title: 'How do i get verified?',
+                    textTop: 15,
+                    chevronTop: 17.5,
+                    height: 57,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const VerifyAccountHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Positioned(
+                  left: 46,
+                  top: 505,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_orders.png',
+                    title: 'Payout delayed',
+                    titleWidth: 91,
+                    subtitle: '#HS-2026, 3Mar',
+                    subtitleWidth: 90,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -684,6 +851,61 @@ class _SelectedTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _QuestionRow extends StatelessWidget {
+  const _QuestionRow({
+    required this.title,
+    required this.textTop,
+    required this.chevronTop,
+    required this.height,
+    this.onTap,
+  });
+
+  final String title;
+  final double textTop;
+  final double chevronTop;
+  final double height;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = SizedBox(
+      width: 362,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 17,
+            top: textTop,
+            child: LabelText(
+              title,
+              HelpSupportScreen._questionTitle,
+              width: 300,
+              height: 17,
+            ),
+          ),
+          Positioned(
+            left: 331.5,
+            top: chevronTop,
+            child: Image.asset(
+              'assets/help/chevron.png',
+              width: 12,
+              height: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: content,
     );
   }
 }

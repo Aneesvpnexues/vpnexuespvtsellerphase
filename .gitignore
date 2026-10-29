@@ -50,3 +50,6 @@ app.*.map.json
 
 # opencode tooling
 .opencode/
+
+# Android Gradle build outputs
+/android/build/

@@ -46,7 +46,7 @@ void main() {
     expect(find.text('Ramesh Kumar'), findsNothing);
   });
 
-  testWidgets('renders the 117 home content with no dummy products', (
+  testWidgets('renders the 117 home content with the empty products card', (
     tester,
   ) async {
     await pumpScreen(tester);
@@ -76,6 +76,21 @@ void main() {
     expect(find.text('Products'), findsOneWidget);
     expect(find.text('Orders'), findsNWidgets(2));
     expect(find.text('Profile'), findsOneWidget);
+  });
+
+  testWidgets('shows the three demo products from the 117 design', (
+    tester,
+  ) async {
+    await seedDemoProducts();
+    await pumpScreen(tester);
+
+    expect(find.byKey(const ValueKey('home-empty-products')), findsNothing);
+    expect(find.byKey(const ValueKey('home-products')), findsOneWidget);
+    expect(find.text('Tomatoes'), findsOneWidget);
+    expect(find.text('Spinach'), findsOneWidget);
+    expect(find.text('Carrots'), findsOneWidget);
+    expect(find.text('50 kg available'), findsNWidgets(3));
+    expect(find.text('Active'), findsNWidgets(3));
   });
 
   testWidgets('layout matches the 412x1071 design geometry', (tester) async {
@@ -184,6 +199,23 @@ void main() {
 
     expect(find.text('Spinach low'), findsOneWidget);
     expect(find.text('Only 5kg remaining'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('home-attention-low-stock')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProductDetailsScreen), findsOneWidget);
+    expect(find.text('Spinach'), findsOneWidget);
+  });
+
+  testWidgets('the Needs Attention order row opens My Orders', (tester) async {
+    await pumpScreen(tester);
+
+    expect(find.byType(MyOrdersScreen), findsNothing);
+
+    await tester.tap(find.byKey(const Key('home-attention-orders')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyOrdersScreen), findsOneWidget);
   });
 
   testWidgets('the bottom nav is pinned with Home selected', (tester) async {

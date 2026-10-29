@@ -81,25 +81,14 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                     ),
                   ),
                   Positioned(
-                    left: 46,
-                    top: 716,
-                    child: _SellerTypePill(
-                      width: 151.5,
-                      icon: Icons.directions_bus,
-                      label: 'Shop Owner',
-                      selected: _selectedIndex == 3,
-                      onTap: () => _select(3),
-                    ),
-                  ),
-                  Positioned(
-                    left: 214,
+                    left: 130.3,
                     top: 716,
                     child: _SellerTypePill(
                       width: 151.5,
                       icon: Icons.inventory_2,
                       label: 'Wholesaler',
-                      selected: _selectedIndex == 4,
-                      onTap: () => _select(4),
+                      selected: _selectedIndex == 3,
+                      onTap: () => _select(3),
                     ),
                   ),
                   Positioned(
@@ -109,8 +98,8 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                       width: 183.5,
                       icon: Icons.apartment,
                       label: 'Business seller',
-                      selected: _selectedIndex == 5,
-                      onTap: () => _select(5),
+                      selected: _selectedIndex == 4,
+                      onTap: () => _select(4),
                     ),
                   ),
                   const Positioned(

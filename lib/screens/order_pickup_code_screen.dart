@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -7,14 +8,67 @@ import '../widgets/design_canvas.dart';
 import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details ├óΓé¼” pickup code entry state. Static replica of Zeplin
+/// Order Details — pickup code entry state. Replica of Zeplin
 /// "Android Compact - 154".
-class OrderPickupCodeScreen extends StatelessWidget {
+///
+/// The four code boxes accept a demo code that is shared by every order and
+/// user: [demoCode]. When the entered code does not match, the boxes turn red,
+/// show an error line and clear; the slide CTA is locked until four digits are
+/// present.
+class OrderPickupCodeScreen extends StatefulWidget {
   const OrderPickupCodeScreen({super.key});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
   static const double trimTop = 49;
+
+  /// Universal demo pickup code (no backend yet).
+  static const String demoCode = '4582';
+
+  @override
+  State<OrderPickupCodeScreen> createState() => _OrderPickupCodeScreenState();
+}
+
+class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
+  final TextEditingController _code = TextEditingController();
+  final FocusNode _codeFocus = FocusNode();
+  bool _error = false;
+
+  bool get _complete => _code.text.length == 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _code.addListener(_onCodeChanged);
+  }
+
+  void _onCodeChanged() {
+    if (_error && _code.text.isNotEmpty) {
+      setState(() => _error = false);
+      return;
+    }
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _code.removeListener(_onCodeChanged);
+    _code.dispose();
+    _codeFocus.dispose();
+    super.dispose();
+  }
+
+  bool _submit() {
+    if (!_complete) return false;
+    if (_code.text == OrderPickupCodeScreen.demoCode) {
+      goToOrderPickupSuccess(context);
+      return true;
+    }
+    _code.clear();
+    setState(() => _error = true);
+    _codeFocus.requestFocus();
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +77,9 @@ class OrderPickupCodeScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: OrderPickupCodeScreen.designWidth,
+          designHeight: OrderPickupCodeScreen.designHeight,
+          trimTop: OrderPickupCodeScreen.trimTop,
           child: DefaultTextStyle(
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
@@ -37,8 +91,20 @@ class OrderPickupCodeScreen extends StatelessWidget {
                 ),
                 const Positioned(left: 24, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
-                const Positioned(left: 25, top: 359, child: _CodeCard()),
-                const Positioned(left: 24, top: 847, child: _ContinueButton()),
+                Positioned(
+                  left: 25,
+                  top: 359,
+                  child: _CodeCard(
+                    controller: _code,
+                    focusNode: _codeFocus,
+                    error: _error,
+                  ),
+                ),
+                Positioned(
+                  left: 24,
+                  top: 847,
+                  child: _ContinueButton(locked: !_complete, onSubmit: _submit),
+                ),
               ],
             ),
           ),
@@ -481,13 +547,24 @@ class _DashedLine extends CustomPainter {
 }
 
 class _CodeCard extends StatelessWidget {
-  const _CodeCard();
+  const _CodeCard({
+    required this.controller,
+    required this.focusNode,
+    required this.error,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool error;
+
+  static const List<double> _boxLefts = <double>[0, 69, 137, 205];
 
   @override
   Widget build(BuildContext context) {
+    final String value = controller.text;
     return Container(
       width: 362,
-      height: 275,
+      height: 317,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
@@ -636,9 +713,36 @@ class _CodeCard extends StatelessWidget {
               height: 26,
             ),
           ),
+          const Positioned(
+            left: 24,
+            top: 117,
+            child: _Label(
+              'Pickup code',
+              TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF7F8078),
+              ),
+              width: 90,
+              height: 16,
+            ),
+          ),
+          Positioned(
+            key: const Key('pickup-code-hint'),
+            left: 208,
+            top: 110,
+            child: Row(
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  _CodeHintBox(character: OrderPickupCodeScreen.demoCode[i]),
+                ],
+              ],
+            ),
+          ),
           Positioned(
             left: 79,
-            top: 131,
+            top: 173,
             width: 200,
             height: 26,
             child: Align(
@@ -656,7 +760,7 @@ class _CodeCard extends StatelessWidget {
           ),
           const Positioned(
             left: 49,
-            top: 160.5,
+            top: 202.5,
             child: _Label(
               'Ask the buyer for the 4-digital code shown in their app',
               TextStyle(fontSize: 12, color: Color(0xFF858585)),
@@ -666,64 +770,159 @@ class _CodeCard extends StatelessWidget {
           ),
           Positioned(
             left: 53,
-            top: 189,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                border: Border.all(color: const Color(0xFF2E8B4B), width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Color(0xFFDDECE2), spreadRadius: 4.5),
-                ],
-              ),
+            top: 231,
+            width: 259,
+            height: 61,
+            child: Stack(
+              key: const Key('pickup-code-boxes'),
+              children: [
+                for (var i = 0; i < 4; i++)
+                  Positioned(
+                    left: _CodeCard._boxLefts[i],
+                    top: i == 0 ? 0 : 1,
+                    child: _CodeBox(
+                      active: i == value.length,
+                      character: i < value.length ? value[i] : null,
+                      error: error,
+                    ),
+                  ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  width: 259,
+                  height: 61,
+                  child: TextField(
+                    key: const Key('pickup-code-field'),
+                    controller: controller,
+                    focusNode: focusNode,
+                    maxLength: 4,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    showCursor: false,
+                    enableInteractiveSelection: false,
+                    style: const TextStyle(
+                      color: Colors.transparent,
+                      fontSize: 1,
+                    ),
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          Positioned(
-            left: 122,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
+          if (error)
+            const Positioned(
+              left: 53,
+              top: 295,
+              width: 258,
+              height: 14,
+              child: _Label(
+                'Incorrect code. Try again.',
+                TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.attentionRed,
+                ),
+                width: 258,
+                height: 14,
               ),
             ),
-          ),
-          Positioned(
-            left: 190,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 258,
-            top: 190,
-            child: Container(
-              width: 54,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
+class _CodeBox extends StatelessWidget {
+  const _CodeBox({
+    required this.active,
+    required this.character,
+    required this.error,
+  });
+
+  final bool active;
+  final String? character;
+  final bool error;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool filled = character != null;
+    final Color borderColor = error
+        ? AppColors.attentionRed
+        : active
+        ? const Color(0xFF2E8B4B)
+        : const Color(0xFFDFE3E8);
+    final double borderWidth = error || active ? 2 : (filled ? 1 : 0);
+
+    return Container(
+      width: 54,
+      height: 60,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: active || filled ? Colors.white : const Color(0xFFF3F6E6),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        border: borderWidth == 0
+            ? null
+            : Border.all(color: borderColor, width: borderWidth),
+        boxShadow: active && !error
+            ? const [BoxShadow(color: Color(0xFFDDECE2), spreadRadius: 4.5)]
+            : null,
+      ),
+      child: character != null
+          ? Text(
+              character!,
+              style: const TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+class _CodeHintBox extends StatelessWidget {
+  const _CodeHintBox({required this.character});
+
+  final String character;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+        border: Border.all(color: const Color(0xFFDFE3E8)),
+      ),
+      child: Text(
+        character,
+        style: const TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+}
+
 class _ContinueButton extends StatefulWidget {
-  const _ContinueButton();
+  const _ContinueButton({required this.locked, required this.onSubmit});
+
+  final bool locked;
+  final bool Function() onSubmit;
 
   @override
   State<_ContinueButton> createState() => _ContinueButtonState();
@@ -760,6 +959,7 @@ class _ContinueButtonState extends State<_ContinueButton>
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
+    if (widget.locked) return;
     _controller.stop();
     setState(() {
       _knobX = (_knobX + details.delta.dx).clamp(_start, _end);
@@ -767,9 +967,15 @@ class _ContinueButtonState extends State<_ContinueButton>
   }
 
   void _onDragEnd(DragEndDetails details) {
+    if (widget.locked) return;
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
-      setState(() => _knobX = _end);
-      goToOrderPickupSuccess(context);
+      final bool done = widget.onSubmit();
+      if (done) {
+        setState(() => _knobX = _end);
+      } else {
+        _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
+        _controller.reverse();
+      }
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -779,30 +985,47 @@ class _ContinueButtonState extends State<_ContinueButton>
   @override
   Widget build(BuildContext context) {
     return SlideDragDetector(
-      onTap: () => goToOrderPickupSuccess(context),
+      onTap: widget.locked
+          ? null
+          : () {
+              if (widget.onSubmit()) {
+                setState(() => _knobX = _end);
+              }
+            },
       onUpdate: _onDragUpdate,
       onEnd: _onDragEnd,
-      child: Container(
+      child: AnimatedContainer(
+        key: const Key('pickup-slide-bar'),
+        duration: const Duration(milliseconds: 200),
         width: 364,
         height: 58,
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(Radius.circular(29)),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF607E6A), Color(0xFF71CA93)],
+          gradient: LinearGradient(
+            colors: widget.locked
+                ? const [Color(0xFF607E6A), Color(0xFF71CA93)]
+                : const [Color(0xFF4FC96F), Color(0xFF2FBF71)],
           ),
           border: Border.all(color: const Color(0x14000000)),
+          boxShadow: widget.locked
+              ? null
+              : const [BoxShadow(color: Color(0x40C6E96D), blurRadius: 14)],
         ),
         child: Stack(
           children: [
             Positioned(
               left: _knobX,
               top: 4,
-              child: Container(
+              child: AnimatedContainer(
+                key: const Key('pickup-slide-knob'),
+                duration: const Duration(milliseconds: 200),
                 alignment: Alignment.center,
                 width: 50,
                 height: 50,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF9EC463),
+                decoration: BoxDecoration(
+                  color: widget.locked
+                      ? const Color(0xFF9EC463)
+                      : const Color(0xFFC6E96D),
                   shape: BoxShape.circle,
                 ),
                 child: const CustomPaint(

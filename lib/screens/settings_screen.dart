@@ -7,7 +7,6 @@ import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import 'about_vpnexues_screen.dart';
 import 'app_language_screen.dart';
-import 'help_support_screen.dart';
 
 /// Settings — replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -39,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
               Positioned(left: 25, top: 127, child: _PreferencesCard()),
               Positioned(left: 25, top: 253, child: _NotificationsCard()),
               Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(left: 25, top: 678, child: _LogoutCard()),
+              Positioned(left: 25, top: 622, child: _LogoutCard()),
               Positioned(
                 left: 0,
                 top: 73,
@@ -180,7 +179,7 @@ class _SupportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 168,
+      height: 112,
       children: [
         const Positioned(
           left: 22,
@@ -194,29 +193,6 @@ class _SupportCard extends StatelessWidget {
         Positioned(
           left: 21,
           top: 53,
-          child: GestureDetector(
-            key: const Key('settings-help'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const HelpSupportScreen(),
-              ),
-            ),
-            child: const _MenuRow(
-              icon: 'assets/settings/ic_help.png',
-              iconSize: 16,
-              title: 'Help & Support',
-              titleWidth: 90,
-              subtitle: 'Talk to our team',
-              subtitleWidth: 78,
-              chevron: true,
-            ),
-          ),
-        ),
-        const Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
-          left: 21,
-          top: 111,
           child: GestureDetector(
             key: const Key('settings-about'),
             behavior: HitTestBehavior.opaque,

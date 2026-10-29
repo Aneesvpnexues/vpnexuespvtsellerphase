@@ -126,14 +126,16 @@ class SellerHomeScreen extends StatelessWidget {
                           top: 793,
                           child: _SectionTitle('Needs Attention'),
                         ),
-                        const Positioned(
+                        Positioned(
                           left: 24,
                           top: 818,
                           child: _AttentionRow(
+                            key: const Key('home-attention-orders'),
                             title: '2 New orders',
                             subtitle: 'Hurry up',
                             barColor: AppColors.attentionAmber,
                             boxColor: AppColors.attentionAmberBg,
+                            onTap: () => goToOrders(context),
                           ),
                         ),
                         if (lowStock != null)
@@ -141,11 +143,16 @@ class SellerHomeScreen extends StatelessWidget {
                             left: 24,
                             top: 892,
                             child: _AttentionRow(
+                              key: const Key('home-attention-low-stock'),
                               title: '${lowStock.name} low',
                               subtitle:
                                   'Only ${lowStock.quantity}${lowStock.unit} remaining',
                               barColor: AppColors.attentionRed,
                               boxColor: AppColors.attentionRedBg,
+                              onTap: () => goToProductDetails(
+                                context,
+                                product: lowStock,
+                              ),
                             ),
                           ),
                         Positioned(
@@ -881,97 +888,104 @@ class _SalesStat extends StatelessWidget {
 
 class _AttentionRow extends StatelessWidget {
   const _AttentionRow({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.barColor,
     required this.boxColor,
+    required this.onTap,
   });
 
   final String title;
   final String subtitle;
   final Color barColor;
   final Color boxColor;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(17)),
-        border: Border.all(color: const Color(0x12000000)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 1,
-            top: 15,
-            child: Container(
-              width: 4,
-              height: 34,
-              decoration: BoxDecoration(
-                color: barColor,
-                borderRadius: const BorderRadius.all(Radius.circular(2)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 22,
-            top: 15,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: boxColor,
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
-              ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                size: 23,
-                color: Color(0xFF5A4A1A),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 76,
-            top: 12,
-            width: 260,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 364,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.all(Radius.circular(17)),
+          border: Border.all(color: const Color(0x12000000)),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 1,
+              top: 15,
+              child: Container(
+                width: 4,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0x8A000000),
-                  ),
+              ),
+            ),
+            Positioned(
+              left: 22,
+              top: 15,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: boxColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
                 ),
-              ],
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 23,
+                  color: Color(0xFF5A4A1A),
+                ),
+              ),
             ),
-          ),
-          const Positioned(
-            right: 12,
-            top: 24,
-            child: Icon(
-              Icons.chevron_right,
-              size: 16,
-              color: Color(0xFF8A8A8A),
+            Positioned(
+              left: 76,
+              top: 12,
+              width: 260,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0x8A000000),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Positioned(
+              right: 12,
+              top: 24,
+              child: Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: Color(0xFF8A8A8A),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
