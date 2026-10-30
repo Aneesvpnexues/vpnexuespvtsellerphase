@@ -18,6 +18,19 @@ Future<void> pumpFlow(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    Step03BusinessDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async => '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
+  });
+
+  tearDown(() => Step03BusinessDetailsScreen.debugProfileSaver = null);
+
   testWidgets('login and onboarding flow ends at the home page', (
     tester,
   ) async {

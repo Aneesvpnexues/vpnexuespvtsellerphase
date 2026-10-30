@@ -42,6 +42,14 @@ class AddProductsScreen extends StatefulWidget {
   final ProductPhotoPicker? photoPicker;
   final ProductSaver? productSaver;
 
+  /// Fallbacks for tests that open this screen through [goToAddProduct],
+  /// which builds it without injectable dependencies.
+  @visibleForTesting
+  static ProductPhotoPicker? debugPhotoPicker;
+
+  @visibleForTesting
+  static ProductSaver? debugProductSaver;
+
   static const int maxPhotos = 5;
   static const String tomatoAsset = 'assets/products/tomato.png';
   static const double designWidth = 412;
@@ -90,7 +98,9 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
 
     ProductPhoto? photo;
     try {
-      photo = await (widget.photoPicker ?? _pickPhotoFromGallery)();
+      photo = await (widget.photoPicker ??
+          AddProductsScreen.debugPhotoPicker ??
+          _pickPhotoFromGallery)();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,7 +264,9 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       return;
     }
     try {
-      await (widget.productSaver ?? _saveToSupabase)(draft, _photos);
+      await (widget.productSaver ??
+          AddProductsScreen.debugProductSaver ??
+          _saveToSupabase)(draft, _photos);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Product added')));

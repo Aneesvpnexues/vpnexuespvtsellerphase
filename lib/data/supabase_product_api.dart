@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -20,18 +21,21 @@ class SupabaseProductApi {
   final String _supabaseUrl;
   final String _anonKey;
 
-  Future<List<Product>> fetchProducts({String? userId}) async {
+  Future<List<Product>> fetchProducts() async {
     if (_supabaseUrl.isEmpty || _anonKey.isEmpty) {
       throw const ApiException('Supabase is not configured.');
     }
     // No `order=` here: PostgREST rejects the request while the table still
     // has no `id` column (008_seller_products_id_access.sql). Newest first is
     // applied client side instead so the read never depends on it.
+    //
+    // No `user_id=` filter either: `sellers_products.user_id` is a leftover
+    // bigint from the auth era while every id this app generates is text, so
+    // the filter would fail with "invalid input syntax for type bigint".
+    // This app has exactly one seller (no login), so the whole table belongs
+    // to the current seller.
     final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/sellers_products').replace(
-      queryParameters: <String, String>{
-        'select': '*',
-        if (userId != null && userId.isNotEmpty) 'user_id': 'eq.$userId',
-      },
+      queryParameters: const <String, String>{'select': '*'},
     );
     final http.Response response = await _client.get(
       uri,
@@ -91,11 +95,22 @@ class SupabaseProductApi {
     required String ifsc,
   }) async {
     _ensureConfigured();
+    String effectiveUserId = userId.trim();
+    if (effectiveUserId.isEmpty) {
+      effectiveUserId = await _existingProfileId();
+    }
+    if (effectiveUserId.isEmpty) {
+      throw const ApiException(
+        'Could not find your seller profile id. Complete Business details '
+        '(STEP 03) first, then try again.',
+      );
+    }
     final http.Response response = await _client.post(
       Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details'),
       headers: _writeHeaders,
       body: jsonEncode(<String, dynamic>{
-        'user_id': userId.trim(),
+        'id': DateTime.now().millisecondsSinceEpoch,
+        'user_id': effectiveUserId,
         'account_houlder_name': holderName.trim(),
         'bank_name': bankName.trim(),
         'account_number': accountNumber.trim(),
@@ -104,7 +119,11 @@ class SupabaseProductApi {
     );
     debugPrint('[supabase_product_api] saveBankDetails status=${response.statusCode} body=${response.body}');
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _serverError(response, 'Could not save bank details.');
+      throw _serverError(
+        response,
+        'Could not save bank details.',
+        migration: '010_seller_bank_details_id.sql',
+      );
     }
   }
 
@@ -120,7 +139,75 @@ class SupabaseProductApi {
     );
     debugPrint('[supabase_product_api] deleteBankDetails status=${response.statusCode} body=${response.body}');
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _serverError(response, 'Could not delete bank details.');
+      throw _serverError(
+        response,
+        'Could not delete bank details.',
+        migration: '010_seller_bank_details_id.sql',
+      );
+    }
+  }
+
+  /// Saves KYC verification document URLs to `seller_verify_your_details`.
+  ///
+  /// The table's real columns are `aadhaar_card`, `pan_card` and
+  /// `business_registration` (they used to be bytea - migration 012 makes them
+  /// text and turns row-level security off so the anon role can write).
+  /// [aadhaarUrl], [panUrl], [businessUrl] are Cloudinary `secure_url` values
+  /// obtained after uploading each document image.
+  /// If a document was not uploaded, pass an empty string or null.
+  Future<void> saveVerifyDetails({
+    required String userId,
+    String? aadhaarUrl,
+    String? panUrl,
+    String? businessUrl,
+  }) async {
+    _ensureConfigured();
+    String effectiveUserId = userId.trim();
+    if (effectiveUserId.isEmpty) {
+      effectiveUserId = await _existingProfileId();
+    }
+    if (effectiveUserId.isEmpty) {
+      throw const ApiException(
+        'Could not find your seller profile id. Complete Business details '
+        '(STEP 03) first, then try again.',
+      );
+    }
+    const String migration = '012_seller_verify_your_details.sql';
+    // on_conflict is a query parameter, not a header: PostgREST only reads it
+    // from the URL when resolving the merge. `user_id` is the primary key of
+    // this table, so one row per seller is merged rather than duplicated.
+    final Uri uri = Uri.parse(
+      '$_supabaseUrl/rest/v1/seller_verify_your_details',
+    ).replace(
+      queryParameters: <String, String>{'on_conflict': 'user_id'},
+    );
+    final http.Response response = await _client.post(
+      uri,
+      headers: <String, String>{
+        ..._writeHeaders,
+        // Upsert: if a row for this user already exists, update it.
+        'Prefer': 'return=representation,resolution=merge-duplicates',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'user_id': effectiveUserId,
+        if (aadhaarUrl != null && aadhaarUrl.trim().isNotEmpty)
+          'aadhaar_card': aadhaarUrl.trim(),
+        if (panUrl != null && panUrl.trim().isNotEmpty)
+          'pan_card': panUrl.trim(),
+        if (businessUrl != null && businessUrl.trim().isNotEmpty)
+          'business_registration': businessUrl.trim(),
+      }),
+    );
+    debugPrint(
+      '[supabase_product_api] saveVerifyDetails status=${response.statusCode} '
+      'body=${response.body}',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(
+        response,
+        'Could not save verification details.',
+        migration: migration,
+      );
     }
   }
 
@@ -128,18 +215,18 @@ class SupabaseProductApi {
     _ensureConfigured();
     _ensureId(product.id, 'update');
     final http.Response response = await _client.patch(
-      _productUri(product.id, userId: product.userId),
+      _productUri(product.id),
       headers: _writeHeaders,
       body: jsonEncode(_rowFromProduct(product)),
     );
     return _productFromWriteResponse(response, 'Could not update the product.');
   }
 
-  Future<void> deleteProduct(String id, {String? userId}) async {
+  Future<void> deleteProduct(String id) async {
     _ensureConfigured();
     _ensureId(id, 'delete');
     final http.Response response = await _client.delete(
-      _productUri(id, userId: userId),
+      _productUri(id),
       headers: _headers,
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -161,12 +248,12 @@ class SupabaseProductApi {
     'Prefer': 'return=representation',
   };
 
-  Uri _productUri(String id, {String? userId}) {
+  // Keyed by `id` only. A `user_id` filter would be sent into an auth-era
+  // bigint column with this app's text ids, which PostgREST answers with
+  // SQLSTATE 22P02.
+  Uri _productUri(String id) {
     return Uri.parse('$_supabaseUrl/rest/v1/sellers_products').replace(
-      queryParameters: <String, String>{
-        'id': 'eq.$id',
-        if (userId != null && userId.isNotEmpty) 'user_id': 'eq.$userId',
-      },
+      queryParameters: <String, String>{'id': 'eq.$id'},
     );
   }
 
@@ -185,24 +272,145 @@ class SupabaseProductApi {
     }
   }
 
-  ApiException _serverError(http.Response response, String fallback) {
+  ApiException _serverError(
+    http.Response response,
+    String fallback, {
+    String migration = '008_seller_products_id_access.sql',
+  }) {
     final String message = apiErrorMessage(response, fallback);
     final String lower = message.toLowerCase();
+    // PostgREST phrases this two ways: "Could not find the 'x' column of
+    // 'y' in the schema cache" (PGRST204) and "column y.x does not exist"
+    // (42703) for a filter on a column that is not there yet.
     final bool needsSchema = response.statusCode == 400 &&
-        lower.contains('could not find the column');
+        (lower.contains('schema cache') ||
+            lower.contains('could not find the') ||
+            response.body.contains('PGRST204') ||
+            (lower.contains('column') && lower.contains('does not exist')));
     final bool needsGrant = response.statusCode == 401 ||
         response.statusCode == 403 ||
         lower.contains('permission denied') ||
         lower.contains('row-level security');
+    // SQLSTATE 23503: the id the app generated does not exist in the table
+    // the leftover auth-era foreign key points at.
+    final bool needsForeignKey =
+        lower.contains('foreign key constraint') ||
+        response.body.contains('23503');
+    if (needsForeignKey) {
+      return ApiException(
+        'Supabase still has an auth-era foreign key on this table. Run '
+        '013_drop_seller_user_id_foreign_keys.sql in the Supabase SQL '
+        'Editor, then try again. ($message)',
+        statusCode: response.statusCode,
+      );
+    }
     if (needsSchema || needsGrant) {
       return ApiException(
         'Supabase is not ready for writes yet. Run '
-        '008_seller_products_id_access.sql in the Supabase SQL Editor, '
-        'then try again. ($message)',
+        '$migration in the Supabase SQL Editor, then try again. ($message)',
         statusCode: response.statusCode,
       );
     }
     return ApiException(message, statusCode: response.statusCode);
+  }
+
+  void _requireOk(http.Response response, String fallback, String migration) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(response, fallback, migration: migration);
+    }
+  }
+
+  Future<String> saveSellerProfile({
+    String? userId,
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) async {
+    _ensureConfigured();
+    const String migration = '009_seller_profiles_write.sql';
+    final String now = DateTime.now().toUtc().toIso8601String();
+    final Map<String, dynamic> body = <String, dynamic>{
+      'display_name': name.trim(),
+      'phone_number': mobile.trim(),
+      'location': businessLocation.trim(),
+      'business_address': businessAddress.trim(),
+      'business_name': businessName.trim(),
+      'seller_type': sellerType.trim().isEmpty ? 'farmer' : sellerType.trim(),
+      'updated_at': now,
+    };
+
+    final String existing = await _existingProfileId();
+    if (existing.isNotEmpty) {
+      final Map<String, dynamic> patch = Map<String, dynamic>.from(body)
+        ..removeWhere((_, Object? value) => value is String && value.isEmpty);
+      final http.Response response = await _client.patch(
+        Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+          queryParameters: <String, String>{'user_id': 'eq.$existing'},
+        ),
+        headers: _writeHeaders,
+        body: jsonEncode(patch),
+      );
+      debugPrint(
+        '[supabase_product_api] saveSellerProfile PATCH ${response.statusCode}',
+      );
+      _requireOk(response, 'Could not save business profile.', migration);
+      return existing;
+    }
+
+    final String generatedId = _profileId(userId);
+    body['user_id'] = generatedId;
+    body['created_at'] = now;
+    final http.Response response = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_profiles'),
+      headers: _writeHeaders,
+      body: jsonEncode(body),
+    );
+    debugPrint(
+      '[supabase_product_api] saveSellerProfile POST ${response.statusCode}',
+    );
+    _requireOk(response, 'Could not save business profile.', migration);
+    final Object? decoded = _decode(response.body);
+    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+      final String saved =
+          ((decoded.first as Map<String, dynamic>)['user_id'] ?? '')
+              .toString()
+              .trim();
+      if (saved.isNotEmpty) return saved;
+    }
+    return generatedId;
+  }
+
+  Future<String> _existingProfileId() async {
+    final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+      queryParameters: const <String, String>{'select': 'user_id', 'limit': '1'},
+    );
+    try {
+      final http.Response response = await _client.get(uri, headers: _headers);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return '';
+      }
+      final Object? decoded = _decode(response.body);
+      if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+        final String id =
+            ((decoded.first as Map<String, dynamic>)['user_id'] ?? '')
+                .toString()
+                .trim();
+        if (id.isNotEmpty) return id;
+      }
+    } catch (_) {
+    }
+    return '';
+  }
+
+  static String _profileId(String? userId) {
+    final String trimmed = (userId ?? '').trim();
+    if (trimmed.isNotEmpty) return trimmed;
+    final Random random = Random();
+    String hex(int len) => List.generate(len, (_) => random.nextInt(16).toRadixString(16)).join();
+    return '${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}';
   }
 
   Product _productFromWriteResponse(http.Response response, String fallback) {
@@ -234,7 +442,8 @@ class SupabaseProductApi {
       'quantity': draft.quantity,
       'product_descrption': draft.description,
       'product_avaliblit': draft.status.apiValue,
-      if (draft.userId.isNotEmpty) 'user_id': draft.userId,
+      // `user_id` is intentionally omitted: sellers_products.user_id is an
+      // auth-era bigint, and this single-seller app has no owner to record.
       'product_img_1': images.isNotEmpty ? images[0] : null,
       'product_img_2': images.length > 1 ? images[1] : null,
       'product_img_3': images.length > 2 ? images[2] : null,
@@ -271,10 +480,30 @@ class SupabaseProductApi {
     }
   }
 
+  /// Decodes a Cloudinary URL that may have been stored as bytea hex in Supabase.
+  /// PostgREST returns bytea columns as `\xHEX`; this converts them back to text.
+  static String _decodeImageUrl(Object? raw) {
+    if (raw == null) return '';
+    final String s = raw.toString().trim();
+    if (s.length >= 2 && s[0] == '\\' && s[1] == 'x') {
+      try {
+        final String hex = s.substring(2); // strip leading \x prefix
+        final List<int> bytes = List<int>.generate(
+          hex.length ~/ 2,
+          (int i) => int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16),
+        );
+        return String.fromCharCodes(bytes);
+      } catch (_) {
+        // fall through and return the raw string
+      }
+    }
+    return s;
+  }
+
   static Product _productFromRow(Map<String, dynamic> row) {
     final List<String> imageUrls = <String>[];
     for (int index = 1; index <= 5; index++) {
-      final String value = (row['product_img_$index'] ?? '').toString().trim();
+      final String value = _decodeImageUrl(row['product_img_$index']);
       if (value.isNotEmpty) imageUrls.add(value);
     }
     debugPrint('[supabase_product_api] _productFromRow imageUrls=${imageUrls.length} keys=${row.keys.toList()}');

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/product_store.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/app_language_screen.dart';
 import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
@@ -33,6 +35,28 @@ void main() {
     expect(find.text('version 1.0'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
   });
+
+  testWidgets(
+    'the mobile field edits SellerProfileStore, not ProductStore.userId',
+    (tester) async {
+      // ProductStore.userId is the id of the seller_profiles row that the
+      // KYC and bank upserts are keyed by, so the Settings mobile field must
+      // not overwrite it.
+      const String profileRowId = '26605269-8989-4719-a942-e52d6cfa13ef';
+      ProductStore.instance.userId = profileRowId;
+      addTearDown(() => ProductStore.instance.userId = '');
+      final SellerProfileStore profile = SellerProfileStore.instance;
+      final String originalMobile = profile.mobile;
+      addTearDown(() => profile.mobile = originalMobile);
+
+      await pumpScreen(tester);
+      await tester.enterText(find.byType(TextField), '9876543210');
+      await tester.pump();
+
+      expect(profile.mobile, '9876543210');
+      expect(ProductStore.instance.userId, profileRowId);
+    },
+  );
 
   testWidgets('layout matches the 412x917 design geometry', (tester) async {
     await pumpScreen(tester);

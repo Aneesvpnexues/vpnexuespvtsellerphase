@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -16,7 +18,14 @@ import '../widgets/label_text.dart';
 /// Built against a 412x917 artboard. Same zoom-scroll pattern as 117/123/132/135:
 /// fit width, scroll vertically.
 class PersonalDetailsScreen extends StatefulWidget {
-  const PersonalDetailsScreen({super.key});
+  const PersonalDetailsScreen({super.key, this.profileSaver});
+
+  /// Persists the profile. Defaults to [SupabaseProductApi.saveSellerProfile].
+  final SellerProfileSaver? profileSaver;
+
+  /// Fallback for tests that cannot inject [profileSaver].
+  @visibleForTesting
+  static SellerProfileSaver? debugProfileSaver;
 
   static const double designWidth = 412;
   static const double designHeight = 917;
@@ -56,7 +65,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _save() {
+  Future<void> _save() async {
     final String name = _name.text.trim();
     final String mobile = _mobile.text.trim();
     final String email = _email.text.trim();
@@ -77,14 +86,54 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     }
 
     FocusScope.of(context).unfocus();
+    final SellerProfileSaver save = widget.profileSaver ??
+        PersonalDetailsScreen.debugProfileSaver ??
+        _saveToSupabase;
+    try {
+      await save(
+        name: name,
+        mobile: mobile,
+        sellerType: _sellerType.dbValue,
+        businessName: '',
+        businessLocation: '',
+        businessAddress: '',
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showMessage(error.message);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Could not save profile. Please try again.');
+      return;
+    }
     SellerProfileStore.instance.save(
       name: name,
       mobile: mobile,
       email: email,
       sellerType: _sellerType,
     );
+    if (!mounted) return;
     _showMessage('Personal details saved');
     Navigator.of(context).maybePop();
+  }
+
+  static Future<String> _saveToSupabase({
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) {
+    return SupabaseProductApi().saveSellerProfile(
+      name: name,
+      mobile: mobile,
+      sellerType: sellerType,
+      businessName: businessName,
+      businessLocation: businessLocation,
+      businessAddress: businessAddress,
+    );
   }
 
   @override

@@ -12,6 +12,7 @@ import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
+import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -76,7 +77,19 @@ final _photoBytes = base64Decode(
 );
 
 void main() {
-  setUp(SellerProfileStore.instance.reset);
+  setUp(() {
+    SellerProfileStore.instance.reset();
+    PersonalDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async => '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
+  });
+
+  tearDown(() => PersonalDetailsScreen.debugProfileSaver = null);
 
   group('ProfileScreen (Account, Zeplin 151)', () {
     testWidgets('renders the Account content', (tester) async {
@@ -814,7 +827,9 @@ void main() {
     testWidgets('Continue adds the product with the entered details', (
       tester,
     ) async {
-      await pumpAddProducts(tester);
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
 
       await tester.enterText(
         find.byKey(const ValueKey('product-name')),
@@ -826,6 +841,15 @@ void main() {
       );
       await tester.tap(find.text('Fruits'));
       await tester.pump();
+
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-photo')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
 
       await tester.dragUntilVisible(
         find.text('Draft'),
@@ -852,7 +876,7 @@ void main() {
       expect(product.unit, 'kg');
       expect(product.quantity, 50);
       expect(product.status, ProductStatus.draft);
-      expect(product.photos, isEmpty);
+      expect(product.photos, hasLength(1));
     });
 
     testWidgets('Continue includes the selected photos', (tester) async {

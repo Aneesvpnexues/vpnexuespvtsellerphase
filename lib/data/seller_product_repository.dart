@@ -16,14 +16,12 @@ class SellerProductRepository {
     ProductDraft draft,
     List<ProductPhoto> photos,
   ) async {
-    final String userId = ProductStore.instance.userId;
-    final ProductDraft draftWithUser = draft.copyWith(userId: userId);
     final List<String> imageUrls = <String>[];
     for (final ProductPhoto photo in photos.take(5)) {
       imageUrls.add(await _uploader.upload(photo));
     }
     final Product product = await _api.createProduct(
-      draftWithUser,
+      draft,
       imageUrls: imageUrls,
     );
     ProductStore.instance.upsert(product);
@@ -31,22 +29,18 @@ class SellerProductRepository {
   }
 
   Future<Product> updateProduct(Product product) async {
-    final String userId = ProductStore.instance.userId;
-    final Product updated = await _api.updateProduct(
-      product.copyWith(userId: userId),
-    );
+    final Product updated = await _api.updateProduct(product);
     ProductStore.instance.updateProduct(updated);
     return updated;
   }
 
   Future<void> deleteProduct(String id) async {
-    final String userId = ProductStore.instance.userId;
-    await _api.deleteProduct(id, userId: userId);
+    await _api.deleteProduct(id);
     ProductStore.instance.removeProduct(id);
   }
 
   Future<void> refresh(ProductStore store) async {
-    final products = await _api.fetchProducts(userId: store.userId);
+    final products = await _api.fetchProducts();
     store.replaceAll(products);
   }
 }

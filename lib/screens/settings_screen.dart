@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -68,7 +68,7 @@ class _PreferencesCardState extends State<_PreferencesCard> {
   @override
   void initState() {
     super.initState();
-    _mobileController.text = ProductStore.instance.userId;
+    _mobileController.text = SellerProfileStore.instance.mobile;
   }
 
   @override
@@ -135,7 +135,8 @@ class _PreferencesCardState extends State<_PreferencesCard> {
                 border: OutlineInputBorder(),
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              onChanged: (value) => ProductStore.instance.userId = value,
+              onChanged: (value) =>
+                  SellerProfileStore.instance.mobile = value,
             ),
           ),
         ),

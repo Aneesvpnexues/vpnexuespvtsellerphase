@@ -157,10 +157,6 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       _showMessage('Select your bank.');
       return;
     }
-    if (!_ifscIsValid) {
-      _showMessage('Enter a valid 11-character IFSC code.');
-      return;
-    }
 
     try {
       await SupabaseProductApi().saveBankDetails(

@@ -1,6 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../data/cloudinary_upload_api.dart';
+import '../data/product_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -12,10 +17,12 @@ typedef DocumentPicker = Future<PickedDocument?> Function();
 
 /// A document selected from the device's file browser.
 class PickedDocument {
-  const PickedDocument({required this.name, this.path});
+  const PickedDocument({required this.name, this.path, this.bytes, this.mimeType});
 
   final String name;
   final String? path;
+  final List<int>? bytes;
+  final String? mimeType;
 
   bool get isPdf => name.toLowerCase().endsWith('.pdf');
 }
@@ -31,7 +38,8 @@ enum _DocumentSlot { aadhaar, pan, business }
 /// sizes the [Artboard] viewport scales it down on small screens and up (capped
 /// at 1.5x) on large ones instead of overflowing. The back arrow pops
 /// the route; each document card opens the system file browser for an image or
-/// PDF; Continue opens [BankDetaileScreen].
+/// PDF; Continue uploads images to Cloudinary, saves URLs to Supabase, then
+/// opens [BankDetaileScreen].
 class VerifyDetaileScreen extends StatefulWidget {
   const VerifyDetaileScreen({super.key, this.documentPicker});
 
@@ -48,6 +56,7 @@ class VerifyDetaileScreen extends StatefulWidget {
 class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
   final Map<_DocumentSlot, PickedDocument> _documents = {};
   _DocumentSlot? _pickingSlot;
+  bool _saving = false;
 
   Future<void> _pickDocument(_DocumentSlot slot) async {
     if (_pickingSlot != null) return;
@@ -72,13 +81,107 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
   }
 
   Future<PickedDocument?> _pickDocumentFromDevice() async {
-    final file = await FilePicker.pickFile(
+    // file_picker 13 exposes static methods (there is no `.platform`).
+    final List<PlatformFile> files = await FilePicker.pickFiles(
       dialogTitle: 'Select document',
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
     );
-    if (file == null) return null;
-    return PickedDocument(name: file.name, path: file.path);
+    if (files.isEmpty) return null;
+    final PlatformFile file = files.first;
+
+    // The platform returns a handle, so read it once here; Continue needs the
+    // bytes to upload the document to Cloudinary.
+    Uint8List? bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      bytes = null;
+    }
+    return PickedDocument(
+      name: file.name,
+      path: file.path,
+      bytes: bytes == null || bytes.isEmpty ? null : bytes,
+      mimeType: _mimeFromName(file.name),
+    );
+  }
+
+  String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  /// Uploads a picked document to Cloudinary and returns the secure URL.
+  /// Returns null if the document has no bytes (e.g. only path was available).
+  Future<String?> _uploadDocument(PickedDocument doc) async {
+    final List<int>? bytes = doc.bytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    final uploader = CloudinaryUploadApi(folder: 'seller_kyc');
+    return uploader.upload(
+      ProductPhoto(
+        bytes: Uint8List.fromList(bytes),
+        mimeType: doc.mimeType ?? 'image/jpeg',
+        filename: doc.name,
+      ),
+    );
+  }
+
+  Future<void> _onContinue() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      // Upload each picked document to Cloudinary.
+      String? aadhaarUrl;
+      String? panUrl;
+      String? businessUrl;
+
+      if (_documents.containsKey(_DocumentSlot.aadhaar)) {
+        aadhaarUrl = await _uploadDocument(_documents[_DocumentSlot.aadhaar]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.pan)) {
+        panUrl = await _uploadDocument(_documents[_DocumentSlot.pan]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.business)) {
+        businessUrl = await _uploadDocument(_documents[_DocumentSlot.business]!);
+      }
+
+      // Save URLs to Supabase.
+      if (aadhaarUrl != null || panUrl != null || businessUrl != null) {
+        final api = SupabaseProductApi();
+        await api.saveVerifyDetails(
+          userId: ProductStore.instance.userId,
+          aadhaarUrl: aadhaarUrl,
+          panUrl: panUrl,
+          businessUrl: businessUrl,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -217,16 +320,20 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                     onTap: () => _pickDocument(_DocumentSlot.business),
                   ),
                 ),
+                // Loading overlay while uploading / saving.
+                if (_saving)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Color(0x66FFFFFF),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
               ],
             ),
           ),
           ContinueButton(
             buttonKey: const Key('verify-continue'),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const BankDetaileScreen(),
-              ),
-            ),
+            onTap: _onContinue,
           ),
         ],
       ),

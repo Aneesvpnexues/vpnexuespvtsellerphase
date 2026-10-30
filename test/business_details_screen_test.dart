@@ -34,6 +34,32 @@ Finder _continueButton() => find.byWidgetPredicate(
 );
 
 void main() {
+  late List<Map<String, String>> savedProfiles;
+
+  setUp(() {
+    savedProfiles = <Map<String, String>>[];
+    Step03BusinessDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async {
+      savedProfiles.add(<String, String>{
+        'name': name,
+        'mobile': mobile,
+        'seller_type': sellerType,
+        'business_name': businessName,
+        'location': businessLocation,
+        'business_address': businessAddress,
+      });
+      return '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
+    };
+  });
+
+  tearDown(() => Step03BusinessDetailsScreen.debugProfileSaver = null);
+
   testWidgets('renders the STEP 03 content', (tester) async {
     await pumpScreen(tester);
 
@@ -288,6 +314,17 @@ void main() {
 
     expect(find.text('Verify your'), findsOneWidget);
     expect(find.text('Verification Details'), findsOneWidget);
+
+    // The profile is saved before the screen moves on.
+    expect(savedProfiles, hasLength(1));
+    expect(savedProfiles.single, <String, String>{
+      'name': 'Ravi',
+      'mobile': '+91 12345 67890',
+      'seller_type': 'farmer',
+      'business_name': 'Green Farm',
+      'location': 'Salem, Tamil Nadu',
+      'business_address': '12 Main Street',
+    });
 
     // Back arrow returns to STEP 03.
     await tester.tap(find.byIcon(Icons.arrow_back));

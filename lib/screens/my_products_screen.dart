@@ -36,15 +36,13 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
 
   List<Product> _visibleProducts(List<Product> products) {
     final query = _query.trim().toLowerCase();
-    final userId = ProductStore.instance.userId.trim().toLowerCase();
     return [
       for (final product in products)
-        if (userId.isEmpty || product.userId.toLowerCase() == userId)
-          if (_filter.matches(product) &&
-              (query.isEmpty ||
-                  product.name.toLowerCase().contains(query) ||
-                  product.category.toLowerCase().contains(query)))
-            product,
+        if (_filter.matches(product) &&
+            (query.isEmpty ||
+                product.name.toLowerCase().contains(query) ||
+                product.category.toLowerCase().contains(query)))
+          product,
     ];
   }
 

@@ -1,5 +1,16 @@
 import 'package:flutter/foundation.dart';
 
+/// Persists a seller profile and returns the `user_id` the
+/// `public.seller_profiles` row is keyed by.
+typedef SellerProfileSaver = Future<String> Function({
+  required String name,
+  required String mobile,
+  required String sellerType,
+  required String businessName,
+  required String businessLocation,
+  required String businessAddress,
+});
+
 enum SellerType { farmer, trader, fpo }
 
 extension SellerTypeLabel on SellerType {
@@ -11,6 +22,18 @@ extension SellerTypeLabel on SellerType {
         return 'Trader';
       case SellerType.fpo:
         return 'FPO / Group';
+    }
+  }
+
+  /// Value stored in `public.seller_profiles.seller_type`.
+  String get dbValue {
+    switch (this) {
+      case SellerType.farmer:
+        return 'farmer';
+      case SellerType.trader:
+        return 'trader';
+      case SellerType.fpo:
+        return 'fpo';
     }
   }
 }
@@ -43,6 +66,14 @@ class SellerProfileStore extends ChangeNotifier {
   String get mobile => _mobile;
 
   String get email => _email;
+
+  /// Updates only the mobile number (used by the Settings screen, which must
+  /// not touch `ProductStore.userId` - that field is the id of the
+  /// `seller_profiles` row and drives the KYC/bank upserts).
+  set mobile(String value) {
+    _mobile = value.trim();
+    notifyListeners();
+  }
 
   SellerType get sellerType => _sellerType;
 

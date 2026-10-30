@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -17,7 +20,15 @@ import 'verify_detaile.dart';
 /// editable; the Continue button stays inert until every field has a value and
 /// then opens [VerifyDetaileScreen].
 class Step03BusinessDetailsScreen extends StatefulWidget {
-  const Step03BusinessDetailsScreen({super.key});
+  const Step03BusinessDetailsScreen({super.key, this.profileSaver});
+
+  /// Persists the profile. Defaults to [SupabaseProductApi.saveSellerProfile].
+  final SellerProfileSaver? profileSaver;
+
+  /// Fallback for tests that reach this screen through a navigation chain
+  /// (Step01 -> Step02 -> Step03) and cannot inject the saver themselves.
+  @visibleForTesting
+  static SellerProfileSaver? debugProfileSaver;
 
   static const String leavesAsset = 'assets/step03/leaves.png';
   static const double designWidth = 412;
@@ -74,11 +85,66 @@ class _Step03BusinessDetailsScreenState
     super.dispose();
   }
 
-  void _openVerifyDetails() {
+  Future<void> _openVerifyDetails() async {
     if (!_allFilled) return;
     FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final SellerProfileSaver save = widget.profileSaver ??
+        Step03BusinessDetailsScreen.debugProfileSaver ??
+        _saveToSupabase;
+    try {
+      await save(
+        name: _name.text.trim(),
+        mobile: _phone.text.trim(),
+        sellerType: SellerProfileStore.instance.sellerType.dbValue,
+        businessName: _business.text.trim(),
+        businessLocation: _location.text.trim(),
+        businessAddress: _address.text.trim(),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save business profile. Please try again.')),
+      );
+      return;
+    }
+
+    final SellerProfileStore profile = SellerProfileStore.instance;
+    profile.save(
+      name: _name.text.trim(),
+      mobile: _phone.text.trim(),
+      email: profile.email,
+      sellerType: profile.sellerType,
+    );
+
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+    );
+  }
+
+  static Future<String> _saveToSupabase({
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) {
+    return SupabaseProductApi().saveSellerProfile(
+      name: name,
+      mobile: mobile,
+      sellerType: sellerType,
+      businessName: businessName,
+      businessLocation: businessLocation,
+      businessAddress: businessAddress,
     );
   }
 

@@ -38,7 +38,19 @@ Future<void> pumpPushedScreen(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(SellerProfileStore.instance.reset);
+  setUp(() {
+    SellerProfileStore.instance.reset();
+    PersonalDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async => '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
+  });
+
+  tearDown(() => PersonalDetailsScreen.debugProfileSaver = null);
 
   testWidgets('renders the 159 personal details content', (tester) async {
     await pumpScreen(tester);
