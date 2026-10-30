@@ -54,3 +54,7 @@ app.*.map.json
 # Local runtime config (use assets/config/*.example.json)
 assets/config/supabase.json
 assets/config/cloudinary.json
+
+# Local-only folders (not pushed)
+.kilo/
+backend/
