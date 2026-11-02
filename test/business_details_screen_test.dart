@@ -219,6 +219,26 @@ void main() {
     ]);
   });
 
+  testWidgets('the keyboard scrolls the focused field above the inset', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    final field = tester.getRect(find.byKey(const Key('businessAddress')));
+    expect(field.bottom, lessThanOrEqualTo(917 - 360));
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;

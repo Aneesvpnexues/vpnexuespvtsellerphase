@@ -132,13 +132,34 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           iconBg: orders[i].iconBg,
                           iconColor: orders[i].iconColor,
                           items: orders[i].items,
-                          thumbs: orders[i].thumbs,
+                          thumbImages: orders[i].thumbImages,
                           extra: orders[i].extra,
                           price: orders[i].price,
                           status: orders[i].status,
                           onTap: () => _openOrder(orders[i]),
                         ),
                       ),
+                    Positioned(
+                      left: 24,
+                      top: 407,
+                      child: Container(
+                        width: 316,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6F0),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFB5D6A3), width: 2),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.hourglass_empty, size: 36, color: Colors.green[700]),
+                            const SizedBox(height: 8),
+                            const Text('More stores coming soon', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -174,7 +195,7 @@ class _Order {
     required this.iconBg,
     this.iconColor = const Color(0xFF5A4A1A),
     required this.items,
-    required this.thumbs,
+    required this.thumbImages,
     required this.extra,
     required this.price,
     required this.amount,
@@ -189,7 +210,7 @@ class _Order {
   final Color iconBg;
   final Color iconColor;
   final String items;
-  final int thumbs;
+  final List<String> thumbImages;
   final String extra;
   final String price;
   final int amount;
@@ -205,65 +226,16 @@ const _orders = <_Order>[
     recency: 4582,
     iconBg: AppColors.orderYellowBg,
     items: '4 items',
-    thumbs: 3,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ],
     extra: '+1',
     price: '\u20B92,400',
     amount: 2400,
     status: 'Accepted',
     opensDetails: true,
-  ),
-  _Order(
-    store: 'Hotel Green Leaf',
-    orderId: '#NX4581',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4581,
-    iconBg: AppColors.orderBlueBg,
-    items: '2 items',
-    thumbs: 2,
-    extra: '',
-    price: '\u20B91,400',
-    amount: 1400,
-    status: 'Accepted',
-  ),
-  _Order(
-    store: 'Annapoorna Mess',
-    orderId: '#NX4580',
-    date: '9 Mar 2024, 1:20 PM',
-    recency: 4580,
-    iconBg: AppColors.darkCard,
-    iconColor: Colors.white,
-    items: '5 items',
-    thumbs: 3,
-    extra: '+2',
-    price: '\u20B93,400',
-    amount: 3400,
-    status: 'Pending',
-  ),
-  _Order(
-    store: 'Daily Needs',
-    orderId: '#NX4579',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4579,
-    iconBg: AppColors.attentionRedBg,
-    items: '4 items',
-    thumbs: 3,
-    extra: '+1',
-    price: '\u20B93,000',
-    amount: 3000,
-    status: 'Confirmed',
-  ),
-  _Order(
-    store: 'Daily Needs',
-    orderId: '#NX4579',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4579,
-    iconBg: AppColors.orderPurpleBg,
-    items: '3 items',
-    thumbs: 3,
-    extra: '',
-    price: '\u20B93,500',
-    amount: 3500,
-    status: 'Delivered',
   ),
 ];
 
@@ -637,7 +609,7 @@ class _OrderBlock extends StatelessWidget {
     required this.iconBg,
     this.iconColor = const Color(0xFF5A4A1A),
     required this.items,
-    required this.thumbs,
+    required this.thumbImages,
     required this.extra,
     required this.price,
     required this.status,
@@ -650,7 +622,7 @@ class _OrderBlock extends StatelessWidget {
   final Color iconBg;
   final Color iconColor;
   final String items;
-  final int thumbs;
+  final List<String> thumbImages;
   final String extra;
   final String price;
   final String status;
@@ -790,28 +762,39 @@ class _OrderBlock extends StatelessWidget {
                 ),
               ),
             ),
-            for (int i = 0; i < thumbs; i++)
+            for (int i = 0; i < thumbImages.length; i++)
               Positioned(
                 left: 20.0 + i * 52.0,
                 top: 98,
                 child: Container(
                   width: 46,
                   height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7BAE5A),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF7BAE5A),
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  foregroundDecoration: BoxDecoration(
                     borderRadius: const BorderRadius.all(Radius.circular(10)),
                     border: Border.all(color: const Color(0x12000000)),
                   ),
-                  child: const Icon(
-                    Icons.eco_outlined,
-                    size: 20,
-                    color: Colors.white,
+                  child: Image.asset(
+                    thumbImages[i],
+                    key: ValueKey<String>('order-thumb-$i'),
+                    width: 46,
+                    height: 46,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.eco_outlined,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             if (extra.isNotEmpty)
               Positioned(
-                left: 20.0 + thumbs * 52.0,
+                left: 20.0 + thumbImages.length * 52.0,
                 top: 98,
                 child: Container(
                   width: 46,

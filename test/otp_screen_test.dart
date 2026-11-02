@@ -48,7 +48,7 @@ void main() {
     );
   });
 
-  testWidgets('verify button is visual only', (tester) async {
+  testWidgets('verify button is styled', (tester) async {
     await pumpScreen(tester);
 
     final verify = tester.widget<Text>(find.text('Verify'));
@@ -62,16 +62,17 @@ void main() {
     expect(decorations.any((d) => d.color == AppColors.primary), isTrue);
   });
 
-  testWidgets('illustration asset loads', (tester) async {
+  testWidgets('illustration and footer assets load', (tester) async {
     await pumpScreen(tester);
 
     final images = tester.widgetList<Image>(find.byType(Image)).toList();
-    expect(images.length, 1);
+    expect(images.length, 2);
     expect(
-      images.any((i) =>
-          i.image is AssetImage &&
-          (i.image as AssetImage).assetName == 'assets/otp/illustration.png'),
-      isTrue,
+      images.map((i) => (i.image as AssetImage).assetName).toSet(),
+      {
+        'assets/otp/illustration.png',
+        'assets/otp/bottom_deco.png',
+      },
     );
   });
 

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../data/country_codes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'location_screen.dart';
 import 'otp_screen.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
@@ -20,8 +21,8 @@ import 'otp_screen.dart';
 /// - Login (default): hero + phone number form; "Send OTP" opens the OTP
 ///   screen; the phone field accepts up to 10 digits.
 /// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
-///   Password fields and a visual-only "Create account" button. Both states
-///   share the terms footer.
+///   Password fields; "Create account" opens the STEP 01 location screen. Both
+///   states share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
@@ -162,10 +163,16 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 714,
                       child: _SignUpField(hint: 'Password', obscure: true),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 784,
-                      child: _CreateAccountButton(),
+                      child: _CreateAccountButton(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const Step01LocationScreen(),
+                          ),
+                        ),
+                      ),
                     ),
                   ] else ...[
                     const Positioned(
@@ -438,9 +445,10 @@ class _Flag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       WelcomeSellerScreen.flagAsset,
-      width: 23,
+      width: 24,
       height: 16,
       fit: BoxFit.fill,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -760,26 +768,32 @@ class _SignUpFieldState extends State<_SignUpField> {
 }
 
 class _CreateAccountButton extends StatelessWidget {
-  const _CreateAccountButton();
+  const _CreateAccountButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x2E000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
-          ),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 364,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x2E000000),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Text('Create account', style: AppTextStyles.sendOtp),
       ),
-      child: const Text('Create account', style: AppTextStyles.sendOtp),
     );
   }
 }

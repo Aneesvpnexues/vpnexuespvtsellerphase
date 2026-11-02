@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:seller_app/screens/notifications_screen.dart';
 
@@ -51,23 +53,25 @@ class SellerHomeScreen extends StatelessWidget {
                     trimTop: trimTop,
                     child: Stack(
                       children: [
-                        const Positioned(left: 24, top: 68, child: _Greeting()),
-                        const Positioned(
-                          left: 320,
-                          top: 66,
-                          child: _HeaderIcon(
-                            icon: Icons.notifications_outlined,
+                        const Positioned(left: 24, top: 74, child: _Greeting()),
+                        Positioned(
+                          left: 330.5,
+                          top: 73.5,
+                          child: _HeaderButton(
+                            key: const Key('home-notifications'),
+                            icon: Icons.notifications,
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => NotificationsScreen(),
+                                builder: (_) => const NotificationsScreen(),
                               ),
                             ),
                           ),
                         ),
                         Positioned(
-                          left: 352,
-                          top: 66,
-                          child: _HeaderIcon(
+                          left: 361.5,
+                          top: 73.5,
+                          child: _HeaderButton(
+                            key: const Key('home-settings'),
                             icon: Icons.settings_outlined,
                             onTap: () => goToSettings(context),
                           ),
@@ -107,8 +111,8 @@ class SellerHomeScreen extends StatelessWidget {
                         ),
                         Positioned(
                           left: 25,
+                          right: 0,
                           top: 389,
-                          width: 362,
                           height: 188,
                           child: _HomeProducts(products: products),
                         ),
@@ -133,8 +137,8 @@ class SellerHomeScreen extends StatelessWidget {
                           child: _SectionTitle('Needs Attention'),
                         ),
                         Positioned(
-                          left: 24,
-                          top: 818,
+                          left: 25,
+                          top: 819,
                           child: _AttentionRow(
                             key: const Key('home-attention-orders'),
                             title: '2 New orders',
@@ -146,8 +150,8 @@ class SellerHomeScreen extends StatelessWidget {
                         ),
                         if (lowStock != null)
                           Positioned(
-                            left: 24,
-                            top: 892,
+                            left: 25,
+                            top: 893,
                             child: _AttentionRow(
                               key: const Key('home-attention-low-stock'),
                               title: '${lowStock.name} low',
@@ -232,7 +236,7 @@ class _Greeting extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 9),
               Container(
                 width: 21,
                 height: 21,
@@ -252,8 +256,8 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, this.onTap});
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({super.key, required this.icon, this.onTap});
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -264,13 +268,13 @@ class _HeaderIcon extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 25,
-        height: 25,
+        width: 28,
+        height: 28,
         decoration: const BoxDecoration(
           color: AppColors.iconCircle,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 17, color: AppColors.iconDark),
+        child: Icon(icon, size: 14, color: AppColors.iconDark),
       ),
     );
   }
@@ -326,59 +330,68 @@ class _ActiveOrdersCard extends StatelessWidget {
             right: 23,
             child: Text(
               'Review and accept to keep\nyour business growing',
-              style: AppTextStyles.homeHeroDesc.copyWith(height: 1.5),
+              style: AppTextStyles.homeHeroDesc.copyWith(height: 1.25),
             ),
           ),
           Positioned(
             left: 20,
             top: 162,
-            child: Row(
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => goToOrders(context),
-                  child: Container(
-                    width: 102,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkCard,
-                      borderRadius: BorderRadius.all(Radius.circular(19)),
-                    ),
-                    child: const Text(
-                      'View orders',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => goToOrders(context),
+              child: Container(
+                width: 102,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.all(Radius.circular(19)),
+                ),
+                child: Stack(
+                  children: [
+                    const Positioned(
+                      left: 14,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Text(
+                          'View orders',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: AppColors.limeLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          size: 12,
+                          color: AppColors.darkCard,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 18,
-                  height: 18,
-                  decoration: const BoxDecoration(
-                    color: AppColors.limeLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_upward,
-                    size: 14,
-                    color: AppColors.darkCard,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           Positioned(
-            right: 14,
-            bottom: 12,
+            right: 10,
+            bottom: 17,
             child: Container(
-              width: 136,
+              width: 126,
               height: 21,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.only(left: 8, right: 6),
               decoration: BoxDecoration(
                 color: const Color(0xC2DAEFB8),
                 borderRadius: const BorderRadius.all(Radius.circular(14)),
@@ -386,8 +399,9 @@ class _ActiveOrdersCard extends StatelessWidget {
               ),
               child: const FittedBox(
                 fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     _WaitingDot(),
                     SizedBox(width: 5),
@@ -405,38 +419,35 @@ class _ActiveOrdersCard extends StatelessWidget {
             ),
           ),
           Positioned(
-            right: 18,
-            top: 20,
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: AppColors.darkCard,
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_outlined,
-                    size: 27,
-                    color: AppColors.limeLight,
-                  ),
+            left: 281,
+            top: 30,
+            child: Transform.rotate(
+              angle: 20 * math.pi / 180,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image.asset(
+                  'assets/order/ic_hero_box_dark.png',
+                  key: const Key('home-hero-tile-dark'),
+                  width: 48,
+                  height: 48,
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 52,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_outlined,
-                    size: 27,
-                    color: AppColors.darkCard,
-                  ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 261,
+            top: 52,
+            child: Transform.rotate(
+              angle: -12 * math.pi / 180,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image.asset(
+                  'assets/order/ic_hero_box_white.png',
+                  key: const Key('home-hero-tile-white'),
+                  width: 48,
+                  height: 48,
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -619,11 +630,11 @@ class _ProductCard extends StatelessWidget {
           children: [
             if (photo != null) Image.memory(photo.bytes, fit: BoxFit.cover),
             Positioned(
-              right: 8,
-              top: 7,
+              right: 12,
+              top: 8,
               child: Container(
-                width: 58,
-                height: 17,
+                width: 44,
+                height: 16.5,
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -652,11 +663,15 @@ class _ProductCard extends StatelessWidget {
                 padding: const EdgeInsets.only(
                   left: 13,
                   right: 6,
-                  top: 2,
+                  top: 4,
                   bottom: 2,
                 ),
                 decoration: const BoxDecoration(
-                  color: Color(0x66000000),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x1A000000), Color(0xB3000000)],
+                  ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(26),
                     bottomRight: Radius.circular(26),
@@ -759,78 +774,90 @@ class _SalesCard extends StatelessWidget {
         color: AppColors.darkCard,
         borderRadius: BorderRadius.all(Radius.circular(22)),
       ),
-      padding: const EdgeInsets.fromLTRB(21, 14, 21, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          const Text(
-            'Total sales this month',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Color(0xA1FFFFFF),
-              height: 1.0,
+          const Positioned(
+            left: 21,
+            top: 20,
+            child: Text(
+              'Total sales this month',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Color(0xA1FFFFFF),
+                height: 1.0,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Text(
-                '\u20B924,850',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.limeLight,
-                  height: 1.0,
-                ),
+          const Positioned(
+            left: 20,
+            top: 37,
+            child: Text(
+              '\u20B924,850',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: AppColors.limeLight,
+                height: 1.0,
               ),
-              const Spacer(),
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF10462A),
-                  border: Border.all(color: AppColors.limeLight, width: 5),
-                ),
-                child: const Center(
-                  child: Text(
-                    '72%',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.0,
-                    ),
+            ),
+          ),
+          Positioned(
+            right: 13,
+            top: 22,
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF10462A),
+                border: Border.all(color: AppColors.limeLight, width: 5),
+              ),
+              child: const Center(
+                child: Text(
+                  '72%',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.0,
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-          Container(
-            height: 1,
-            margin: const EdgeInsets.only(top: 6),
-            color: const Color(0x26CDEB6B),
+          Positioned(
+            left: 21,
+            right: 21,
+            top: 87,
+            child: Container(height: 1, color: const Color(0x26CDEB6B)),
           ),
-          const SizedBox(height: 6),
-          const Row(
-            children: [
-              _SalesStat(number: '12', label: 'Orders', dot: Colors.white),
-              SizedBox(width: 28),
-              _SalesStat(
-                number: '8',
-                label: 'Complete',
-                dot: AppColors.limeLight,
-              ),
-              SizedBox(width: 28),
-              _SalesStat(
-                number: '4',
-                label: 'Progress',
-                dot: Color(0xFFE9B949),
-              ),
-            ],
+          const Positioned(
+            left: 22,
+            top: 101,
+            child: _SalesStat(
+              number: '12',
+              label: 'Orders',
+              dot: Colors.white,
+            ),
+          ),
+          const Positioned(
+            left: 129,
+            top: 101,
+            child: _SalesStat(
+              number: '8',
+              label: 'Complete',
+              dot: AppColors.limeLight,
+            ),
+          ),
+          const Positioned(
+            left: 248,
+            top: 101,
+            child: _SalesStat(
+              number: '4',
+              label: 'Progress',
+              dot: Color(0xFFE9B949),
+            ),
           ),
         ],
       ),
@@ -879,7 +906,7 @@ class _SalesStat extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: Color(0xC2FFFFFF),
                   height: 1.0,
                 ),
@@ -914,8 +941,8 @@ class _AttentionRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 364,
-        height: 64,
+        width: 362,
+        height: 62,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.all(Radius.circular(17)),
@@ -924,8 +951,8 @@ class _AttentionRow extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              left: 1,
-              top: 15,
+              left: 0,
+              top: 14,
               child: Container(
                 width: 4,
                 height: 34,
@@ -936,8 +963,8 @@ class _AttentionRow extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 22,
-              top: 15,
+              left: 21,
+              top: 14,
               child: Container(
                 width: 34,
                 height: 34,
@@ -954,7 +981,7 @@ class _AttentionRow extends StatelessWidget {
             ),
             Positioned(
               left: 76,
-              top: 12,
+              top: 11,
               width: 260,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -983,7 +1010,7 @@ class _AttentionRow extends StatelessWidget {
             ),
             const Positioned(
               right: 12,
-              top: 24,
+              top: 23,
               child: Icon(
                 Icons.chevron_right,
                 size: 16,

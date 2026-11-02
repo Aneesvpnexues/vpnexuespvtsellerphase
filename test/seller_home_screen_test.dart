@@ -101,12 +101,140 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Hello,')).left, closeTo(24, 2));
-    expect(rectOf(find.text('Hello,')).top, closeTo(24, 2));
+    expect(rectOf(find.text('Hello,')).top, closeTo(30, 2));
     expect(rectOf(find.text('ACTIVE ORDERS')).left, closeTo(45, 2));
     expect(rectOf(find.text('ACTIVE ORDERS')).top, closeTo(117, 3));
     expect(rectOf(find.text('My Products')).left, closeTo(25, 2));
     expect(rectOf(find.text('Sales Overview')).left, closeTo(25, 2));
     expect(rectOf(find.text('Needs Attention')).left, closeTo(25, 2));
+  });
+
+  testWidgets('header has the two 28px circular buttons of the design', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    final bell = find.byKey(const Key('home-notifications'));
+    final gear = find.byKey(const Key('home-settings'));
+
+    expect(rectOf(bell).left, closeTo(330.5, 1));
+    expect(rectOf(bell).top, closeTo(29.5, 1));
+    expect(rectOf(bell).width, closeTo(28, 1));
+    expect(rectOf(bell).height, closeTo(28, 1));
+
+    expect(rectOf(gear).left, closeTo(361.5, 1));
+    expect(rectOf(gear).top, closeTo(29.5, 1));
+    expect(rectOf(gear).right, closeTo(389.5, 1));
+    expect(rectOf(gear).width, closeTo(28, 1));
+  });
+
+  testWidgets('active orders card uses the rotated hero tiles', (tester) async {
+    await pumpScreen(tester);
+
+    final dark = tester.widget<Image>(
+      find.byKey(const Key('home-hero-tile-dark')),
+    );
+    final white = tester.widget<Image>(
+      find.byKey(const Key('home-hero-tile-white')),
+    );
+    expect(
+      (dark.image as AssetImage).assetName,
+      'assets/order/ic_hero_box_dark.png',
+    );
+    expect(
+      (white.image as AssetImage).assetName,
+      'assets/order/ic_hero_box_white.png',
+    );
+
+    final darkRect = tester.getRect(find.byKey(const Key('home-hero-tile-dark')));
+    final whiteRect = tester.getRect(
+      find.byKey(const Key('home-hero-tile-white')),
+    );
+    expect(whiteRect.left, lessThan(darkRect.left));
+    expect(whiteRect.top, greaterThan(darkRect.top));
+  });
+
+  testWidgets('View orders pill carries its arrow inside', (tester) async {
+    await pumpScreen(tester);
+
+    final pill = find
+        .ancestor(of: find.text('View orders'), matching: find.byType(Container))
+        .first;
+    final arrow = find.byIcon(Icons.arrow_forward);
+    expect(arrow, findsOneWidget);
+
+    final pillRect = tester.getRect(pill);
+    final arrowRect = tester.getRect(arrow);
+    expect(pillRect.width, closeTo(102, 1));
+    expect(pillRect.height, closeTo(30, 1));
+    expect(pillRect.contains(arrowRect.topLeft), isTrue);
+    expect(pillRect.contains(arrowRect.bottomRight), isTrue);
+  });
+
+  testWidgets('waiting pill sits inside the card at the design margin', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    final pill = find
+        .ancestor(
+          of: find.text('Waiting for your response'),
+          matching: find.byType(Container),
+        )
+        .first;
+    final rect = tester.getRect(pill);
+    expect(rect.width, closeTo(126, 1));
+    expect(rect.height, closeTo(21, 1));
+    expect(rect.right, closeTo(377, 1));
+    expect(rect.bottom, closeTo(287, 1));
+  });
+
+  testWidgets('product strip bleeds to the right edge of the artboard', (
+    tester,
+  ) async {
+    await seedDemoProducts();
+    await pumpScreen(tester);
+
+    final strip = tester.getRect(
+      find.byKey(const ValueKey('home-products')),
+    );
+    expect(strip.left, closeTo(25, 1));
+    expect(strip.right, closeTo(412, 1));
+
+    final third = tester.getRect(
+      find.byKey(const ValueKey('home-product-P1')),
+    );
+    expect(third.right, greaterThan(387));
+  });
+
+  testWidgets('sales stats sit at the design x positions', (tester) async {
+    await pumpScreen(tester);
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    expect(rectOf(find.text('12')).left, closeTo(47, 2));
+    expect(rectOf(find.text('8')).left, closeTo(154, 2));
+    expect(rectOf(find.text('4')).left, closeTo(273, 2));
+  });
+
+  testWidgets('attention rows match the design box', (tester) async {
+    await pumpScreen(tester);
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    final row = rectOf(find.byKey(const Key('home-attention-orders')));
+    expect(row.left, closeTo(25, 1));
+    expect(row.top, closeTo(775, 1));
+    expect(row.width, closeTo(362, 1));
+    expect(row.height, closeTo(62, 1));
   });
 
   testWidgets('renders products added to the store', (tester) async {

@@ -233,6 +233,36 @@ void main() {
     expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
   });
 
+  testWidgets('illustration animates in on the first frame', (tester) async {
+    tester.view.physicalSize = const Size(412, 943);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: Step02SellerTypeScreen()));
+    await tester.pump();
+
+    final image = find.byType(Image).first;
+    final fade = find
+        .ancestor(of: image, matching: find.byType(FadeTransition))
+        .first;
+    final scale = find
+        .ancestor(of: image, matching: find.byType(ScaleTransition))
+        .first;
+
+    expect(tester.widget<FadeTransition>(fade).opacity.value, lessThan(1));
+    expect(tester.widget<ScaleTransition>(scale).scale.value, lessThan(1));
+
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+    expect(tester.widget<ScaleTransition>(scale).scale.value, 1);
+
+    final rect = tester.getRect(find.byType(Image).first);
+    expect(rect.left, closeTo(40, 1));
+    expect(rect.top, closeTo(97, 1));
+    expect(rect.width, closeTo(348.5, 1));
+    expect(rect.height, closeTo(347.5, 1));
+  });
+
   testWidgets('uses the step02 illustration asset', (tester) async {
     await pumpScreen(tester);
 

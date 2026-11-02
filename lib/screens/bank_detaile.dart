@@ -133,6 +133,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.surface,
       body: LayoutBuilder(
         builder: (context, constraints) {

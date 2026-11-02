@@ -11,10 +11,10 @@ import 'verify_detaile.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes the [Artboard] viewport scales it down on small screens and up (capped
-/// at 1.5x) on large ones instead of overflowing. All five rows are
-/// editable; the Continue button stays inert until every field has a value and
-/// then opens [VerifyDetaileScreen].
+/// sizes the [Artboard] scales by width (capped at 1.5x) and scrolls vertically
+/// instead of overflowing, so the keyboard never covers the focused field. All
+/// five rows are editable; the Continue button stays inert until every field
+/// has a value and then opens [VerifyDetaileScreen].
 class Step03BusinessDetailsScreen extends StatefulWidget {
   const Step03BusinessDetailsScreen({super.key});
 
@@ -88,6 +88,7 @@ class _Step03BusinessDetailsScreenState
       body: Artboard(
         designWidth: Step03BusinessDetailsScreen.designWidth,
         designHeight: Step03BusinessDetailsScreen.designHeight,
+        scrollable: true,
         child: Stack(
           children: [
             const Positioned(left: 200, top: 0, child: _Leaves()),

@@ -126,16 +126,55 @@ class _StepLabel extends StatelessWidget {
   }
 }
 
-class _Illustration extends StatelessWidget {
+class _Illustration extends StatefulWidget {
   const _Illustration();
 
   @override
+  State<_Illustration> createState() => _IllustrationState();
+}
+
+class _IllustrationState extends State<_Illustration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final CurvedAnimation _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      Step02SellerTypeScreen.illustrationAsset,
-      width: 348.5,
-      height: 347.5,
-      fit: BoxFit.fill,
+    return FadeTransition(
+      opacity: _curve,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(_curve),
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.94, end: 1).animate(_curve),
+          child: Image.asset(
+            Step02SellerTypeScreen.illustrationAsset,
+            width: 348.5,
+            height: 347.5,
+            fit: BoxFit.fill,
+          ),
+        ),
+      ),
     );
   }
 }
