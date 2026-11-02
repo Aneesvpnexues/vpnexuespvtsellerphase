@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/country_codes.dart';
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
+import '../data/seller_product_repository.dart';
+import '../data/supabase_product_api.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/keyboard_aware_canvas.dart';
+import 'bank_detaile.dart';
+import 'location_screen.dart';
 import 'otp_screen.dart';
+import 'seller_home_screen.dart';
+import 'verify_detaile.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad0633d41c4e26df3c1017) with
@@ -38,7 +47,12 @@ class WelcomeSellerScreen extends StatefulWidget {
 
 class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   bool _signUp = false;
+  bool _sending = false;
   CountryCode _country = CountryCode.india;
+
+  /// Owned here so [AuthFlow] can read the digits on "Send OTP"; [TextField]
+  /// in [_PhoneBox] only borrows it.
+  final TextEditingController _phone = TextEditingController();
 
   void _showLogin() => setState(() => _signUp = false);
 
@@ -57,6 +71,277 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (selected != null && mounted) {
       setState(() => _country = selected);
     }
+  }
+
+  @override
+  void dispose() {
+    AuthFlow.instance.autoVerified = null;
+    _phone.dispose();
+    super.dispose();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Validates the digits, composes the E.164 number and asks Firebase for
+  /// an SMS. The OTP screen opens only from the codeSent callback, so the
+  /// flow never advances before Firebase accepted the number.
+  Future<void> _sendOtp() async {
+    if (_sending) return;
+    final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != _country.maxDigits) {
+      _showError('Enter a valid ${_country.maxDigits}-digit mobile number.');
+      return;
+    }
+    final String display = '${_country.dial} $digits';
+    AuthFlow.instance.autoVerified = _openStep01;
+    setState(() => _sending = true);
+    await AuthFlow.instance.sendOtp(
+      e164: '${_country.dial}$digits',
+      display: display,
+      onCodeSent: () {
+        // Instant verification can finish before codeSent; _openStep01 has
+        // already navigated in that case.
+        if (!mounted || AuthFlow.instance.verified) return;
+        setState(() => _sending = false);
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: display)),
+        );
+      },
+      onError: (String message) {
+        if (!mounted) return;
+        setState(() => _sending = false);
+        _showError(message);
+      },
+    );
+  }
+
+  /// Android instant verification / SMS auto-retrieval: the phone is
+  /// confirmed without a typed code. Fetch existing seller data from Supabase,
+  /// skip completed onboarding pages, and navigate to the first incomplete
+  /// step or directly to Home.
+  void _openStep01() {
+    AuthFlow.instance.autoVerified = null;
+    SellerProfileStore.instance.mobile = AuthFlow.instance.displayPhone;
+    _routeAfterLogin();
+  }
+
+  /// After instant verification, fetch all existing seller data from Supabase
+  /// using the authenticated mobile number, determine which onboarding
+  /// sections are already complete, skip those pages, and navigate to the
+  /// first incomplete step or directly to Home.
+  void _routeAfterLogin() async {
+    // Clear any stale data from a previous login session.
+    SellerProfileStore.instance.resetCompletionFlags();
+    ProductStore.instance.clear();
+
+    // Get the verified phone number from Firebase Auth (null-safe in tests).
+    final String? firebasePhone = AuthFlow.instance.currentUserPhone;
+    final String firebaseUid = AuthFlow.instance.firebaseUid ?? '';
+
+    // Set the user_id for product queries and all user-scoped lookups.
+    ProductStore.instance.userId = firebaseUid;
+    SellerProfileStore.instance.userId = firebaseUid;
+
+    // Always re-fetch this user's products from Supabase.
+    try {
+      await SellerProductRepository().refresh(ProductStore.instance);
+    } catch (_) {
+      // Home still opens with whatever products are cached locally.
+    }
+
+    SellerProfileStore.instance.mobile = firebasePhone ?? AuthFlow.instance.displayPhone;
+
+    // Look up the seller's Supabase rows for the verified phone number. The
+    // match is number-agnostic: exact E.164 -> last 10 digits -> Firebase
+    // UID, and bank/KYC are always checked under both candidate ids.
+    if (mounted) {
+      try {
+        final api = SupabaseProductApi();
+        api.userId = firebaseUid;
+        final profile = await api.getProfileByPhone(
+          firebasePhone ?? AuthFlow.instance.displayPhone,
+          userId: firebaseUid,
+        );
+
+        final String profileUserId =
+            (profile?['user_id'] ?? '').toString().trim();
+
+        // Products live under the Firebase UID; profile/bank/KYC rows may
+        // also carry a legacy backend id, so check both.
+        final List<String> candidateIds = <String>{
+          firebaseUid,
+          profileUserId,
+        }.where((String id) => id.trim().isNotEmpty).toList();
+
+        if (profile != null) {
+          _populateProfileStore(profile);
+        }
+
+        // Bank and KYC are fetched even when the profile row is missing so a
+        // seller who finished them but lost the profile row is not retried.
+        Map<String, dynamic>? bankDetails;
+        Map<String, dynamic>? verificationDetails;
+        if (candidateIds.isNotEmpty) {
+          bankDetails = await api.getBankDetailsForUsers(candidateIds);
+          verificationDetails =
+              await api.getVerificationForUsers(candidateIds);
+        }
+
+        final bool profileComplete =
+            profile != null && _isProfileComplete(profile);
+        final bool bankComplete =
+            bankDetails != null && _isBankComplete(bankDetails);
+        final bool verificationComplete = verificationDetails != null &&
+            _isVerificationComplete(verificationDetails);
+
+        SellerProfileStore.instance.setCompletion(
+          profileComplete: profileComplete,
+          bankComplete: bankComplete,
+          verificationComplete: verificationComplete,
+        );
+
+        if (!mounted) return;
+        _navigateBasedOnCompletion(
+          profileComplete: profileComplete,
+          bankComplete: bankComplete,
+          verificationComplete: verificationComplete,
+        );
+        return;
+      } catch (_) {
+        // Supabase lookup failed — fall through to onboarding.
+      }
+    }
+
+    // No Supabase data found for this number — new user, onboarding Step 01.
+    if (!mounted) return;
+    setState(() => _sending = false);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+    );
+  }
+
+  /// Determines whether the seller profile section is complete based on
+  /// required Supabase fields being non-empty.
+  bool _isProfileComplete(Map<String, dynamic> profile) {
+    final fields = <String>[
+      profile['display_name'] ?? '',
+      profile['business_name'] ?? '',
+      profile['phone_number'] ?? '',
+      profile['location'] ?? '',
+      profile['business_address'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Determines whether bank details are complete based on required fields.
+  bool _isBankComplete(Map<String, dynamic> bank) {
+    final fields = <String>[
+      bank['account_houlder_name'] ?? '',
+      bank['bank_name'] ?? '',
+      bank['account_number'] ?? '',
+      bank['IFSC_code'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Determines whether verification/KYC is complete based on at least one
+  /// document URL being present.
+  bool _isVerificationComplete(Map<String, dynamic> verification) {
+    final fields = <String>[
+      verification['aadhaar_card'] ?? '',
+      verification['pan_card'] ?? '',
+      verification['business_registration'] ?? '',
+    ];
+    return fields.any(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Navigates to the first incomplete onboarding step, or to Home if all
+  /// sections are complete.
+  void _navigateBasedOnCompletion({
+    required bool profileComplete,
+    required bool bankComplete,
+    required bool verificationComplete,
+  }) {
+    if (!mounted) return;
+    setState(() => _sending = false);
+
+    if (!profileComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Step01LocationScreen(),
+        ),
+      );
+      return;
+    }
+
+    // Flow order is STEP 01-03 (profile) -> Verify -> Bank -> Home, so the
+    // first incomplete section after the profile is verification.
+    if (!verificationComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const VerifyDetaileScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!bankComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
+      );
+      return;
+    }
+
+    // All sections complete — go straight to Home.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+    );
+  }
+
+  /// Populate the in-memory profile store from a Supabase profile record.
+  void _populateProfileStore(Map<String, dynamic> profile) {
+    final String name = (profile['display_name'] ?? '').toString().trim();
+    final String mobile = (profile['phone_number'] ?? '').toString().trim();
+    final String sellerTypeStr =
+        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
+    SellerType sellerType;
+    switch (sellerTypeStr) {
+      case 'trader':
+        sellerType = SellerType.trader;
+      case 'fpo':
+        sellerType = SellerType.fpo;
+      default:
+        sellerType = SellerType.farmer;
+    }
+    if (name.isNotEmpty) {
+      SellerProfileStore.instance.save(
+        name: name,
+        mobile: mobile,
+        email: '',
+        sellerType: sellerType,
+      );
+    } else {
+      SellerProfileStore.instance.mobile = mobile;
+    }
+  }
+
+  void _openSignUpLocation() {
+    setState(() => _sending = false);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+    );
   }
 
   @override
@@ -154,11 +439,13 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 714,
                       child: _SignUpField(hint: 'Password', obscure: true),
                     ),
-                    const Positioned(
-                      left: 24,
-                      top: 784,
-                      child: _CreateAccountButton(),
+                  Positioned(
+                    left: 24,
+                    top: 784,
+                    child: _CreateAccountButton(
+                      onTap: _openSignUpLocation,
                     ),
+                  ),
                   ] else ...[
                     const Positioned(
                       left: 24,
@@ -214,17 +501,17 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     Positioned(
                       left: 112,
                       top: 684,
-                      child: _PhoneBox(maxLength: _country.maxDigits),
+                      child: _PhoneBox(
+                        controller: _phone,
+                        maxLength: _country.maxDigits,
+                      ),
                     ),
                     Positioned(
                       left: 24,
                       top: 749,
                       child: _SendOtpButton(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const OtpScreen(),
-                          ),
-                        ),
+                        loading: _sending,
+                        onTap: _sendOtp,
                       ),
                     ),
                   ],
@@ -459,9 +746,13 @@ class _DialCode extends StatelessWidget {
 /// placeholder, numeric-only entry and a [maxLength] that follows the
 /// selected country's dial code (truncating any longer number when the
 /// country changes).
+///
+/// The [controller] is owned by the widget state above (it is what "Send OTP"
+/// reads); this box only attaches listeners to it.
 class _PhoneBox extends StatefulWidget {
-  const _PhoneBox({required this.maxLength});
+  const _PhoneBox({required this.controller, required this.maxLength});
 
+  final TextEditingController controller;
   final int maxLength;
 
   @override
@@ -469,13 +760,12 @@ class _PhoneBox extends StatefulWidget {
 }
 
 class _PhoneBoxState extends State<_PhoneBox> {
-  final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onChanged);
+    widget.controller.addListener(_onChanged);
   }
 
   void _onChanged() => setState(() {});
@@ -483,16 +773,22 @@ class _PhoneBoxState extends State<_PhoneBox> {
   @override
   void didUpdateWidget(covariant _PhoneBox oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onChanged);
+      widget.controller.addListener(_onChanged);
+    }
     if (widget.maxLength != oldWidget.maxLength &&
-        _controller.text.length > widget.maxLength) {
-      _controller.text = _controller.text.substring(0, widget.maxLength);
+        widget.controller.text.length > widget.maxLength) {
+      widget.controller.text = widget.controller.text.substring(
+        0,
+        widget.maxLength,
+      );
     }
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onChanged);
-    _controller.dispose();
+    widget.controller.removeListener(_onChanged);
     _focusNode.dispose();
     super.dispose();
   }
@@ -511,7 +807,7 @@ class _PhoneBoxState extends State<_PhoneBox> {
       ),
       child: TextField(
         key: const Key('loginPhone'),
-        controller: _controller,
+        controller: widget.controller,
         focusNode: _focusNode,
         maxLength: widget.maxLength,
         keyboardType: TextInputType.phone,
@@ -535,15 +831,19 @@ class _PhoneBoxState extends State<_PhoneBox> {
 }
 
 class _SendOtpButton extends StatelessWidget {
-  const _SendOtpButton({required this.onTap});
+  const _SendOtpButton({required this.onTap, this.loading = false});
 
   final VoidCallback onTap;
+
+  /// While Firebase is sending the SMS the label swaps for a spinner and
+  /// taps are ignored.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       child: Container(
         width: 364,
         height: 52,
@@ -559,15 +859,24 @@ class _SendOtpButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Send OTP', style: AppTextStyles.sendOtp),
-              SizedBox(width: 12),
-              _SendIcon(),
-            ],
-          ),
+        child: Center(
+          child: loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.surface,
+                  ),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Send OTP', style: AppTextStyles.sendOtp),
+                    SizedBox(width: 12),
+                    _SendIcon(),
+                  ],
+                ),
         ),
       ),
     );
@@ -691,29 +1000,36 @@ class _SignUpFieldState extends State<_SignUpField> {
 }
 
 class _CreateAccountButton extends StatelessWidget {
-  const _CreateAccountButton();
+  const _CreateAccountButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x2E000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
-          ),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 364,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x2E000000),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Text('Create account', style: AppTextStyles.sendOtp),
       ),
-      child: const Text('Create account', style: AppTextStyles.sendOtp),
     );
   }
 }
+
 
 /// Redesigned "Select country" popup: a tall bottom sheet with a search
 /// field that filters the full [kCountryCodes] list (name, ISO code or dial

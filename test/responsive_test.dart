@@ -31,7 +31,7 @@ void main() {
 
   final screens = <String, Widget Function()>{
     'WelcomeSellerScreen': () => const WelcomeSellerScreen(),
-    'OtpScreen': () => const OtpScreen(),
+    'OtpScreen': () => const OtpScreen(phone: '+91 1234567890'),
     'Step01LocationScreen': () => const Step01LocationScreen(),
     'Step02SellerTypeScreen': () => const Step02SellerTypeScreen(),
     'Step03BusinessDetailsScreen': () => const Step03BusinessDetailsScreen(),

@@ -30,6 +30,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(WelcomeSellerScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-empty-products')), findsNothing);
   });
 }

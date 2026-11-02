@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
+import 'package:seller_app/services/auth_flow.dart';
 import 'package:seller_app/theme/app_colors.dart';
+
+import 'fake_auth_flow.dart';
 
 /// Pumps the Welcome Seller screen on the 412x917 artboard the design was
 /// drawn for.
@@ -14,6 +18,18 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  late FakeAuthFlow fake;
+
+  setUp(() {
+    fake = FakeAuthFlow();
+    AuthFlow.debugOverride = fake;
+    SellerProfileStore.instance.reset();
+  });
+
+  tearDown(() {
+    AuthFlow.debugOverride = null;
+    SellerProfileStore.instance.reset();
+  });
   testWidgets('renders the Welcome Seller content', (tester) async {
     await pumpScreen(tester);
 
@@ -325,12 +341,16 @@ void main() {
   testWidgets('send OTP opens the OTP screen and back returns', (tester) async {
     await pumpScreen(tester);
 
+    await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
 
     expect(find.text('Enter OTP'), findsOneWidget);
     expect(find.text('Verify'), findsOneWidget);
     expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+    // The E.164 number composed from the picked country reached Firebase.
+    expect(fake.sentE164, <String>['+919876543210']);
+    expect(fake.sentDisplay, <String>['+91 9876543210']);
 
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
     navigator.pop();

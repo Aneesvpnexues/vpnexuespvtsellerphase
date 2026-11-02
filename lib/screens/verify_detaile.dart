@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../data/cloudinary_upload_api.dart';
 import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -12,6 +13,7 @@ import '../widgets/artboard.dart';
 import '../widgets/continue_button.dart';
 import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
+import 'seller_home_screen.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
 
@@ -158,10 +160,12 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
       }
 
       // Save URLs to Supabase.
-      if (aadhaarUrl != null || panUrl != null || businessUrl != null) {
+      final bool savedThisSession = aadhaarUrl != null ||
+          panUrl != null ||
+          businessUrl != null;
+      if (savedThisSession) {
         final api = SupabaseProductApi();
         await api.saveVerifyDetails(
-          userId: ProductStore.instance.userId,
           aadhaarUrl: aadhaarUrl,
           panUrl: panUrl,
           businessUrl: businessUrl,
@@ -169,6 +173,28 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
       }
 
       if (!mounted) return;
+
+      // KYC counts as done if anything was just uploaded, or if an earlier
+      // session already stored a document.
+      final SellerProfileStore profile = SellerProfileStore.instance;
+      final bool verificationComplete =
+          savedThisSession || profile.verificationComplete;
+      profile.setCompletion(
+        profileComplete: profile.profileComplete,
+        bankComplete: profile.bankComplete,
+        verificationComplete: verificationComplete,
+      );
+
+      // Bank is next in the flow — skip straight to Home when it is already
+      // done so a returning seller never re-enters completed pages.
+      if (profile.bankComplete) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      }
+
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const BankDetaileScreen(),

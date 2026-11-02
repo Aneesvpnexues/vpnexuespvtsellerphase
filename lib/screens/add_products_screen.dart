@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../data/api_error.dart';
 import '../data/product_store.dart';
 import '../data/seller_product_repository.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -286,7 +287,11 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     ProductDraft draft,
     List<ProductPhoto> photos,
   ) {
-    return SellerProductRepository().addProduct(draft, photos);
+    return SellerProductRepository().addProduct(
+      draft,
+      photos,
+      userId: AuthFlow.instance.firebaseUid ?? '',
+    );
   }
 
   void _showSaveError(String message) {

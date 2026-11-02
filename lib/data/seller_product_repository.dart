@@ -14,12 +14,14 @@ class SellerProductRepository {
 
   Future<Product> addProduct(
     ProductDraft draft,
-    List<ProductPhoto> photos,
-  ) async {
+    List<ProductPhoto> photos, {
+    required String userId,
+  }) async {
     final List<String> imageUrls = <String>[];
     for (final ProductPhoto photo in photos.take(5)) {
       imageUrls.add(await _uploader.upload(photo));
     }
+    _api.userId = userId;
     final Product product = await _api.createProduct(
       draft,
       imageUrls: imageUrls,

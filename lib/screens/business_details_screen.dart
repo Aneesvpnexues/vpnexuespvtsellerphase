@@ -7,6 +7,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
 import '../widgets/continue_button.dart';
+import 'bank_detaile.dart';
+import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
 /// "STEP 03 — Tell us about your business" — static replica of Zeplin
@@ -44,7 +46,7 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _name = TextEditingController();
   final TextEditingController _business = TextEditingController();
   final TextEditingController _phone = TextEditingController(
-    text: '+91 12345 67890',
+    text: SellerProfileStore.instance.mobile,
   );
   final TextEditingController _location = TextEditingController(
     text: 'Salem, Tamil Nadu',
@@ -124,7 +126,33 @@ class _Step03BusinessDetailsScreenState
       sellerType: profile.sellerType,
     );
 
+    // The profile section just completed successfully. Keep the existing
+    // bank/KYC flags so a seller who already finished them is not sent
+    // through those pages again.
+    profile.setCompletion(
+      profileComplete: true,
+      bankComplete: profile.bankComplete,
+      verificationComplete: profile.verificationComplete,
+    );
+
     if (!mounted) return;
+
+    // Forward flow is Verify -> Bank -> Home; skip whatever is already done.
+    if (profile.verificationComplete && profile.bankComplete) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    if (profile.verificationComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
     );

@@ -59,13 +59,69 @@ class SellerProfileStore extends ChangeNotifier {
   String _name = defaultName;
   String _mobile = defaultMobile;
   String _email = '';
+  String _userId = '';
   SellerType _sellerType = SellerType.farmer;
+
+  /// Completion status of each onboarding section, populated from Supabase
+  /// after Firebase OTP login. Used to skip already-completed pages.
+  bool _profileComplete = false;
+  bool _bankComplete = false;
+  bool _verificationComplete = false;
 
   String get name => _name;
 
   String get mobile => _mobile;
 
   String get email => _email;
+
+  /// The Supabase `user_id` for the currently logged-in seller. Drives
+  /// product queries and all user-scoped data lookups.
+  String get userId => _userId;
+
+  set userId(String value) {
+    _userId = value.trim();
+    notifyListeners();
+  }
+
+  /// Whether the seller profile section is complete (name, business name,
+  /// phone, location, address all populated).
+  bool get profileComplete => _profileComplete;
+
+  /// Whether the bank details section is complete (bank account saved).
+  bool get bankComplete => _bankComplete;
+
+  /// Whether the verification/KYC section is complete (documents submitted).
+  bool get verificationComplete => _verificationComplete;
+
+  /// Whether all three onboarding sections are complete.
+  bool get onboardingComplete =>
+      _profileComplete && _bankComplete && _verificationComplete;
+
+  SellerType get sellerType => _sellerType;
+
+  String get initials => initialsForName(_name);
+
+  String get sellerSummary => '${_sellerType.label}, Salem, Tamil Nadu';
+
+  /// Marks all completion flags as incomplete — used when logging out or
+  /// switching accounts so stale data doesn't leak between users.
+  void resetCompletionFlags() {
+    _profileComplete = false;
+    _bankComplete = false;
+    _verificationComplete = false;
+  }
+
+  /// Sets completion flags from fetched Supabase data.
+  void setCompletion({
+    required bool profileComplete,
+    required bool bankComplete,
+    required bool verificationComplete,
+  }) {
+    _profileComplete = profileComplete;
+    _bankComplete = bankComplete;
+    _verificationComplete = verificationComplete;
+    notifyListeners();
+  }
 
   /// Updates only the mobile number (used by the Settings screen, which must
   /// not touch `ProductStore.userId` - that field is the id of the
@@ -74,12 +130,6 @@ class SellerProfileStore extends ChangeNotifier {
     _mobile = value.trim();
     notifyListeners();
   }
-
-  SellerType get sellerType => _sellerType;
-
-  String get initials => initialsForName(_name);
-
-  String get sellerSummary => '${_sellerType.label}, Salem, Tamil Nadu';
 
   void save({
     required String name,
@@ -98,7 +148,9 @@ class SellerProfileStore extends ChangeNotifier {
     _name = defaultName;
     _mobile = defaultMobile;
     _email = '';
+    _userId = '';
     _sellerType = SellerType.farmer;
+    resetCompletionFlags();
     notifyListeners();
   }
 }

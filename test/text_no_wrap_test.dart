@@ -49,7 +49,7 @@ void main() {
 
     final Map<String, Widget> screens = <String, Widget>{
       'WelcomeSellerScreen': const WelcomeSellerScreen(),
-      'OtpScreen': const OtpScreen(),
+      'OtpScreen': const OtpScreen(phone: '+91 1234567890'),
       'Step01LocationScreen': const Step01LocationScreen(),
       'Step02SellerTypeScreen': const Step02SellerTypeScreen(),
       'SellerHomeScreen': const SellerHomeScreen(),

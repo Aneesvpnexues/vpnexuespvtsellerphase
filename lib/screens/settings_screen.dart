@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/seller_profile_store.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -10,6 +11,7 @@ import '../widgets/label_text.dart';
 import 'app_language_screen.dart';
 import 'about_vpnexues_screen.dart';
 import 'help_support_screen.dart';
+import 'welcome_seller_screen.dart';
 
 /// Settings — replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -41,7 +43,21 @@ class SettingsScreen extends StatelessWidget {
               Positioned(left: 25, top: 127, child: _PreferencesCard()),
               Positioned(left: 25, top: 253, child: _NotificationsCard()),
               Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(left: 25, top: 678, child: _LogoutCard()),
+              Positioned(
+                left: 25,
+                top: 678,
+                child: _LogoutCard(
+                  onTap: () async {
+                    final navigator = Navigator.of(context);
+                    await AuthFlow.instance.signOut();
+                    navigator.pushReplacement(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const WelcomeSellerScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
               Positioned(
                 left: 0,
                 top: 73,
@@ -286,44 +302,50 @@ class _SupportCard extends StatelessWidget {
 }
 
 class _LogoutCard extends StatelessWidget {
-  const _LogoutCard();
+  const _LogoutCard({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
-      height: 81,
-      children: [
-        Positioned(
-          left: 22,
-          top: 23,
-          child: SizedBox(
-            width: 324,
-            height: 34,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: _Tile(
-                    icon: 'assets/settings/ic_logout.png',
-                    iconSize: 16,
-                    color: AppColors.outOfStockBg,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: const _Card(
+        height: 81,
+        children: [
+          Positioned(
+            left: 22,
+            top: 23,
+            child: SizedBox(
+              width: 324,
+              height: 34,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: _Tile(
+                      icon: 'assets/settings/ic_logout.png',
+                      iconSize: 16,
+                      color: AppColors.outOfStockBg,
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: 45,
-                  top: 4,
-                  child: LabelText(
-                    'Log out',
-                    AppTextStyles.settingsLogout,
-                    width: 45,
+                  Positioned(
+                    left: 45,
+                    top: 4,
+                    child: LabelText(
+                      'Log out',
+                      AppTextStyles.settingsLogout,
+                      width: 45,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

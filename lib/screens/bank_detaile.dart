@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/api_error.dart';
-import '../data/product_store.dart';
 import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -160,7 +159,6 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
 
     try {
       await SupabaseProductApi().saveBankDetails(
-        userId: ProductStore.instance.userId,
         holderName: holderName,
         bankName: bankName,
         accountNumber: accountNumber,

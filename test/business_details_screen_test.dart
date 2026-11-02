@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
+import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 03 screen on the 412x917 artboard the design was drawn for.
@@ -38,6 +42,7 @@ void main() {
 
   setUp(() {
     savedProfiles = <Map<String, String>>[];
+    SellerProfileStore.instance.resetCompletionFlags();
     Step03BusinessDetailsScreen.debugProfileSaver = ({
       required String name,
       required String mobile,
@@ -58,7 +63,10 @@ void main() {
     };
   });
 
-  tearDown(() => Step03BusinessDetailsScreen.debugProfileSaver = null);
+  tearDown(() {
+    Step03BusinessDetailsScreen.debugProfileSaver = null;
+    SellerProfileStore.instance.resetCompletionFlags();
+  });
 
   testWidgets('renders the STEP 03 content', (tester) async {
     await pumpScreen(tester);
@@ -331,5 +339,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verify your'), findsNothing);
+  });
+
+  Future<void> fillAndContinue(WidgetTester tester) async {
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('Continue opens Home when verify and bank are already done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: false,
+      bankComplete: true,
+      verificationComplete: true,
+    );
+
+    await pumpScreen(tester);
+    await fillAndContinue(tester);
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsNothing);
+    expect(savedProfiles, hasLength(1));
+  });
+
+  testWidgets('Continue skips verify and opens bank when only KYC is done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: false,
+      bankComplete: false,
+      verificationComplete: true,
+    );
+
+    await pumpScreen(tester);
+    await fillAndContinue(tester);
+
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
   });
 }

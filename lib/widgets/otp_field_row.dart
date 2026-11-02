@@ -13,18 +13,24 @@ import 'bottom_deco.dart';
 /// The box at the caret position keeps the active 2px green border from the
 /// design, the rest stay 1px grey.
 class OtpFieldRow extends StatefulWidget {
-  const OtpFieldRow({super.key});
+  const OtpFieldRow({super.key, this.onChanged});
 
   static const int boxCount = 6;
   static const double boxGap = 9;
 
+  /// Fires with the digits currently typed (including `''` after [clear]).
+  final ValueChanged<String>? onChanged;
+
   @override
-  State<OtpFieldRow> createState() => _OtpFieldRowState();
+  State<OtpFieldRow> createState() => OtpFieldRowState();
 }
 
-class _OtpFieldRowState extends State<OtpFieldRow> {
+class OtpFieldRowState extends State<OtpFieldRow> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
+  /// Empties the boxes — used after a rejected OTP so the seller can retype.
+  void clear() => _controller.clear();
 
   @override
   void initState() {
@@ -32,7 +38,10 @@ class _OtpFieldRowState extends State<OtpFieldRow> {
     _controller.addListener(_onChanged);
   }
 
-  void _onChanged() => setState(() {});
+  void _onChanged() {
+    widget.onChanged?.call(_controller.text);
+    setState(() {});
+  }
 
   @override
   void dispose() {

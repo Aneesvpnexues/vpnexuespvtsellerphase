@@ -49,7 +49,7 @@ void main() {
   testWidgets('OTP keeps its full-width layout above the keyboard', (
     tester,
   ) async {
-    await _pumpWithKeyboard(tester, const OtpScreen(), const Size(412, 917));
+    await _pumpWithKeyboard(tester, const OtpScreen(phone: '+91 1234567890'), const Size(412, 917));
 
     expect(tester.takeException(), isNull);
     final title = _rectOf(tester, find.text('Enter OTP'));

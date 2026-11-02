@@ -28,6 +28,12 @@ import 'keyboard_inset.dart';
 /// width-scaled scrolling, even if [scrollable] is false, so a shrunken
 /// viewport never scales the whole screen down. [keyboardBottomInset] reserves
 /// space above a pinned CTA/navigation bar while that mode is active.
+///
+/// The subtree below [KeyboardInset] is identical in every mode — the scroll
+/// view and padding are always present and only values (scale, fit, padding)
+/// change. Returning a different tree per mode (the previous
+/// `Align` vs `Padding`+scroll split) unmounted the focused field as soon as
+/// `viewInsets.bottom` became non-zero and dismissed the keypad.
 class Artboard extends StatelessWidget {
   const Artboard({
     super.key,
@@ -126,48 +132,43 @@ class Artboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return KeyboardInset(
       builder: (context, keyboardInset) {
-        final keyboardVisible = keyboardInset > 0;
-        if (scrollable || keyboardVisible) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final scale = (constraints.maxWidth / designWidth).clamp(
-                0.0,
-                maxScale,
-              );
-              return Padding(
-                padding: keyboardVisible
-                    ? EdgeInsets.only(bottom: keyboardBottomInset)
-                    : EdgeInsets.zero,
-                child: SingleChildScrollView(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: _artboard(
-                      scale.toDouble(),
-                      scale.toDouble(),
-                      BoxFit.contain,
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        }
+        final bool open = keyboardInset > 0;
         return LayoutBuilder(
           builder: (context, constraints) {
-            final metrics = Artboard.metricsFor(
-              constraints,
-              designWidth: designWidth,
-              designHeight: designHeight,
-              maxScale: maxScale,
-              fillWidth: fillWidth,
-              maxWidthStretch: maxWidthStretch,
-            );
-            return Align(
-              alignment: Alignment.topCenter,
-              child: _artboard(
-                metrics.xScale,
-                metrics.yScale,
-                fillWidth ? BoxFit.fill : BoxFit.contain,
+            // Values only — the widget tree stays identical across modes so
+            // the focused field (and the keypad) survives an inset change.
+            final double xScale;
+            final double yScale;
+            final BoxFit fit;
+            if (scrollable || open) {
+              final double scale = (constraints.maxWidth / designWidth)
+                  .clamp(0.0, maxScale)
+                  .toDouble();
+              xScale = scale;
+              yScale = scale;
+              fit = BoxFit.contain;
+            } else {
+              final ArtboardMetrics metrics = Artboard.metricsFor(
+                constraints,
+                designWidth: designWidth,
+                designHeight: designHeight,
+                maxScale: maxScale,
+                fillWidth: fillWidth,
+                maxWidthStretch: maxWidthStretch,
+              );
+              xScale = metrics.xScale;
+              yScale = metrics.yScale;
+              fit = fillWidth ? BoxFit.fill : BoxFit.contain;
+            }
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: open ? keyboardBottomInset : 0,
+              ),
+              child: SingleChildScrollView(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _artboard(xScale, yScale, fit),
+                ),
               ),
             );
           },

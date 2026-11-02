@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/location_screen.dart';
@@ -8,6 +9,9 @@ import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
+import 'package:seller_app/services/auth_flow.dart';
+
+import 'fake_auth_flow.dart';
 
 Future<void> pumpFlow(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -19,6 +23,8 @@ Future<void> pumpFlow(WidgetTester tester) async {
 
 void main() {
   setUp(() {
+    AuthFlow.debugOverride = FakeAuthFlow();
+    SellerProfileStore.instance.reset();
     Step03BusinessDetailsScreen.debugProfileSaver = ({
       required String name,
       required String mobile,
@@ -29,20 +35,28 @@ void main() {
     }) async => '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
   });
 
-  tearDown(() => Step03BusinessDetailsScreen.debugProfileSaver = null);
+  tearDown(() {
+    AuthFlow.debugOverride = null;
+    SellerProfileStore.instance.reset();
+    Step03BusinessDetailsScreen.debugProfileSaver = null;
+  });
 
   testWidgets('login and onboarding flow ends at the home page', (
     tester,
   ) async {
     await pumpFlow(tester);
 
+    await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
     expect(find.byType(OtpScreen), findsOneWidget);
 
+    await tester.enterText(find.byType(TextField), '123456');
+    await tester.pump();
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
     expect(find.byType(Step01LocationScreen), findsOneWidget);
+    expect(SellerProfileStore.instance.mobile, '+91 9876543210');
 
     await tester.tap(find.text('Use my current Location'));
     await tester.pumpAndSettle();

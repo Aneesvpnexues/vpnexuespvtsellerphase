@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/bank_detaile.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
@@ -43,6 +46,9 @@ Finder _continueButton() => find.byWidgetPredicate(
 );
 
 void main() {
+  setUp(SellerProfileStore.instance.resetCompletionFlags);
+  tearDown(SellerProfileStore.instance.resetCompletionFlags);
+
   testWidgets('renders the verify content', (tester) async {
     await pumpScreen(tester);
 
@@ -346,6 +352,26 @@ void main() {
 
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
     expect(find.text('Account Holder Name'), findsOneWidget);
+  });
+
+  testWidgets('Continue opens Home when the bank section is already done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: true,
+      bankComplete: true,
+      verificationComplete: false,
+    );
+
+    await pumpScreen(tester);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.byType(BankDetaileScreen), findsNothing);
+    // Nothing was uploaded, so KYC stays incomplete while bank stays done.
+    expect(SellerProfileStore.instance.verificationComplete, isFalse);
+    expect(SellerProfileStore.instance.bankComplete, isTrue);
   });
 
   testWidgets('back arrow pops the route', (tester) async {
