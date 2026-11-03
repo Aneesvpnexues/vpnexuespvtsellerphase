@@ -1,3 +1,4 @@
+
 # Starts the API against an in-memory database — no Supabase or Firebase
 # account needed. All data is wiped when the server stops.
 #
@@ -17,7 +18,7 @@ Set-Location $backend
 
 if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) {
     Write-Host "Maven is not on your PATH." -ForegroundColor Red
-    Write-Host "See backend/SETUP.md, section 1, for install steps."
+    Write-Host "See 'vpnexues backend/SETUP.md', section 1, for install steps."
     exit 1
 }
 
