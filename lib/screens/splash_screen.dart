@@ -8,6 +8,7 @@ import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
 import '../services/backend_service.dart';
+import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
 import '../screens/location_screen.dart';
@@ -352,7 +353,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F8EF),
+      backgroundColor: AppColors.splashBg,
       body: SafeArea(
         bottom: false,
         child: LayoutBuilder(

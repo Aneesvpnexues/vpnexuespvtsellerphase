@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -28,15 +30,14 @@ import 'verify_detaile.dart';
 /// - Login (default): hero + phone number form; "Send OTP" opens the OTP
 ///   screen; the phone field accepts up to 10 digits.
 /// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
-///   Password fields and a visual-only "Create account" button. Both states
-///   share the terms footer.
+///   Password fields; "Create account" opens the STEP 01 location screen. Both
+///   states share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
   static const String leafAsset = 'assets/welcome/leaf.png';
   static const String heroAsset = 'assets/welcome/hero.png';
   static const String flagAsset = 'assets/welcome/flag.png';
-  static const String waveAsset = 'assets/welcome/wave.png';
   static const String sendAsset = 'assets/welcome/send.png';
   static const double designWidth = 412;
   static const double designHeight = 917;
@@ -426,12 +427,15 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 574,
                       child: _SignUpField(hint: 'Name'),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 644,
                       child: _SignUpField(
-                        hint: 'E-Mail',
-                        keyboardType: TextInputType.emailAddress,
+                        hint: 'Phone Number',
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                       ),
                     ),
                     const Positioned(
@@ -452,7 +456,6 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 587.8,
                       child: _WelcomeBack(),
                     ),
-                    const Positioned(left: 166, top: 579, child: _Wave()),
                     const Positioned(
                       left: 24,
                       right: 0,
@@ -464,46 +467,22 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 656.5,
                       child: _PhoneLabel(),
                     ),
-                    const Positioned(left: 24, top: 684, child: _FieldBox()),
                     Positioned(
                       left: 24,
                       top: 684,
-                      width: 83,
-                      height: 54,
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _country.isIndia
-                                ? const _Flag()
-                                : Text(
-                                    _country.flag,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                            const SizedBox(width: 5),
-                            _DialCode(_country.dial),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 24,
-                      top: 684,
-                      width: 83,
-                      height: 54,
-                      child: GestureDetector(
-                        key: const Key('countryPicker'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _showCountryPicker,
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                    Positioned(
-                      left: 112,
-                      top: 684,
-                      child: _PhoneBox(
-                        controller: _phone,
-                        maxLength: _country.maxDigits,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _CountrySelector(
+                            country: _country,
+                            onTap: _showCountryPicker,
+                          ),
+                          const SizedBox(width: 5),
+                          _PhoneBox(
+                            controller: _phone,
+                            maxLength: _country.maxDigits,
+                          ),
+                        ],
                       ),
                     ),
                     Positioned(
@@ -659,20 +638,14 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Welcome back', style: AppTextStyles.welcomeBack);
-  }
-}
-
-class _Wave extends StatelessWidget {
-  const _Wave();
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      WelcomeSellerScreen.waveAsset,
-      width: 28,
-      height: 28,
-      fit: BoxFit.fill,
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('Welcome back', style: AppTextStyles.welcomeBack),
+        SizedBox(width: 6),
+        Text('👋', style: TextStyle(fontSize: 18, height: 1.0)),
+      ],
     );
   }
 }
@@ -698,20 +671,41 @@ class _PhoneLabel extends StatelessWidget {
   }
 }
 
-class _FieldBox extends StatelessWidget {
-  const _FieldBox();
+class _CountrySelector extends StatelessWidget {
+  const _CountrySelector({required this.country, required this.onTap});
+
+  final CountryCode country;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 83,
-      height: 54,
-      decoration: const BoxDecoration(
-        color: AppColors.fieldFill,
-        border: Border.fromBorderSide(
-          BorderSide(color: AppColors.fieldBorder, width: 1),
+    return GestureDetector(
+      key: const Key('countryPicker'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 83,
+        height: 54,
+        decoration: const BoxDecoration(
+          color: AppColors.fieldFill,
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.fieldBorder, width: 1),
+          ),
+          borderRadius: BorderRadius.all(Radius.circular(27)),
         ),
-        borderRadius: BorderRadius.all(Radius.circular(27)),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              country.isIndia
+                  ? const _Flag()
+                  : Text(country.flag, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 5),
+              _DialCode(country.dial),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -724,9 +718,10 @@ class _Flag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       WelcomeSellerScreen.flagAsset,
-      width: 23,
+      width: 24,
       height: 16,
       fit: BoxFit.fill,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -742,10 +737,10 @@ class _DialCode extends StatelessWidget {
   }
 }
 
-/// Redesigned phone input: pill-shaped box with a "Mobile number"
-/// placeholder, numeric-only entry and a [maxLength] that follows the
-/// selected country's dial code (truncating any longer number when the
-/// country changes).
+/// Redesigned phone input: pill-shaped box that shows a blinking caret while
+/// empty (mirroring the design), numeric-only entry and a [maxLength] that
+/// follows the selected country's dial code (truncating any longer number
+/// when the country changes).
 ///
 /// The [controller] is owned by the widget state above (it is what "Send OTP"
 /// reads); this box only attaches listeners to it.
@@ -766,6 +761,7 @@ class _PhoneBoxState extends State<_PhoneBox> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onChanged);
+    _focusNode.addListener(_onChanged);
   }
 
   void _onChanged() => setState(() {});
@@ -789,12 +785,15 @@ class _PhoneBoxState extends State<_PhoneBox> {
   @override
   void dispose() {
     widget.controller.removeListener(_onChanged);
+    _focusNode.removeListener(_onChanged);
     _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool showCaret =
+        widget.controller.text.isEmpty && !_focusNode.hasFocus;
     return Container(
       width: 277,
       height: 54,
@@ -805,26 +804,89 @@ class _PhoneBoxState extends State<_PhoneBox> {
         ),
         borderRadius: BorderRadius.all(Radius.circular(27)),
       ),
-      child: TextField(
-        key: const Key('loginPhone'),
-        controller: widget.controller,
-        focusNode: _focusNode,
-        maxLength: widget.maxLength,
-        keyboardType: TextInputType.phone,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        textAlignVertical: TextAlignVertical.center,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
-        cursorColor: AppColors.inputCaret,
-        cursorWidth: 2,
-        decoration: const InputDecoration(
-          hintText: 'Mobile number',
-          hintStyle: AppTextStyles.signUpField,
-          counterText: '',
-          border: InputBorder.none,
-          filled: false,
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-        ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: TextField(
+              key: const Key('loginPhone'),
+              controller: widget.controller,
+              focusNode: _focusNode,
+              maxLength: widget.maxLength,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+              ),
+              cursorColor: AppColors.inputCaret,
+              cursorWidth: 2,
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                filled: false,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 17,
+                ),
+              ),
+            ),
+          ),
+          if (showCaret)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 16),
+                    child: _PhoneCaret(),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Decorative blinking caret shown while the phone field is empty and
+/// unfocused, matching the design's resting state. The real text cursor takes
+/// over as soon as the field is focused.
+class _PhoneCaret extends StatefulWidget {
+  const _PhoneCaret();
+
+  @override
+  State<_PhoneCaret> createState() => _PhoneCaretState();
+}
+
+class _PhoneCaretState extends State<_PhoneCaret> {
+  Timer? _timer;
+  bool _visible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) setState(() => _visible = !_visible);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: _visible ? 1 : 0,
+      child: Container(
+        width: 2,
+        height: 19,
+        color: AppColors.inputCaret,
       ),
     );
   }
@@ -929,11 +991,13 @@ class _SignUpField extends StatefulWidget {
     required this.hint,
     this.keyboardType,
     this.obscure = false,
+    this.inputFormatters,
   });
 
   final String hint;
   final TextInputType? keyboardType;
   final bool obscure;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
@@ -958,6 +1022,7 @@ class _SignUpFieldState extends State<_SignUpField> {
       ),
       child: TextField(
         keyboardType: widget.keyboardType,
+        inputFormatters: widget.inputFormatters,
         obscureText: widget.obscure && !_visible,
         textAlignVertical: TextAlignVertical.center,
         style: const TextStyle(

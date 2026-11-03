@@ -13,15 +13,16 @@ import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
+import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
+import 'package:seller_app/screens/report_problem_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/wallet_page.dart';
-import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
 import 'package:seller_app/widgets/page_header.dart';
@@ -374,13 +375,13 @@ void main() {
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Language, notifications'), findsOneWidget);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
-      // Design keeps the typo in "Supppport" (three p's) — string above
-      // uses it; also assert no Account/Business rows leak in.
+      expect(find.text('Help & Support'), findsOneWidget);
+      // Log out lives in Settings, not on the App tab.
+      expect(find.text('Log out'), findsNothing);
+      // Assert no Account/Business rows leak in.
       expect(find.text('Personal Details'), findsNothing);
       expect(find.text('Wallet & Transactions'), findsNothing);
-      // Chevrons on Settings/Help only — Log out has none.
+      // Chevrons on Settings/Help.
       expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
       // Shared chrome + App tab selected.
       expect(find.text('Withdrawal balance'), findsOneWidget);
@@ -409,12 +410,9 @@ void main() {
       expect(settings.left, closeTo(24 + 68, 1));
       expect(settings.top, closeTo(560 + 23, 3));
 
-      // Help title at card-rel (68,89); Log out at (68,143).
-      final help = rectOf(find.text('Help & Suppport'));
+      // Help title at card-rel (68,89).
+      final help = rectOf(find.text('Help & Support'));
       expect(help.top, closeTo(560 + 89, 3));
-      final logout = rectOf(find.text('Log out'));
-      expect(logout.top, closeTo(560 + 143, 3));
-      expect(logout.left, closeTo(24 + 68, 1));
 
       // Subtitle below Settings.
       final sub = rectOf(find.text('Language, notifications'));
@@ -451,16 +449,6 @@ void main() {
       expect(find.text('Personal Details'), findsNothing);
     });
 
-    testWidgets('Log out returns to the login screen', (tester) async {
-      await pumpProfile(tester, const ProfileAppScreen());
-
-      await tester.tap(find.text('Log out'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(WelcomeSellerScreen), findsOneWidget);
-      expect(find.text('Withdrawal balance'), findsNothing);
-    });
-
     testWidgets('Settings row opens the settings page', (tester) async {
       await pumpProfile(tester, const ProfileAppScreen());
 
@@ -476,8 +464,39 @@ void main() {
       await tester.tap(find.byKey(PageHeader.backKey));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsNothing);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('Log out'), findsNothing);
+    });
+
+    testWidgets('Help row opens the Help & Support screen', (tester) async {
+      await pumpProfile(tester, const ProfileAppScreen());
+
+      await tester.tap(find.text('Help & Support'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('How can we help?'), findsOneWidget);
+
+      await tester.tap(find.text('Report a problem'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportProblemScreen), findsOneWidget);
+      expect(find.text('Submit'), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsNothing);
+      expect(find.text('Help & Support'), findsOneWidget);
     });
 
     testWidgets('Help & Suppport row opens the help screen', (tester) async {
@@ -685,7 +704,7 @@ void main() {
       expect(find.text('125 reviews'), findsOneWidget);
       expect(find.text('Reviews'), findsOneWidget);
       // Reviewer rows.
-      expect(find.text('Lakshmi Priya'), findsOneWidget);
+      expect(find.text('Anees'), findsOneWidget);
       expect(find.text('14 Mar 2024'), findsOneWidget);
       expect(
         find.text(
@@ -693,9 +712,9 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Arjun Kumar'), findsOneWidget);
-      expect(find.text('Divya Sundaram'), findsOneWidget);
-      expect(find.text('Mohamed Rafi'), findsOneWidget);
+      expect(find.text('Jhon'), findsOneWidget);
+      expect(find.text('Anjith'), findsOneWidget);
+      expect(find.text('Senthil'), findsOneWidget);
       // Standalone page — no bottom nav / profile chrome.
       expect(find.byType(BottomNavBar), findsNothing);
       expect(find.byType(ProfileShell), findsNothing);
@@ -729,10 +748,10 @@ void main() {
       expect(cardTitle.top, closeTo(265 + 17, 2));
 
       // Row 1 name rel (70, 10), row 4 sits 336 lower (3 pitches of 112).
-      final row1 = rectOf(find.text('Lakshmi Priya'));
+      final row1 = rectOf(find.text('Anees'));
       expect(row1.left, closeTo(24 + 70, 1));
       expect(row1.top, closeTo(265 + 55 + 10, 2));
-      final row4 = rectOf(find.text('Mohamed Rafi'));
+      final row4 = rectOf(find.text('Senthil'));
       expect(row4.top, closeTo(265 + 55 + 10 + 336, 2));
     });
 
@@ -765,14 +784,14 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Average rating'), findsOneWidget);
-      expect(find.text('Lakshmi Priya'), findsOneWidget);
+      expect(find.text('Anees'), findsOneWidget);
 
       // Nothing may stick out past the viewport on the right.
       final origin = tester.getTopLeft(find.byType(MaterialApp));
       for (final finder in [
         find.text('Review & Ratings'),
         find.text('4.8'),
-        find.text('Mohamed Rafi'),
+        find.text('Senthil'),
         find.text('14 Mar 2024'),
       ]) {
         final right = tester.getRect(finder).right - origin.dx;
@@ -1618,6 +1637,47 @@ void main() {
   });
 
   group('OrderPrivewScreen (Fresh Tomatoes is live!, Zeplin 172)', () {
+    testWidgets('Add another product opens the add product flow', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 917);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddProductsScreen), findsNothing);
+
+      await tester.tap(find.byKey(const Key('order-add-product')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddProductsScreen), findsOneWidget);
+      expect(find.text('Add Products'), findsOneWidget);
+    });
+
+    testWidgets('Preview product opens the product details page', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 1515);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Preview product'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProductDetailsScreen), findsOneWidget);
+      expect(find.text('Go back to order'), findsOneWidget);
+      expect(find.text('Fresh Tomatoes'), findsOneWidget);
+
+      await tester.tap(find.text('Go back to order'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPrivewScreen), findsOneWidget);
+      expect(find.byType(ProductDetailsScreen), findsNothing);
+    });
+
     testWidgets('renders at the measured 412x917 geometry', (tester) async {
       tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;
@@ -1629,6 +1689,12 @@ void main() {
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, const Color(0xFFFAFBF3));
+
+      // Floating back circle sits in the empty band above the hero.
+      final back = tester.getRect(find.byKey(const Key('order-preview-back')));
+      expect(back.left, closeTo(24, 0.6));
+      expect(back.top, closeTo(56, 0.6));
+      expect(back.size, const Size(26, 26));
 
       // Baked hero (card + shadow, baked title erased in the asset).
       final hero = tester.getRect(

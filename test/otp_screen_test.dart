@@ -101,7 +101,7 @@ void main() {
     );
   });
 
-  testWidgets('verify button is visual only', (tester) async {
+  testWidgets('verify button is styled', (tester) async {
     await pumpScreen(tester);
 
     final verify = tester.widget<Text>(find.text('Verify'));
@@ -115,7 +115,7 @@ void main() {
     expect(decorations.any((d) => d.color == AppColors.primary), isTrue);
   });
 
-  testWidgets('bottom decoration and illustration assets load', (tester) async {
+  testWidgets('illustration and footer assets load', (tester) async {
     await pumpScreen(tester);
 
     final images = tester.widgetList<Image>(find.byType(Image)).toList();

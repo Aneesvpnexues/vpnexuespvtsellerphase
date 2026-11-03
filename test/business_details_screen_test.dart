@@ -254,6 +254,26 @@ void main() {
     ]);
   });
 
+  testWidgets('the keyboard scrolls the focused field above the inset', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    final field = tester.getRect(find.byKey(const Key('businessAddress')));
+    expect(field.bottom, lessThanOrEqualTo(917 - 360));
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
@@ -295,6 +315,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verification Details'), findsNothing);
+  });
+
+  testWidgets('whitespace-only input does not count as filled', (tester) async {
+    await pumpScreen(tester);
+
+    // Spaces-only name / business / address must not enable Continue.
+    await tester.enterText(find.byKey(const Key('businessName')), '   ');
+    await tester.enterText(find.byKey(const Key('businessFarm')), '  ');
+    await tester.enterText(find.byKey(const Key('businessAddress')), '   ');
+    await tester.pump();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Business Details'), findsOneWidget);
+    expect(find.text('Verification Details'), findsNothing);
+
+    // Real values on all three rows let the flow continue.
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(
+        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(
+        find.byKey(const Key('businessAddress')), '12 Main Street');
+    await tester.pump();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verification Details'), findsOneWidget);
   });
 
   testWidgets('Continue opens the verify details screen', (tester) async {

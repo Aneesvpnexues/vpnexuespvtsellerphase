@@ -63,14 +63,13 @@ void main() {
     await pumpScreen(tester);
 
     final assets = tester.widgetList<Image>(find.byType(Image)).toList();
-    expect(assets.length, 5);
+    expect(assets.length, 4);
     expect(
       assets.map((i) => (i.image as AssetImage).assetName).toSet(),
       {
         WelcomeSellerScreen.leafAsset,
         WelcomeSellerScreen.heroAsset,
         WelcomeSellerScreen.flagAsset,
-        WelcomeSellerScreen.waveAsset,
         WelcomeSellerScreen.sendAsset,
       },
     );
@@ -151,8 +150,11 @@ void main() {
     expect(phone.left, closeTo(112, 1));
     expect(phone.width, closeTo(277, 1));
 
-    // Redesigned box shows the placeholder instead of a static caret.
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    // The field shows a resting caret instead of a placeholder.
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
 
     // Send OTP button: x 24..388, y 749..801.
     final button = rectOf(_findPrimaryContainers(tester).last);
@@ -231,7 +233,10 @@ void main() {
       (tester) async {
     await pumpScreen(tester);
 
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
 
     // Tapping the field opens the input connection (keyboard on device).
     expect(tester.testTextInput.isVisible, isFalse);
@@ -254,7 +259,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('9876543210'), findsNothing);
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
   });
 
   testWidgets('phone input is numeric only and the length follows the '
@@ -360,15 +368,15 @@ void main() {
     expect(find.text('Enter OTP'), findsNothing);
   });
 
-  testWidgets('switching to Sign Up swaps the phone form for Name, E-Mail '
-      'and Password', (tester) async {
+  testWidgets('switching to Sign Up swaps the login form for Name, Phone '
+      'Number and Password', (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
     await tester.pumpAndSettle();
 
     expect(find.text('Name', findRichText: true), findsOneWidget);
-    expect(find.text('E-Mail', findRichText: true), findsOneWidget);
+    expect(find.text('Phone Number', findRichText: true), findsOneWidget);
     expect(find.text('Password', findRichText: true), findsOneWidget);
     expect(find.text('Create account'), findsOneWidget);
 
@@ -383,10 +391,9 @@ void main() {
       findsOneWidget,
     );
 
-    // The phone form is gone in this state.
+    // The login form is gone in this state.
     expect(find.text('Welcome back'), findsNothing);
     expect(find.text('Send OTP'), findsNothing);
-    expect(find.text('Phone Number'), findsNothing);
     expect(find.text('+91'), findsNothing);
     expect(find.byType(TextField), findsNWidgets(3));
 
@@ -468,7 +475,7 @@ void main() {
     expect(hero.top, closeTo(225, 1));
 
     final boxes = _findBorderedBoxes(tester);
-    expect(boxes.length, 3, reason: 'Name, E-Mail and Password fields');
+    expect(boxes.length, 3, reason: 'Name, Phone Number and Password fields');
     const tops = [574, 644, 714];
     for (var i = 0; i < 3; i++) {
       final field = rectOf(boxes[i]);

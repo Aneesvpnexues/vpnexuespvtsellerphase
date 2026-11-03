@@ -12,8 +12,8 @@ import 'seller_type_screen.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes it scales down uniformly instead of overflowing. The primary button
-/// opens the STEP 02 screen; the manual link is visual only.
+/// sizes it scales down uniformly instead of overflowing. Both the primary
+/// button and the "Select it Manually" link open the STEP 02 screen.
 class Step01LocationScreen extends StatelessWidget {
   const Step01LocationScreen({super.key});
 
@@ -148,12 +148,23 @@ class _LocationButton extends StatelessWidget {
 class _ManualLink extends StatelessWidget {
   const _ManualLink();
 
+  void _openSellerTypePage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Select it Manually',
-      textAlign: TextAlign.center,
-      style: AppTextStyles.manualLink,
+    return GestureDetector(
+      key: const Key('manualLocationLink'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openSellerTypePage(context),
+      child: const Text(
+        'Select it Manually',
+        textAlign: TextAlign.center,
+        style: AppTextStyles.manualLink,
+      ),
     );
   }
 }

@@ -37,6 +37,23 @@ void main() {
     expect(find.text('Orders'), findsOneWidget);
   });
 
+  testWidgets('order thumbnails show real product photos', (tester) async {
+    await pumpScreen(tester);
+
+    const expected = [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ];
+    for (var i = 0; i < expected.length; i++) {
+      final image = tester.widget<Image>(
+        find.byKey(ValueKey<String>('order-thumb-$i')).first,
+      );
+      expect((image.image as AssetImage).assetName, expected[i]);
+    }
+    expect(find.text('+1'), findsWidgets);
+  });
+
   testWidgets('layout matches the 412x1154 design geometry', (tester) async {
     await pumpScreen(tester);
 

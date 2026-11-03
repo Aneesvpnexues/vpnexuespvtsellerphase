@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'data/api_config.dart';
+import 'data/product_store.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
@@ -18,6 +19,7 @@ Future<void> main() async {
       statusBarBrightness: Brightness.light,
     ),
   );
+  await seedDemoProducts();
   runApp(const SellerApp());
   // After the first frame the notification permission dialog (Android 13+)
   // and the FCM token request can show over real UI instead of a blank

@@ -15,6 +15,7 @@ abstract final class AppColors {
   static const Color paleCircle = Color(0xFFF5FDF7);
   static const Color linkGreen = Color(0xFF3F9E49);
   static const Color welcomeBg = Color(0xFFF6FCF7);
+  static const Color splashBg = Color(0xFFF3F8EF);
   static const Color sellerGreen = Color(0xFF3CA248);
   static const Color darkGreen = Color(0xFF14472F);
   static const Color fieldFill = Color(0xFFF6F6F6);

@@ -58,3 +58,6 @@ assets/config/cloudinary.json
 # Local-only folders (not pushed)
 .kilo/
 backend/
+
+# Android Gradle build outputs
+/android/build/

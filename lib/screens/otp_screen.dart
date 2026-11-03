@@ -18,8 +18,7 @@ import 'location_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
-/// Enter OTP screen — static replica of Zeplin "Android Compact - 50"
-/// (project 6a8d49709e27bd8b35213d35, screen 6aad063196da349aa4dae3c4).
+/// "Enter OTP" screen — replica of Zeplin "Android Compact - 50".
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design, so on a matching device the layout renders 1:1; on shorter or
@@ -35,8 +34,10 @@ class OtpScreen extends StatefulWidget {
   /// "We've sent a 6-digit code to".
   final String phone;
 
-  static const String illustrationAsset = 'assets/otp/illustration.png';
   static const double designWidth = 412;
+  static const double designHeight = 917;
+
+  static const String illustrationAsset = 'assets/otp/illustration.png';
 
   /// Seconds before "Resend OTP" becomes tappable (Firebase's SMS resend
   /// window is 60s).
