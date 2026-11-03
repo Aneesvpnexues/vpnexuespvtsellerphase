@@ -340,8 +340,9 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
 
   void _openSignUpLocation() {
     setState(() => _sending = false);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      (Route<dynamic> route) => false,
     );
   }
 
