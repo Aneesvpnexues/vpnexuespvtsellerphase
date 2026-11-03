@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
-import 'package:seller_app/screens/settings_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 
 /// The soft keyboard must open when a field is tapped *and stay open*: the
@@ -99,27 +98,5 @@ void main() {
     );
     final field = tester.getRect(find.byKey(const Key('bank-ifsc-field')));
     expect(field.bottom, lessThanOrEqualTo(936 - _keyboard + 1));
-  });
-
-  testWidgets('Settings mobile field keeps focus when the keyboard opens', (
-    tester,
-  ) async {
-    await _pump(tester, const SettingsScreen(), const Size(412, 917));
-
-    // The notifications card overlaps the bottom of the mobile field
-    // (pre-existing layout overlap), so tap the top strip of the editable.
-    await tester.tapAt(
-      Offset(
-        tester.getRect(find.byType(TextField)).center.dx,
-        tester.getRect(find.byType(TextField)).top + 15,
-      ),
-    );
-    await tester.pump();
-
-    expect(
-      _focusInsideTextInput(FocusManager.instance.primaryFocus),
-      isTrue,
-      reason: 'the keyboard opening must not drop focus on the field',
-    );
   });
 }

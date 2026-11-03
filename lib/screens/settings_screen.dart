@@ -81,24 +81,10 @@ class _PreferencesCard extends StatefulWidget {
 }
 
 class _PreferencesCardState extends State<_PreferencesCard> {
-  final _mobileController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _mobileController.text = SellerProfileStore.instance.mobile;
-  }
-
-  @override
-  void dispose() {
-    _mobileController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 168,
+      height: 112,
       children: [
         const Positioned(
           left: 22,
@@ -128,33 +114,6 @@ class _PreferencesCardState extends State<_PreferencesCard> {
               subtitle: 'English',
               subtitleWidth: 35,
               chevron: true,
-            ),
-          ),
-        ),
-        Positioned(
-          left: 21,
-          top: 85,
-          child: LabelText(
-            'Mobile number',
-            AppTextStyles.profileMenuTitle,
-            width: 100,
-          ),
-        ),
-        Positioned(
-          left: 21,
-          top: 107,
-          child: SizedBox(
-            width: 300,
-            child: TextField(
-              controller: _mobileController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                hintText: 'Enter your mobile number',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              onChanged: (value) =>
-                  SellerProfileStore.instance.mobile = value,
             ),
           ),
         ),
