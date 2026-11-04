@@ -75,15 +75,15 @@ class ProfileShell extends StatelessWidget {
                   onBack: () => goToHome(context),
                 ),
               ),
-              const Positioned(left: 22, top: 65, child: _BalanceCard()),
+              const Positioned(left: 17, top: 65, child: _BalanceCard()),
               Positioned(
-                left: 22,
+                left: 17,
                 top: 336,
                 child: _SellerCard(onPersonalDetails: onPersonalDetails),
               ),
-              const Positioned(left: 22, top: 427, child: _StatsRow()),
+              const Positioned(left: 17, top: 427, child: _StatsRow()),
               Positioned(
-                left: 22,
+                left: 17,
                 top: 502,
                 child: _TabBar(
                   selectedTab: selectedTab,
@@ -92,7 +92,7 @@ class ProfileShell extends StatelessWidget {
                   onAppTab: onAppTab,
                 ),
               ),
-              Positioned(left: 22, top: 560, child: listCard),
+              Positioned(left: 17, top: 560, child: listCard),
               Positioned(
                 left: 0,
                 bottom: 0,
@@ -119,7 +119,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 368,
+      width: 378,
       height: 250,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -297,7 +297,7 @@ class _SellerCard extends StatelessWidget {
         builder: (context, _) {
           final SellerProfileStore store = SellerProfileStore.instance;
           return Container(
-            width: 368,
+            width: 378,
             height: 78,
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
@@ -347,7 +347,7 @@ class _SellerCard extends StatelessWidget {
                 Positioned(
                   left: 81,
                   top: 46,
-                  width: 165,
+                  width: 200,
                   child: Text(
                     store.sellerSummary,
                     maxLines: 1,
@@ -356,8 +356,8 @@ class _SellerCard extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  right: 18,
-                  top: 28,
+                  right: 17,
+                  top: 18,
                   child: Container(
                     height: 26,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -453,7 +453,7 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 368,
+      width: 378,
       height: 44,
       decoration: BoxDecoration(
         color: AppColors.tabTrack,
@@ -590,7 +590,7 @@ class ProfileListCard extends StatelessWidget {
       children.add(rows[i]);
     }
     return Container(
-      width: 368,
+      width: 378,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
