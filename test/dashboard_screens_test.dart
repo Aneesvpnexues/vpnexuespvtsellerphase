@@ -143,9 +143,9 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Balance card: x 24..388, y 65..315 (design 121..371, top trim -56).
+      // Balance card: x 22..390, y 65..315 (design 121..371, top trim -56).
       final balance = rectOf(find.text('Withdrawal balance').hitTestable());
-      expect(balance.left, closeTo(48, 1));
+      expect(balance.left, closeTo(46, 1));
 
       final withdraw = rectOf(find.text('Withdraw'));
       // Label is vertically centered inside the y 255..292 button.
@@ -407,7 +407,7 @@ void main() {
 
       // List card top at y560; Settings title Text at card-rel (68,23).
       final settings = rectOf(find.text('Settings'));
-      expect(settings.left, closeTo(24 + 68, 1));
+      expect(settings.left, closeTo(22 + 68, 1));
       expect(settings.top, closeTo(560 + 23, 3));
 
       // Help title at card-rel (68,89).
