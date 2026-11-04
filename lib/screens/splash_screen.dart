@@ -7,13 +7,10 @@ import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
-import '../services/backend_service.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
-import '../screens/business_details_screen.dart';
 import '../screens/location_screen.dart';
 import '../screens/seller_home_screen.dart';
-import '../screens/seller_type_screen.dart';
 import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
 
@@ -29,9 +26,12 @@ import '../screens/welcome_seller_screen.dart';
 /// bleeds off the screen like the design.
 ///
 /// On cold start, [_SplashScreenState] checks whether a Firebase Auth session
-/// already exists. If the user is signed in, the app goes straight to the home
-/// page; otherwise the splash remains and tapping the arrow opens the login
-/// flow.
+/// already exists. A signed-in seller resumes at the first incomplete
+/// onboarding section — or straight on the home page when every section is
+/// already saved — while a seller with no saved rows restarts onboarding at
+/// Step 01, exactly like the OTP and welcome login paths, so a pending page
+/// is never skipped in favour of Home. Without a session the splash remains
+/// and tapping the arrow opens the login flow.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -44,6 +44,12 @@ class SplashScreen extends StatefulWidget {
   /// Design-space hit target around the arrow at the bottom-right of the
   /// artwork. The visible disc is 36px, padded to a 56px tap target.
   static const Rect arrowHitArea = Rect.fromLTWH(340, 794, 56, 56);
+
+  /// Test seam: when set, the splash treats this seller as the signed-in
+  /// session instead of asking Firebase Auth, so widget tests can exercise
+  /// the session-restore routing without a Firebase app.
+  @visibleForTesting
+  static ({String uid, String phone})? debugSignedInSeller;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -62,19 +68,35 @@ class _SplashScreenState extends State<SplashScreen> {
   /// If signed in, restore [AuthFlow.instance.firebaseUid], re-fetch that
   /// user's products from Supabase, check Supabase for an existing profile
   /// matching the verified phone number, determine which onboarding sections
-  /// are complete, and route accordingly. Otherwise stay on the splash so the
-  /// user can tap to log in.
+  /// are complete, and route accordingly: the first incomplete section, or
+  /// Home when everything is already saved. A signed-in seller with no saved
+  /// rows restarts onboarding at Step 01 — never Home — so a pending page
+  /// cannot be skipped. Otherwise stay on the splash so the user can tap to
+  /// log in.
   Future<void> _checkSession() async {
     if (!mounted) return;
-    User? currentUser;
-    try {
-      currentUser = FirebaseAuth.instance.currentUser;
-    } catch (_) {
-      currentUser = null;
+
+    String? uid;
+    String? phone;
+    final ({String uid, String phone})? debugSeller =
+        SplashScreen.debugSignedInSeller;
+    if (debugSeller != null) {
+      uid = debugSeller.uid;
+      phone = debugSeller.phone;
+    } else {
+      User? currentUser;
+      try {
+        currentUser = FirebaseAuth.instance.currentUser;
+      } catch (_) {
+        currentUser = null;
+      }
+      uid = currentUser?.uid;
+      phone = currentUser?.phoneNumber;
     }
+
     if (!mounted) return;
-    if (currentUser != null) {
-      AuthFlow.instance.firebaseUid = currentUser.uid;
+    if (uid != null && uid.isNotEmpty) {
+      AuthFlow.instance.firebaseUid = uid;
       AuthFlow.instance.verified = true;
 
       // Clear any stale data from a previous login session.
@@ -82,8 +104,8 @@ class _SplashScreenState extends State<SplashScreen> {
       ProductStore.instance.clear();
 
       // Set the user_id for product queries and all user-scoped lookups.
-      ProductStore.instance.userId = currentUser.uid;
-      SellerProfileStore.instance.userId = currentUser.uid;
+      ProductStore.instance.userId = uid;
+      SellerProfileStore.instance.userId = uid;
 
       // Always re-fetch this user's products from Supabase so they persist
       // across app restarts.
@@ -93,19 +115,16 @@ class _SplashScreenState extends State<SplashScreen> {
         // Home still opens with whatever products are cached locally.
       }
 
-      // Get the verified phone number from Firebase Auth for profile lookup.
-      final String? firebasePhone = currentUser.phoneNumber;
-
       // Look up this seller's Supabase rows by the verified phone number.
       // Number-agnostic: exact E.164 -> last 10 digits -> Firebase UID, and
       // bank/KYC are always checked under both candidate ids.
       if (mounted) {
         try {
           final api = SupabaseProductApi();
-          api.userId = currentUser.uid;
+          api.userId = uid;
           final profile = await api.getProfileByPhone(
-            firebasePhone ?? '',
-            userId: currentUser.uid,
+            phone ?? '',
+            userId: uid,
           );
 
           final String profileUserId =
@@ -114,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen> {
           // Products live under the Firebase UID; profile/bank/KYC rows may
           // also carry a legacy backend id, so check both.
           final List<String> candidateIds = <String>{
-            currentUser.uid,
+            uid,
             profileUserId,
           }.where((String id) => id.trim().isNotEmpty).toList();
 
@@ -156,38 +175,17 @@ class _SplashScreenState extends State<SplashScreen> {
             return;
           }
         } catch (_) {
-          // Supabase lookup failed — fall through to backend status check.
+          // Supabase lookup failed — treat the seller as having no saved
+          // rows and restart onboarding below.
         }
       }
 
-      // No Supabase profile found — check backend onboarding status for
-      // returning sellers with partial data, or go straight to Home.
-      try {
-        final idToken = await AuthFlow.instance.getIdToken();
-        if (idToken != null && mounted) {
-          await BackendService.openSession(idToken);
-          if (!mounted) return;
-          final status = await BackendService.onboardingStatus(idToken);
-          if (!mounted) return;
-          final step = (status['onboardingStep'] as String? ?? '')
-              .toString()
-              .trim()
-              .toUpperCase();
-          if (step.isNotEmpty &&
-              step != 'COMPLETE' &&
-              step != 'DONE' &&
-              step != 'FINISHED') {
-            _navigateToStep(step);
-            return;
-          }
-        }
-      } catch (_) {
-        // Backend unavailable — go straight to Home.
-      }
-
+      // No Supabase data found for this seller — resume at Step 01 exactly
+      // like the OTP and welcome login paths, so a pending onboarding page
+      // is never skipped in favour of Home.
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
       );
     } else {
       setState(() => _checking = false);
@@ -303,42 +301,6 @@ class _SplashScreenState extends State<SplashScreen> {
       );
     } else {
       SellerProfileStore.instance.mobile = mobile;
-    }
-  }
-
-  /// Navigate to the onboarding step indicated by the backend, or Home if
-  /// onboarding is complete.
-  void _navigateToStep(String step) {
-    if (!mounted) return;
-    switch (step) {
-      case 'LOCATION':
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
-        );
-        break;
-      case 'SELLER_TYPE':
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => const Step02SellerTypeScreen(),
-          ),
-        );
-        break;
-      case 'BUSINESS':
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => const Step03BusinessDetailsScreen(),
-          ),
-        );
-        break;
-      case 'BANK':
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-        );
-        break;
-      default:
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-        );
     }
   }
 
