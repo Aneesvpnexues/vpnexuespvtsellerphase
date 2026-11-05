@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'write_review_screen.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/page_header.dart';
 
 /// "Review & Ratings" — seller ratings page (Zeplin screen
 /// 6ad1af82c2491ce58636d479; the API token no longer resolves, so the page
@@ -22,54 +24,22 @@ class ReviewRatingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
-      body: Artboard(
-        designWidth: designWidth,
-        designHeight: designHeight,
-        child: Stack(
-          children: [
-            const Positioned(left: 24, top: 72, child: _HeaderBack()),
-            const Positioned(
-              left: 68,
-              top: 76,
-              child: Text(
-                'Review & Ratings',
-                style: AppTextStyles.profileHeaderTitle,
+      body: SafeArea(
+        bottom: false,
+        child: Artboard(
+          designWidth: designWidth,
+          designHeight: designHeight,
+          child: Stack(
+            children: [
+              const Positioned(
+                left: 0,
+                top: 24,
+                child: PageHeader(title: 'Review & Ratings'),
               ),
-            ),
-            const Positioned(left: 24, top: 121, child: _RatingSummaryCard()),
-            const Positioned(left: 24, top: 321, child: _ReviewsCard()),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderBack extends StatelessWidget {
-  const _HeaderBack();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.arrow_back,
-          size: 14,
-          color: AppColors.textPrimary,
+              const Positioned(left: 22, top: 65, child: _RatingSummaryCard()),
+              const Positioned(left: 22, top: 265, child: _ReviewsCard()),
+            ],
+          ),
         ),
       ),
     );
@@ -90,7 +60,7 @@ class _RatingSummaryCard extends StatelessWidget {
     color: AppColors.balanceSoft,
   );
   static const _sub = TextStyle(
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.balanceSoft,
@@ -110,7 +80,7 @@ class _RatingSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 176,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -228,7 +198,7 @@ class _ReviewsCard extends StatelessWidget {
   const _ReviewsCard();
 
   static const _cardTitle = TextStyle(
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
@@ -236,30 +206,30 @@ class _ReviewsCard extends StatelessWidget {
 
   static const _reviews = <_Review>[
     _Review(
-      initials: 'LP',
-      name: 'Lakshmi Priya',
+      initials: 'AN',
+      name: 'Anees',
       rating: 5,
       date: '14 Mar 2024',
       comment:
           'Fresh tomatoes every time and quick delivery. Excellent quality!',
     ),
     _Review(
-      initials: 'AK',
-      name: 'Arjun Kumar',
+      initials: 'JH',
+      name: 'Jhon',
       rating: 5,
       date: '10 Mar 2024',
       comment: 'Best seller in the market. Always delivers on time.',
     ),
     _Review(
-      initials: 'DS',
-      name: 'Divya Sundaram',
+      initials: 'AJ',
+      name: 'Anjith',
       rating: 4,
       date: '2 Mar 2024',
       comment: 'Good produce overall. Packing could be better.',
     ),
     _Review(
-      initials: 'MR',
-      name: 'Mohamed Rafi',
+      initials: 'SE',
+      name: 'Senthil',
       rating: 5,
       date: '25 Feb 2024',
       comment: 'Consistent quality on every single order.',
@@ -269,8 +239,8 @@ class _ReviewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
-      height: 520,
+      width: 368,
+      height: 620,
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -291,22 +261,26 @@ class _ReviewsCard extends StatelessWidget {
           ),
           for (var i = 0; i < _reviews.length; i++) ...[
             Positioned(
-              left: 0,
-              right: 0,
+              left: 0, right: 0,
               top: 55 + 112.0 * i,
-              child: SizedBox(
-                height: 112,
-                child: _ReviewRow(review: _reviews[i]),
-              ),
+              child: SizedBox(height: 112, child: _ReviewRow(review: _reviews[i])),
             ),
             if (i < _reviews.length - 1)
-              Positioned(
-                left: 22,
-                right: 17,
-                top: 166 + 112.0 * i,
-                child: const _Divider(),
-              ),
+              Positioned(left: 22, right: 17, top: 166 + 112.0 * i, child: const _Divider()),
           ],
+          Positioned(
+            left: 22, bottom: 20,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WriteReviewScreen())),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.darkCard,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: const Text('Write a Review'),
+            ),
+          ),
         ],
       ),
     );
@@ -336,7 +310,7 @@ class _ReviewRow extends StatelessWidget {
   final _Review review;
 
   static const _name = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
@@ -348,7 +322,7 @@ class _ReviewRow extends StatelessWidget {
     color: AppColors.listSubtitle,
   );
   static const _comment = TextStyle(
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.4,
     color: AppColors.listSubtitle,
@@ -402,6 +376,7 @@ class _ReviewRow extends StatelessWidget {
             child: Text(review.comment, style: _comment),
           ),
         ),
+        const SizedBox.shrink(),
       ],
     );
   }

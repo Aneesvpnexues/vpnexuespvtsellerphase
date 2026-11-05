@@ -4,6 +4,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import '../widgets/slide_drag_detector.dart';
 
@@ -35,58 +37,19 @@ class OrderDeliveryScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText(
-                  'Order Details',
-                  AppTextStyles.orderTitle,
-                  width: 200,
-                  height: 25,
-                ),
+                child: PageHeader(title: 'Order Details'),
               ),
-              Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              Positioned(left: 22, top: 117, child: _SegmentTabs()),
               Positioned(left: 25, top: 172, child: _OrderHero()),
               Positioned(left: 41, top: 247, child: _ProgressCard()),
-              Positioned(left: 24, top: 358, child: _BuyerCard()),
-              Positioned(left: 24, top: 552, child: _DeliveryCard()),
-              Positioned(left: 24, top: 847, child: _SlideDelivery()),
+              Positioned(left: 22, top: 358, child: _BuyerCard()),
+              Positioned(left: 22, top: 552, child: _DeliveryCard()),
+              Positioned(left: 22, top: 847, child: _SlideDelivery()),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );
@@ -115,12 +78,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -254,7 +217,7 @@ class _OrderHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 246,
+            left: 244,
             top: 11,
             child: Container(
               width: 101,
@@ -538,7 +501,7 @@ class _BuyerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 181,
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
@@ -745,7 +708,7 @@ class _DeliveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 217,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -845,7 +808,7 @@ class _DeliveryCard extends StatelessWidget {
             child: LabelText(
               'Delivery Details',
               AppTextStyles.orderCardTitle,
-              width: 112,
+              width: 128,
               height: 25,
             ),
           ),
@@ -1041,66 +1004,69 @@ class _SlideDeliveryState extends State<_SlideDelivery>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => setState(() => _knobX = _end),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
-            stops: [0.11656297743320465, 1],
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: () => setState(() => _knobX = _end),
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          width: 368,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+              stops: [0.11656297743320465, 1],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2E000000),
+                offset: Offset(0, 22),
+                blurRadius: 30,
+                spreadRadius: -2,
+              ),
+            ],
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x2E000000),
-              offset: Offset(0, 22),
-              blurRadius: 30,
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          border: Border.all(color: const Color(0x0F000000)),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderSlideLime,
-                  shape: BoxShape.circle,
-                ),
-                child: const Image(
-                  image: AssetImage('assets/order/ic_slide.png'),
-                  width: 26,
-                  height: 26,
+          foregroundDecoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            border: Border.all(color: const Color(0x0F000000)),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 4,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
+                  ),
                 ),
               ),
-            ),
-            const Positioned(
-              left: 93,
-              top: 15,
-              child: LabelText(
-                'Slide when the buyer arrives',
-                AppTextStyles.orderSlideLabel,
-                width: 199,
+              const Positioned(
+                left: 93,
+                top: 15,
+                child: LabelText(
+                  'Slide when the buyer arrives',
+                  AppTextStyles.orderSlideLabel,
+                  width: 199,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+

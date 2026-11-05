@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/order_delivery_screen.dart';
 import 'package:seller_app/screens/order_ready_screen.dart';
 
@@ -21,6 +22,16 @@ Finder slideArrow() => find.byWidgetPredicate(
 );
 
 void main() {
+  setUp(() {
+    // The route guard only opens authenticated screens while a session is
+    // active; these tests exercise the in-app navigation directly.
+    SessionStore.instance.startSession(
+      phone: '9876543210',
+      userName: 'Test Seller',
+      method: 'login',
+    );
+  });
+
   testWidgets('renders the 140 order ready content', (tester) async {
     await pumpReady(tester);
 
@@ -52,6 +63,21 @@ void main() {
     expect(find.text('Pack all items to continue'), findsNothing);
   });
 
+  testWidgets('the completed step draws a white tick without a white box', (
+    tester,
+  ) async {
+    await pumpReady(tester);
+
+    expect(
+      find.image(const AssetImage('assets/order/ic_step_tick_white.png')),
+      findsOneWidget,
+    );
+    expect(
+      find.image(const AssetImage('assets/order/ic_step_tick.png')),
+      findsNothing,
+    );
+  });
+
   testWidgets('layout matches the 412x917 design geometry', (tester) async {
     await pumpReady(tester);
 
@@ -70,7 +96,7 @@ void main() {
 
     // The canvas trims the 49px status bar, so screen y = design y - 49.
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Order Details')).top, closeTo(22, 4));
     expect(rectOf(find.text('ORDER #NX4582')).left, closeTo(41, 3));
     expect(rectOf(find.text('ORDER #NX4582')).top, closeTo(135, 4));
     expect(rectOf(find.text('Order Accepted')).left, closeTo(41, 3));
@@ -179,6 +205,80 @@ void main() {
     expect(find.byType(OrderReadyScreen), findsOneWidget);
   });
 
+  testWidgets('each checklist row toggles independently', (tester) async {
+    await pumpReady(tester);
+
+    expect(find.text('3/3 packed'), findsOneWidget);
+
+    await tester.tap(find.text('Fresh Tomatoes'));
+    await tester.pumpAndSettle();
+    expect(find.text('2/3 packed'), findsOneWidget);
+
+    await tester.tap(find.text('Green Chillies').first);
+    await tester.pumpAndSettle();
+    expect(find.text('1/3 packed'), findsOneWidget);
+
+    await tester.tap(find.text('Green Chillies').last);
+    await tester.pumpAndSettle();
+    expect(find.text('0/3 packed'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/order_ready/ic_badge_check.png')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Green Chillies').last);
+    await tester.pumpAndSettle();
+    expect(find.text('1/3 packed'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/order_ready/ic_badge_check.png')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the checklist drives the counter, rail and slide gate', (
+    tester,
+  ) async {
+    await pumpReady(tester);
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    expect(
+      rectOf(find.byKey(const Key('packing_progress_fill'))).width,
+      closeTo(330, 0.5),
+    );
+    expect(find.text('Slide to mark as ready'), findsOneWidget);
+
+    await tester.tap(find.text('Fresh Tomatoes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2/3 packed'), findsOneWidget);
+    expect(
+      rectOf(find.byKey(const Key('packing_progress_fill'))).width,
+      closeTo(220, 0.5),
+    );
+    expect(find.text('Pack all items to continue'), findsOneWidget);
+    expect(find.text('Slide to mark as ready'), findsNothing);
+
+    await tester.dragFrom(tester.getCenter(slideArrow()), const Offset(320, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(OrderDeliveryScreen), findsNothing);
+    expect(rectOf(slideArrow()).left, closeTo(40, 2));
+
+    await tester.tap(find.text('Fresh Tomatoes'));
+    await tester.pumpAndSettle();
+    expect(find.text('3/3 packed'), findsOneWidget);
+    expect(find.text('Slide to mark as ready'), findsOneWidget);
+
+    await tester.drag(
+      find.text('Slide to mark as ready'),
+      const Offset(320, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(OrderDeliveryScreen), findsOneWidget);
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
@@ -191,3 +291,4 @@ void main() {
     expect(find.text('Packing checklist'), findsOneWidget);
   });
 }
+

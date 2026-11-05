@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
 /// Bank Details — static replica of Zeplin "Android Compact - 162"
@@ -30,15 +31,10 @@ class BankDetailsScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: const [
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
+                left: 0,
                 top: 73,
-                child: LabelText(
-                  'Bank Details',
-                  AppTextStyles.orderTitle,
-                  width: 123,
-                ),
+                child: PageHeader(title: 'Bank Details'),
               ),
               Positioned(left: 25, top: 127, child: _BankCard()),
               Positioned(left: 25, top: 316, child: _UpiCard()),
@@ -57,38 +53,6 @@ class BankDetailsScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
         ),
       ),
     );
@@ -301,7 +265,7 @@ class _UpiCard extends StatelessWidget {
           Positioned(
             left: 22,
             top: 13,
-            child: LabelText('UPI', AppTextStyles.orderCardTitle, width: 24),
+            child: LabelText('UPI', AppTextStyles.orderCardTitle, width: 36),
           ),
           Positioned(left: 21, top: 56, child: _UpiTile()),
           Positioned(

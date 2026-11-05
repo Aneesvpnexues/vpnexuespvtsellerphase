@@ -1,25 +1,180 @@
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../data/api_error.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/hover_press.dart';
 import 'seller_home_screen.dart';
 
-/// "Add your bank details" — static replica of Zeplin "Android Compact - 106"
+/// "Add your bank details" — editable replica of Zeplin "Android Compact - 106"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb1cc78003f7066066b).
 ///
 /// Built against a 412x936 artboard (the design's 44px top headroom removed).
-/// The vegetable-basket illustration is the design PNG cropped to
-/// x190..412 / y70..332; the white "STEP 04" label sits over foliage inside
-/// that crop and is therefore baked into the asset (only "STEP 02" is rendered
-/// here). The back arrow pops; Continue opens the home page
+/// The header artwork is pre-composited into [headerAsset] at 2x: a soft-focus
+/// produce wash, the sharp vegetable basket and the white "STEP 04" pill all
+/// live in that PNG. Only "STEP 02" is rendered as text here. Name/account/IFSC
+/// are typeable, the bank card opens a picker, Verify validates the IFSC
+/// format, and Continue saves nothing but opens the home page
 /// ([SellerHomeScreen]).
-class BankDetaileScreen extends StatelessWidget {
+class BankDetaileScreen extends StatefulWidget {
   const BankDetaileScreen({super.key});
 
-  static const String illustrationAsset = 'assets/bank/illustration.png';
+  static const String headerAsset = 'assets/bank/header.png';
   static const double designWidth = 412;
   static const double designHeight = 936;
+  static const double sheetTop = 287.5;
+  static const double sheetRadius = 40;
+
+  /// The header washes out just past the sheet's rounded corners; below this
+  /// the backdrop is plain white.
+  static const double backdropBottom = sheetTop + sheetRadius;
+
+  static const LinearGradient headerGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [AppColors.bankPageBg, AppColors.bankPageBgEnd],
+  );
+
+  @override
+  State<BankDetaileScreen> createState() => _BankDetaileScreenState();
+}
+
+class _BankDetaileScreenState extends State<BankDetaileScreen> {
+  static const List<String> _banks = [
+    'State Bank of India',
+    'HDFC Bank',
+    'ICICI Bank',
+    'Axis Bank',
+    'Kotak Mahindra Bank',
+    'Punjab National Bank',
+    'Bank of Baroda',
+    'Canara Bank',
+    'Other / Manual entry',
+  ];
+
+  final TextEditingController _holderName = TextEditingController();
+  final TextEditingController _accountNumber = TextEditingController();
+  final TextEditingController _ifsc = TextEditingController();
+  final TextEditingController _manualBank = TextEditingController();
+  final FocusNode _holderNameFocus = FocusNode();
+  final FocusNode _accountFocus = FocusNode();
+  final FocusNode _ifscFocus = FocusNode();
+  final FocusNode _manualBankFocus = FocusNode();
+
+  String? _bankName = _banks.first;
+  bool _ifscVerified = false;
+  bool _showManualBank = false;
+
+  @override
+  void dispose() {
+    _holderName.dispose();
+    _accountNumber.dispose();
+    _ifsc.dispose();
+    _manualBank.dispose();
+    _holderNameFocus.dispose();
+    _accountFocus.dispose();
+    _ifscFocus.dispose();
+    _manualBankFocus.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+        ),
+      );
+  }
+
+  Future<void> _selectBank() async {
+    FocusScope.of(context).unfocus();
+    final String? selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _BankPickerSheet(selected: _bankName),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _bankName = selected;
+        _showManualBank = selected == 'Other / Manual entry';
+      });
+    }
+  }
+
+  void _onIfscChanged(String _) {
+    if (_ifscVerified) {
+      setState(() => _ifscVerified = false);
+    }
+  }
+
+  bool get _ifscIsValid => _ifsc.text.trim().length == 11;
+
+  void _verifyIfsc() {
+    if (!_ifscIsValid) {
+      _showMessage('Enter a valid 11-character IFSC code.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    setState(() => _ifscVerified = true);
+  }
+
+  Future<void> _continue() async {
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final holderName = _holderName.text.trim();
+    final bankName = _bankName == 'Other / Manual entry'
+        ? _manualBank.text.trim()
+        : (_bankName ?? '');
+    final accountNumber = _accountNumber.text.trim().replaceAll(' ', '');
+    final ifsc = _ifsc.text.trim();
+
+    if (holderName.isEmpty) {
+      _showMessage('Enter the account holder name.');
+      return;
+    }
+    if (_bankName == 'Other / Manual entry' && _manualBank.text.trim().isEmpty) {
+      _showMessage('Enter your bank name.');
+      return;
+    }
+    if (bankName.isEmpty) {
+      _showMessage('Select your bank.');
+      return;
+    }
+
+    try {
+      await SupabaseProductApi().saveBankDetails(
+        holderName: holderName,
+        bankName: bankName,
+        accountNumber: accountNumber,
+        ifsc: ifsc,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (route) => false,
+      );
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Could not save bank details. Please try again.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,72 +182,203 @@ class BankDetaileScreen extends StatelessWidget {
       backgroundColor: AppColors.surface,
       body: Stack(
         children: [
+          const Positioned.fill(child: _HeaderBackdrop()),
           Artboard(
-            designWidth: designWidth,
-            designHeight: designHeight,
+            designWidth: BankDetaileScreen.designWidth,
+            designHeight: BankDetaileScreen.designHeight,
+            fillWidth: true,
+            keyboardBottomInset: ContinueButton.keyboardInset,
             child: Stack(
-              children: const [
-                Positioned(left: 0, top: 0, child: _HeaderBackground()),
-                // Sheet first: the illustration is drawn above it and
-                // carries its own baked shadow along the seam, so the
-                // sheet's BoxShadow is only visible left of the image
-                // (no doubling).
-                Positioned(left: 0, top: 287.5, child: _Sheet()),
-                Positioned(left: 190, top: 26, child: _Illustration()),
-                Positioned(left: 21, top: 30, child: _BackButton()),
-                Positioned(left: 25, top: 89.13, child: _StepLabel()),
-                Positioned(left: 25, top: 118.75, child: _ProgressTrack()),
-                Positioned(left: 24, top: 141.79, child: _TitleLead()),
-                Positioned(left: 24, top: 175.80, child: _TitleAccent()),
-                Positioned(left: 25, top: 218.12, child: _Subtitle()),
+              children: [
+                const Positioned(left: 0, top: 0, child: _HeaderArt()),
+                const Positioned(
+                  left: 0,
+                  top: BankDetaileScreen.sheetTop,
+                  child: _Sheet(),
+                ),
+                const Positioned(left: 21, top: 30, child: _BackButton()),
+                const Positioned(left: 25, top: 89.13, child: _StepLabel()),
+                const Positioned(
+                  left: 25,
+                  top: 118.75,
+                  child: _ProgressTrack(),
+                ),
+                const Positioned(left: 22, top: 141.79, child: _TitleLead()),
+                const Positioned(left: 22, top: 175.80, child: _TitleAccent()),
+                const Positioned(left: 25, top: 218.12, child: _Subtitle()),
                 // Bank details section row.
-                Positioned(left: 27, top: 319, child: _SectionTick()),
-                Positioned(left: 41, top: 319.45, child: _SectionTitle()),
-                Positioned(left: 261, top: 313, child: _PillNote()),
-                Positioned(left: 26, top: 350, child: _Divider()),
+                const Positioned(left: 27, top: 319, child: _SectionTick()),
+                const Positioned(left: 41, top: 319.45, child: _SectionTitle()),
+                const Positioned(left: 261, top: 313, child: _PillNote()),
+                const Positioned(left: 26, top: 350, child: _Divider()),
                 // Card 1 — Account Holder Name (active: soft shadow).
-                Positioned(left: 25, top: 363, child: _CardActive()),
-                Positioned(left: 36, top: 378, child: _TilePerson()),
-                Positioned(left: 81, top: 381.81, child: _LabelName()),
-                Positioned(left: 81, top: 402, child: _InputName()),
-                Positioned(left: 90.5, top: 415.99, child: _InputTextName()),
+                const Positioned(left: 25, top: 363, child: _CardActive()),
+                const Positioned(left: 36, top: 378, child: _TilePerson()),
+                const Positioned(left: 81, top: 381.81, child: _LabelName()),
+                const Positioned(left: 81, top: 402, child: _InputName()),
+                Positioned(
+                  left: 81,
+                  top: 402,
+                  width: 291.5,
+                  height: 35.5,
+                  child: GestureDetector(
+                    key: const Key('bank-holder-name-tap'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _holderNameFocus.requestFocus,
+                  ),
+                ),
+                Positioned(
+                  left: 90.5,
+                  top: 415.99,
+                  width: 273,
+                  child: _BankTextField(
+                    fieldKey: const Key('bank-holder-name-field'),
+                    controller: _holderName,
+                    focusNode: _holderNameFocus,
+                    hintText: 'Name should match your bank account',
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    maxLength: 50,
+                    onSubmitted: (_) => _accountFocus.requestFocus(),
+                  ),
+                ),
                 // Card 2 — Bank Name (dropdown).
-                Positioned(left: 25, top: 467, child: _CardBank()),
-                Positioned(left: 36, top: 482, child: _TileBank()),
-                Positioned(left: 81, top: 485.81, child: _LabelBank()),
-                Positioned(left: 81, top: 506, child: _InputBank()),
-                Positioned(left: 90.5, top: 520.10, child: _InputTextBank()),
-                Positioned(left: 348, top: 521, child: _ChevronDown()),
+                const Positioned(left: 25, top: 467, child: _CardBank()),
+                const Positioned(left: 36, top: 482, child: _TileBank()),
+                const Positioned(left: 81, top: 485.81, child: _LabelBank()),
+                const Positioned(left: 81, top: 506, child: _InputBank()),
+                Positioned(
+                  left: 90.5,
+                  top: 520.10,
+                  width: 240,
+                  child: Text(
+                    _bankName ?? 'Select your bank',
+                    key: const Key('bank-name-value'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bankInputText,
+                  ),
+                ),
+                const Positioned(left: 348, top: 521, child: _ChevronDown()),
+                if (_showManualBank)
+                  Positioned(
+                    left: 81,
+                    top: 562,
+                    width: 291.5,
+                    child: _BankTextField(
+                      fieldKey: const Key('bank-manual-name-field'),
+                      controller: _manualBank,
+                      focusNode: _manualBankFocus,
+                      hintText: 'Enter your bank name',
+                      textInputAction: TextInputAction.next,
+                      maxLength: 50,
+                      onSubmitted: (_) => _accountFocus.requestFocus(),
+                    ),
+                  ),
                 // Card 3 — Account Number.
-                Positioned(left: 25, top: 571, child: _CardAccount()),
-                Positioned(left: 36, top: 586, child: _TileAccount()),
-                Positioned(left: 81, top: 589.81, child: _LabelAccount()),
-                Positioned(left: 81, top: 610, child: _InputAccount()),
-                Positioned(left: 90.5, top: 623.67, child: _InputTextAccount()),
+                const Positioned(left: 25, top: 571, child: _CardAccount()),
+                const Positioned(left: 36, top: 586, child: _TileAccount()),
+                const Positioned(left: 81, top: 589.81, child: _LabelAccount()),
+                const Positioned(left: 81, top: 610, child: _InputAccount()),
+                Positioned(
+                  left: 81,
+                  top: 610,
+                  width: 291.5,
+                  height: 35.5,
+                  child: GestureDetector(
+                    key: const Key('bank-account-number-tap'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _accountFocus.requestFocus,
+                  ),
+                ),
+                Positioned(
+                  left: 90.5,
+                  top: 623.67,
+                  width: 273,
+                  child: _BankTextField(
+                    fieldKey: const Key('bank-account-number-field'),
+                    controller: _accountNumber,
+                    focusNode: _accountFocus,
+                    hintText: '1234 5678 9012',
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: const [_AccountNumberFormatter()],
+                    maxLength: 23,
+                    onSubmitted: (_) => _ifscFocus.requestFocus(),
+                  ),
+                ),
                 // Card 4 — IFSC Code + Verify button.
-                Positioned(left: 25, top: 675, child: _CardIfsc()),
-                Positioned(left: 36, top: 690, child: _TileIfsc()),
-                Positioned(left: 81, top: 692.81, child: _LabelIfsc()),
-                Positioned(left: 81, top: 714, child: _InputIfsc()),
-                Positioned(left: 90.5, top: 727.99, child: _InputTextIfsc()),
-                Positioned(left: 301, top: 713.5, child: _VerifyButton()),
+                const Positioned(left: 25, top: 675, child: _CardIfsc()),
+                const Positioned(left: 36, top: 690, child: _TileIfsc()),
+                const Positioned(left: 81, top: 692.81, child: _LabelIfsc()),
+                const Positioned(left: 81, top: 714, child: _InputIfsc()),
+                Positioned(
+                  left: 81,
+                  top: 714,
+                  width: 212.5,
+                  height: 35.5,
+                  child: GestureDetector(
+                    key: const Key('bank-ifsc-tap'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _ifscFocus.requestFocus,
+                  ),
+                ),
+                Positioned(
+                  left: 90.5,
+                  top: 727.99,
+                  width: 193.5,
+                  child: _BankTextField(
+                    fieldKey: const Key('bank-ifsc-field'),
+                    controller: _ifsc,
+                    focusNode: _ifscFocus,
+                    hintText: 'Enter 11-digit code',
+                    textCapitalization: TextCapitalization.characters,
+                    textInputAction: TextInputAction.done,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9]')),
+                      const _UpperCaseTextFormatter(),
+                      LengthLimitingTextInputFormatter(11),
+                    ],
+                    maxLength: 11,
+                    onChanged: _onIfscChanged,
+                    onSubmitted: (_) => _verifyIfsc(),
+                  ),
+                ),
+                Positioned(
+                  left: 301,
+                  top: 713.5,
+                  child: _VerifyButton(
+                    verified: _ifscVerified,
+                    onTap: _verifyIfsc,
+                  ),
+                ),
+                // Full-card hit target for the bank picker.
+                Positioned(
+                  left: 25,
+                  top: 467,
+                  width: 368,
+                  height: 93,
+                  child: GestureDetector(
+                    key: const Key('bank-selector'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _selectBank,
+                  ),
+                ),
                 // Security banner.
-                Positioned(left: 25, top: 793, child: _Banner()),
-                Positioned(left: 36, top: 807, child: _Shield()),
-                Positioned(left: 80.5, top: 808.94, child: _BannerTitle()),
-                Positioned(left: 80.5, top: 827.99, child: _BannerBody()),
+                const Positioned(left: 25, top: 793, child: _Banner()),
+                const Positioned(left: 36, top: 807, child: _Shield()),
+                const Positioned(
+                  left: 80.5,
+                  top: 808.94,
+                  child: _BannerTitle(),
+                ),
+                const Positioned(left: 80.5, top: 827.99, child: _BannerBody()),
               ],
             ),
           ),
-          // Anchored to the physical screen bottom so it stays there on
-          // taller devices; on the 936-tall artboard this matches the
-          // design offset (980 - 44 - 54 - 16 = 866).
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
-              child: SizedBox(height: 54, child: const _ContinueButton()),
-            ),
+          ContinueButton(
+            buttonKey: const Key('bank-continue'),
+            onTap: _continue,
           ),
         ],
       ),
@@ -100,29 +386,90 @@ class BankDetaileScreen extends StatelessWidget {
   }
 }
 
-class _HeaderBackground extends StatelessWidget {
-  const _HeaderBackground();
+class _AccountNumberFormatter extends TextInputFormatter {
+  const _AccountNumberFormatter();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: BankDetaileScreen.designWidth,
-      height: 386,
-      color: AppColors.bankPageBg,
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String limited = digits.length > 18
+        ? digits.substring(0, 18)
+        : digits;
+    final StringBuffer buffer = StringBuffer();
+    for (var i = 0; i < limited.length; i++) {
+      if (i > 0 && i % 4 == 0) buffer.write(' ');
+      buffer.write(limited[i]);
+    }
+    final String text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
 
-class _Illustration extends StatelessWidget {
-  const _Illustration();
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  const _UpperCaseTextFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      composing: TextRange.empty,
+    );
+  }
+}
+
+class _HeaderArt extends StatelessWidget {
+  const _HeaderArt();
 
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      BankDetaileScreen.illustrationAsset,
-      width: 222,
-      height: 262,
+      BankDetaileScreen.headerAsset,
+      width: BankDetaileScreen.designWidth,
+      height: BankDetaileScreen.backdropBottom,
       fit: BoxFit.fill,
+    );
+  }
+}
+
+/// Extends the header wash past the artboard so it reaches the physical left
+/// and right edges on any screen shape. Below the sheet seam the screen stays
+/// white, so the white panel is edge-to-edge too.
+class _HeaderBackdrop extends StatelessWidget {
+  const _HeaderBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double scale = math
+            .min(
+              constraints.maxWidth / BankDetaileScreen.designWidth,
+              constraints.maxHeight / BankDetaileScreen.designHeight,
+            )
+            .clamp(0.0, Artboard.defaultMaxScale);
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            key: const Key('bank-backdrop'),
+            width: constraints.maxWidth,
+            height: BankDetaileScreen.backdropBottom * scale,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: BankDetaileScreen.headerGradient,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -134,10 +481,12 @@ class _BackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
-      child: const Icon(
-        Icons.arrow_back,
-        size: 22,
-        color: AppColors.textPrimary,
+      child: HoverPress.icon(
+        child: const Icon(
+          Icons.arrow_back,
+          size: 22,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -235,10 +584,12 @@ class _Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: BankDetaileScreen.designWidth,
-      height: BankDetaileScreen.designHeight - 287.5,
+      height: BankDetaileScreen.designHeight - BankDetaileScreen.sheetTop,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(BankDetaileScreen.sheetRadius),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x2E000000),
@@ -305,7 +656,7 @@ class _PillNote extends StatelessWidget {
       child: const FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fiedls are required',
+          'All fields are required',
           style: AppTextStyles.verifyPillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -332,9 +683,10 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 93,
       decoration: BoxDecoration(
+        color: AppColors.surface,
         border: Border.all(color: AppColors.docCardBorder),
         borderRadius: BorderRadius.circular(12),
         boxShadow: shadow
@@ -721,47 +1073,55 @@ class _InputIfsc extends StatelessWidget {
   Widget build(BuildContext context) => const _Input(width: 212.5);
 }
 
-class _InputTextName extends StatelessWidget {
-  const _InputTextName();
+class _BankTextField extends StatelessWidget {
+  const _BankTextField({
+    required this.fieldKey,
+    required this.controller,
+    required this.focusNode,
+    required this.hintText,
+    this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
+    this.textInputAction,
+    this.inputFormatters = const <TextInputFormatter>[],
+    this.maxLength,
+    this.onChanged,
+    this.onSubmitted,
+  });
+
+  final Key fieldKey;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String hintText;
+  final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
+  final TextInputAction? textInputAction;
+  final List<TextInputFormatter> inputFormatters;
+  final int? maxLength;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Name should match your bank account',
+    return TextField(
+      key: fieldKey,
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      textInputAction: textInputAction,
+      maxLines: 1,
       style: AppTextStyles.bankInputText,
-    );
-  }
-}
-
-class _InputTextBank extends StatelessWidget {
-  const _InputTextBank();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'State Bank of India',
-      style: AppTextStyles.bankInputText,
-    );
-  }
-}
-
-class _InputTextAccount extends StatelessWidget {
-  const _InputTextAccount();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('1234 5678 9012', style: AppTextStyles.bankInputText);
-  }
-}
-
-class _InputTextIfsc extends StatelessWidget {
-  const _InputTextIfsc();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'Enter 11-digit code',
-      style: AppTextStyles.bankInputText,
+      cursorColor: AppColors.inputCaret,
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ...inputFormatters,
+      ],
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration.collapsed(
+        hintText: hintText,
+        hintStyle: AppTextStyles.bankInputText,
+      ),
     );
   }
 }
@@ -807,20 +1167,33 @@ class _ChevronPainter extends CustomPainter {
 }
 
 class _VerifyButton extends StatelessWidget {
-  const _VerifyButton();
+  const _VerifyButton({required this.verified, required this.onTap});
+
+  final bool verified;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 73.5,
-      height: 37,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.verifiedText),
-        borderRadius: BorderRadius.circular(7),
+    return GestureDetector(
+      key: const Key('bank-verify-ifsc'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: HoverPress.chip(
+        child: Container(
+          width: 73.5,
+          height: 37,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: verified ? AppColors.verifiedBg : AppColors.surface,
+            border: Border.all(color: AppColors.verifiedText),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            verified ? 'Verified' : 'Verify',
+            style: AppTextStyles.bankVerifyText,
+          ),
+        ),
       ),
-      child: const Text('Verify', style: AppTextStyles.bankVerifyText),
     );
   }
 }
@@ -831,7 +1204,7 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 61,
       decoration: BoxDecoration(
         color: AppColors.bankBannerBg,
@@ -921,36 +1294,105 @@ class _BannerBody extends StatelessWidget {
   }
 }
 
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton();
+class _BankPickerSheet extends StatelessWidget {
+  const _BankPickerSheet({required this.selected});
+
+  final String? selected;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const SellerHomeScreen()),
-        (route) => false,
-      ),
-      child: Container(
-        height: 54,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Column(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: const BoxDecoration(
+                      color: AppColors.fieldBorder,
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text(
+                        'Select bank',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        key: const ValueKey('bank-picker-close'),
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const HoverPress.icon(
+                          child: Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                itemCount: _BankDetaileScreenState._banks.length,
+                itemBuilder: (context, index) {
+                  final String bank = _BankDetaileScreenState._banks[index];
+                  final bool isSelected = bank == selected;
+                  return InkWell(
+                    key: ValueKey('bank-option-$index'),
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                    onTap: () => Navigator.of(context).pop(bank),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 13,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              bank,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? AppColors.darkCard
+                                    : AppColors.tabGray,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(
+                              Icons.check_circle,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
-        child: const Text('Continue', style: AppTextStyles.button),
       ),
     );
   }

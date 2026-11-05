@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/page_header.dart';
 
 /// "Wallet" — replica of Zeplin "Android Compact - 156"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af863fd5637f240caaa5).
@@ -30,85 +32,56 @@ class _WalletPageState extends State<WalletPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
-      body: Artboard(
-        designWidth: WalletPage.designWidth,
-        designHeight: WalletPage.designHeight,
-        child: Stack(
-          children: [
-            const Positioned(left: 24, top: 72, child: _HeaderBack()),
-            const Positioned(
-              left: 68,
-              top: 76,
-              child: Text('Wallet', style: AppTextStyles.profileHeaderTitle),
-            ),
-            const Positioned(left: 24, top: 121, child: _BalanceCard()),
-            Positioned(
-              left: 24,
-              top: 327,
-              child: _Chip(
-                width: 48.5,
-                label: 'All',
-                selected: _filter == 0,
-                onTap: () => setState(() => _filter = 0),
+      body: SafeArea(
+        bottom: false,
+        child: Artboard(
+          designWidth: WalletPage.designWidth,
+          designHeight: WalletPage.designHeight,
+          child: Stack(
+            children: [
+              const Positioned(
+                left: 0,
+                top: 24,
+                child: PageHeader(title: 'Wallet'),
               ),
-            ),
-            Positioned(
-              left: 91,
-              top: 327,
-              child: _Chip(
-                width: 90,
-                label: 'Credited',
-                selected: _filter == 1,
-                onTap: () => setState(() => _filter = 1),
+              const Positioned(left: 22, top: 65, child: _BalanceCard()),
+              Positioned(
+                left: 22,
+                top: 271,
+                child: _Chip(
+                  width: 48.5,
+                  label: 'All',
+                  selected: _filter == 0,
+                  onTap: () => setState(() => _filter = 0),
+                ),
               ),
-            ),
-            Positioned(
-              left: 202,
-              top: 327,
-              child: _Chip(
-                width: 110.5,
-                label: 'Withdrawn',
-                selected: _filter == 2,
-                onTap: () => setState(() => _filter = 2),
+              Positioned(
+                left: 91,
+                top: 271,
+                child: _Chip(
+                  width: 90,
+                  label: 'Credited',
+                  selected: _filter == 1,
+                  onTap: () => setState(() => _filter = 1),
+                ),
               ),
-            ),
-            Positioned(
-              left: 24,
-              top: 376,
-              child: _TransactionsCard(filter: _filter),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderBack extends StatelessWidget {
-  const _HeaderBack();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.arrow_back,
-          size: 14,
-          color: AppColors.textPrimary,
+              Positioned(
+                left: 202,
+                top: 271,
+                child: _Chip(
+                  width: 110.5,
+                  label: 'Withdrawn',
+                  selected: _filter == 2,
+                  onTap: () => setState(() => _filter = 2),
+                ),
+              ),
+              Positioned(
+                left: 22,
+                top: 320,
+                child: _TransactionsCard(filter: _filter),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -139,7 +112,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 184.5,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -275,30 +248,32 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: width,
-        height: 31,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.chipActive : AppColors.dashboardBg,
-          borderRadius: BorderRadius.circular(15.5),
-          boxShadow: [
-            BoxShadow(
-              color: selected
-                  ? const Color(0x4D000000)
-                  : const Color(0x1A000000),
-              blurRadius: selected ? 13 : 16,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: selected
-              ? AppTextStyles.chipActiveLabel
-              : AppTextStyles.chipLabel.copyWith(
-                  color: AppColors.tabUnselectedText,
-                ),
+      child: HoverPress.chip(
+        child: Container(
+          width: width,
+          height: 31,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.chipActive : AppColors.dashboardBg,
+            borderRadius: BorderRadius.circular(15.5),
+            boxShadow: [
+              BoxShadow(
+                color: selected
+                    ? const Color(0x4D000000)
+                    : const Color(0x1A000000),
+                blurRadius: selected ? 13 : 16,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: selected
+                ? AppTextStyles.chipActiveLabel
+                : AppTextStyles.chipLabel.copyWith(
+                    color: AppColors.tabUnselectedText,
+                  ),
+          ),
         ),
       ),
     );
@@ -318,7 +293,7 @@ class _TransactionsCard extends StatelessWidget {
   final int filter;
 
   static const _cardTitle = TextStyle(
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
@@ -371,7 +346,7 @@ class _TransactionsCard extends StatelessWidget {
       _ => _txns,
     };
     return Container(
-      width: 364,
+      width: 368,
       height: 290,
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,
@@ -441,7 +416,7 @@ class _TxnRow extends StatelessWidget {
   final _Txn txn;
 
   static const _title = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,
@@ -453,13 +428,13 @@ class _TxnRow extends StatelessWidget {
     color: AppColors.listSubtitle,
   );
   static const _amountCredit = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.walletCredit,
   );
   static const _amountDebit = TextStyle(
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: FontWeight.w700,
     height: 1.0,
     color: AppColors.textPrimary,

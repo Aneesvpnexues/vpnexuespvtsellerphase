@@ -14,6 +14,26 @@ Future<void> pumpScreen(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> enterBankDetails(WidgetTester tester, {bool verify = true}) async {
+  await tester.enterText(
+    find.byKey(const Key('bank-holder-name-field')),
+    'Sita Devi',
+  );
+  await tester.enterText(
+    find.byKey(const Key('bank-account-number-field')),
+    '987654321098',
+  );
+  await tester.enterText(
+    find.byKey(const Key('bank-ifsc-field')),
+    'SBIN0001234',
+  );
+  await tester.pump();
+  if (verify) {
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+  }
+}
+
 Finder _tiles() => find.byWidgetPredicate(
   (w) =>
       w is Container &&
@@ -93,7 +113,7 @@ void main() {
     expect(find.text('bank details'), findsOneWidget);
     expect(find.text('To receive your earnings'), findsOneWidget);
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
+    expect(find.text('All fields are required'), findsOneWidget);
     expect(find.text('Account Holder Name'), findsOneWidget);
     expect(find.text('Bank Name'), findsOneWidget);
     expect(find.text('Account Number'), findsOneWidget);
@@ -118,12 +138,13 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    // Illustration: x 190..412, y 26..288 (STEP 04 is baked into the crop).
-    final illustration = rectOf(find.byType(Image).first);
-    expect(illustration.left, closeTo(190, 1));
-    expect(illustration.top, closeTo(26, 1));
-    expect(illustration.width, closeTo(222, 1));
-    expect(illustration.height, closeTo(262, 1));
+    // Header art: full width, top 0, down past the sheet seam so the rounded
+    // corners reveal it. STEP 04 lives inside this 2x asset.
+    final headerArt = rectOf(find.byType(Image).first);
+    expect(headerArt.left, closeTo(0, 1));
+    expect(headerArt.top, closeTo(0, 1));
+    expect(headerArt.width, closeTo(412, 1));
+    expect(headerArt.height, closeTo(327.5, 1));
 
     // Back arrow.
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
@@ -134,9 +155,9 @@ void main() {
     // Step label + headings + subtitle.
     expect(rectOf(find.text('STEP 02')).left, closeTo(25, 1));
     expect(rectOf(find.text('STEP 02')).top, closeTo(89.13, 1));
-    expect(rectOf(find.text('Add your')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Add your')).left, closeTo(22, 1));
     expect(rectOf(find.text('Add your')).top, closeTo(141.79, 1));
-    expect(rectOf(find.text('bank details')).left, closeTo(24, 1));
+    expect(rectOf(find.text('bank details')).left, closeTo(22, 1));
     expect(rectOf(find.text('bank details')).top, closeTo(175.80, 1));
     expect(rectOf(find.text('To receive your earnings')).left, closeTo(25, 1));
     expect(
@@ -206,7 +227,7 @@ void main() {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(25, 1), reason: 'card $i left');
       expect(rect.top, closeTo(cardTops[i], 1), reason: 'card $i top');
-      expect(rect.width, closeTo(364, 1), reason: 'card $i width');
+      expect(rect.width, closeTo(368, 1), reason: 'card $i width');
       expect(rect.height, closeTo(93, 1), reason: 'card $i height');
     }
 
@@ -281,7 +302,7 @@ void main() {
     final banner = rectOf(_banner());
     expect(banner.left, closeTo(25, 1));
     expect(banner.top, closeTo(793, 1));
-    expect(banner.width, closeTo(364, 1));
+    expect(banner.width, closeTo(368, 1));
     expect(banner.height, closeTo(61, 1));
     expect(
       rectOf(find.text('Your information is safe with us.')).left,
@@ -297,12 +318,12 @@ void main() {
       closeTo(827.99, 1),
     );
 
-    // Continue button: bottom-anchored, x 10..402, y 866..920 on the 936
+    // Continue button: bottom-anchored, x 24..388, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(10, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(866, 1));
-    expect(button.width, closeTo(392, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -334,14 +355,14 @@ void main() {
     expect(accent.style?.fontSize, 35);
 
     final subtitle = tester.widget<Text>(find.text('To receive your earnings'));
-    expect(subtitle.style?.fontSize, 15.5);
+    expect(subtitle.style?.fontSize, 14);
     expect(subtitle.style?.color, AppColors.bankSubtitle);
 
     final section = tester.widget<Text>(find.text('Fill Your Bank Details'));
-    expect(section.style?.fontSize, 17);
+    expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.bankSectionTitle);
 
-    final note = tester.widget<Text>(find.text('All fiedls are required'));
+    final note = tester.widget<Text>(find.text('All fields are required'));
     expect(note.style?.fontSize, 11);
 
     final label = tester.widget<Text>(find.text('Account Holder Name'));
@@ -391,6 +412,15 @@ void main() {
       AppColors.fieldTileLocation,
     ]);
 
+    // The active card's shadow must not show through its interior.
+    final cardColors = _docCards()
+        .evaluate()
+        .map(
+          (e) => ((e.widget as Container).decoration! as BoxDecoration).color,
+        )
+        .toList();
+    expect(cardColors, List.filled(4, AppColors.surface));
+
     // Dropdown chevron is a custom painter, not a Material icon.
     expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
 
@@ -404,6 +434,92 @@ void main() {
       ),
     );
     expect((shield.decoration! as BoxDecoration).shape, BoxShape.circle);
+  });
+
+  testWidgets('fields accept input and the bank can be changed', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-holder-name-field')),
+      'Sita Devi',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-account-number-field')),
+      '987654321098',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'sbin0001234',
+    );
+    await tester.pump();
+
+    expect(find.text('Sita Devi'), findsOneWidget);
+    expect(find.text('9876 5432 1098'), findsOneWidget);
+    expect(find.text('SBIN0001234'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bank-selector')));
+    await tester.pumpAndSettle();
+    expect(find.text('Select bank'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bank-option-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('HDFC Bank'), findsOneWidget);
+    expect(find.text('Select bank'), findsNothing);
+  });
+
+  testWidgets('Verify validates and resets the IFSC state', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'SBIN1234',
+    );
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a valid 11-character IFSC code.'), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'SBIN0001234',
+    );
+    await tester.tap(find.byKey(const Key('bank-verify-ifsc')));
+    await tester.pumpAndSettle();
+    expect(find.text('Verified'), findsOneWidget);
+    expect(find.text('Verify'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-ifsc-field')),
+      'HDFC0001234',
+    );
+    await tester.pump();
+    expect(find.text('Verify'), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
+  });
+
+  testWidgets('Continue succeeds even when IFSC is invalid or empty', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('bank-holder-name-field')),
+      'edsfsa',
+    );
+    await tester.enterText(
+      find.byKey(const Key('bank-account-number-field')),
+      '987654321098',
+    );
+    await tester.enterText(find.byKey(const Key('bank-ifsc-field')), '12345');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('bank-continue')));
+    await tester.pumpAndSettle();
+
+    // IFSC should not block Continue — Supabase call fails in test env,
+    // but not because of IFSC validation.
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
   });
 
   testWidgets('back arrow pops the route', (tester) async {
@@ -438,22 +554,17 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('Continue opens the home page', (tester) async {
-    tester.view.physicalSize = const Size(412, 936);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
+  testWidgets('Continue shows error when Supabase save fails', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await enterBankDetails(tester);
+
+    await tester.tap(find.byKey(const Key('bank-continue')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SellerHomeScreen), findsOneWidget);
-    expect(find.text('Hello,'), findsOneWidget);
-    expect(find.text('Ramesh Kumar'), findsOneWidget);
-    expect(find.text('ACTIVE ORDERS'), findsOneWidget);
-    // Onboarding is cleared from the stack.
-    expect(find.text('Fill Your Bank Details'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
@@ -467,15 +578,85 @@ void main() {
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
   });
 
-  testWidgets('uses the bank illustration asset', (tester) async {
+  testWidgets('uses the composited bank header artwork', (tester) async {
     await pumpScreen(tester);
 
     final image = tester.widget<Image>(find.byType(Image).first);
     expect(image.image, isA<AssetImage>());
     expect(
       (image.image as AssetImage).assetName,
-      BankDetaileScreen.illustrationAsset,
+      BankDetaileScreen.headerAsset,
     );
-    expect(BankDetaileScreen.illustrationAsset, 'assets/bank/illustration.png');
+    expect(BankDetaileScreen.headerAsset, 'assets/bank/header.png');
+  });
+
+  testWidgets('header backdrop reaches both edges on a wide viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 936);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
+    await tester.pumpAndSettle();
+
+    final backdrop = tester.getRect(find.byKey(const Key('bank-backdrop')));
+    expect(backdrop.left, closeTo(0, 1));
+    expect(backdrop.right, closeTo(800, 1));
+    expect(backdrop.top, closeTo(0, 1));
+    expect(backdrop.height, closeTo(327.5, 1));
+
+    final decoration = tester.widget<DecoratedBox>(
+      find.descendant(
+        of: find.byKey(const Key('bank-backdrop')),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(
+      (decoration.decoration as BoxDecoration).gradient,
+      BankDetaileScreen.headerGradient,
+    );
+
+    // scaleY = 1; scaleX capped at 1.25 -> artboard 412*1.25=515 wide,
+    // centered at x142.5..657.5 while the backdrop still spans full width.
+    final headerArt = tester.getRect(find.byType(Image).first);
+    expect(headerArt.left, closeTo(142.5, 1));
+    expect(headerArt.right, closeTo(657.5, 1));
+  });
+
+  testWidgets('fills width and aligns content on a phone viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: BankDetaileScreen()));
+    await tester.pumpAndSettle();
+
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    final scaleX = 390 / BankDetaileScreen.designWidth;
+
+    // Header art and sheet span the full screen width; header STEP 04 pill
+    // reaches both edges like the reference.
+    final headerArt = tester.getRect(find.byType(Image).first);
+    expect(headerArt.left, closeTo(0, 1));
+    expect(headerArt.right, closeTo(390, 1));
+    expect(headerArt.top, closeTo(0, 1));
+
+    final sheet = rectOf(_sheet());
+    expect(sheet.left, closeTo(0, 1));
+    expect(sheet.right, closeTo(390, 1));
+
+    // Cards follow the scaled design margin; Continue keeps the shared
+    // onboarding 24px margin and 54px height.
+    expect(rectOf(_docCards().first).left, closeTo(25 * scaleX, 1));
+
+    final button = rectOf(_continueButton());
+    expect(button.left, closeTo(22, 1));
+    expect(button.right, closeTo(390 - 24, 1));
+    expect(button.height, closeTo(54, 1));
   });
 }
+

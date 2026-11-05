@@ -45,7 +45,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Bank Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Bank Details')).top, closeTo(24, 6));
+    expect(rectOf(find.text('Bank Details')).top, closeTo(22, 6));
     expect(rectOf(find.text('State Bank of India')).left, closeTo(45, 3));
     expect(rectOf(find.text('State Bank of India')).top, closeTo(99, 5));
     expect(rectOf(find.text('3421')).left, closeTo(228, 3));
@@ -128,3 +128,4 @@ void main() {
     expect(find.text('State Bank of India'), findsOneWidget);
   });
 }
+

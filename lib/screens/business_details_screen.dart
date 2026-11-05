@@ -1,22 +1,36 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/continue_button.dart';
+import 'bank_detaile.dart';
+import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
-/// "STEP 02 — Tell us about your business" — static replica of Zeplin
+/// "STEP 03 — Tell us about your business" — static replica of Zeplin
 /// "Android Compact - 88" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1adb0eb1c415e3347477b).
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes the [Artboard] viewport scales it down on small screens and up (capped
-/// at 1.5x) on large ones instead of overflowing. All five rows are
-/// editable; the Continue button stays inert until every field has a value and
-/// then opens [VerifyDetaileScreen].
+/// sizes the [Artboard] scales by width (capped at 1.5x) and scrolls vertically
+/// instead of overflowing, so the keyboard never covers the focused field. All
+/// five rows are editable; the Continue button stays inert until every field
+/// has a value and then opens [VerifyDetaileScreen].
 class Step03BusinessDetailsScreen extends StatefulWidget {
-  const Step03BusinessDetailsScreen({super.key});
+  const Step03BusinessDetailsScreen({super.key, this.profileSaver});
+
+  /// Persists the profile. Defaults to [SupabaseProductApi.saveSellerProfile].
+  final SellerProfileSaver? profileSaver;
+
+  /// Fallback for tests that reach this screen through a navigation chain
+  /// (Step01 -> Step02 -> Step03) and cannot inject the saver themselves.
+  @visibleForTesting
+  static SellerProfileSaver? debugProfileSaver;
 
   static const String leavesAsset = 'assets/step03/leaves.png';
   static const double designWidth = 412;
@@ -32,7 +46,7 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _name = TextEditingController();
   final TextEditingController _business = TextEditingController();
   final TextEditingController _phone = TextEditingController(
-    text: '+91 12345 67890',
+    text: SellerProfileStore.instance.mobile,
   );
   final TextEditingController _location = TextEditingController(
     text: 'Salem, Tamil Nadu',
@@ -40,11 +54,11 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _address = TextEditingController();
 
   bool get _allFilled =>
-      _name.text.isNotEmpty &&
-      _business.text.isNotEmpty &&
-      _phone.text.isNotEmpty &&
-      _location.text.isNotEmpty &&
-      _address.text.isNotEmpty;
+      _name.text.trim().isNotEmpty &&
+      _business.text.trim().isNotEmpty &&
+      _phone.text.trim().isNotEmpty &&
+      _location.text.trim().isNotEmpty &&
+      _address.text.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -73,11 +87,92 @@ class _Step03BusinessDetailsScreenState
     super.dispose();
   }
 
-  void _openVerifyDetails() {
+  Future<void> _openVerifyDetails() async {
     if (!_allFilled) return;
     FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final SellerProfileSaver save = widget.profileSaver ??
+        Step03BusinessDetailsScreen.debugProfileSaver ??
+        _saveToSupabase;
+    try {
+      await save(
+        name: _name.text.trim(),
+        mobile: _phone.text.trim(),
+        sellerType: SellerProfileStore.instance.sellerType.dbValue,
+        businessName: _business.text.trim(),
+        businessLocation: _location.text.trim(),
+        businessAddress: _address.text.trim(),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save business profile. Please try again.')),
+      );
+      return;
+    }
+
+    final SellerProfileStore profile = SellerProfileStore.instance;
+    profile.save(
+      name: _name.text.trim(),
+      mobile: _phone.text.trim(),
+      email: profile.email,
+      sellerType: profile.sellerType,
+    );
+
+    // The profile section just completed successfully. Keep the existing
+    // bank/KYC flags so a seller who already finished them is not sent
+    // through those pages again.
+    profile.setCompletion(
+      profileComplete: true,
+      bankComplete: profile.bankComplete,
+      verificationComplete: profile.verificationComplete,
+    );
+
+    if (!mounted) return;
+
+    // Forward flow is Verify -> Bank -> Home; skip whatever is already done.
+    if (profile.verificationComplete && profile.bankComplete) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    if (profile.verificationComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+    );
+  }
+
+  static Future<String> _saveToSupabase({
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) {
+    return SupabaseProductApi().saveSellerProfile(
+      name: name,
+      mobile: mobile,
+      sellerType: sellerType,
+      businessName: businessName,
+      businessLocation: businessLocation,
+      businessAddress: businessAddress,
     );
   }
 
@@ -85,97 +180,114 @@ class _Step03BusinessDetailsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.stepPageBg,
-      body: Artboard(
-        designWidth: Step03BusinessDetailsScreen.designWidth,
-        designHeight: Step03BusinessDetailsScreen.designHeight,
-        child: Stack(
-          children: [
-            const Positioned(left: 200, top: 0, child: _Leaves()),
-            const Positioned(left: 24, top: 105.63, child: _StepLabel()),
-            const Positioned(left: 25, top: 139, child: _ProgressTrack()),
-            const Positioned(left: 24, top: 162.33, child: _TitleLead()),
-            const Positioned(left: 24, top: 196.83, child: _TitleYour()),
-            const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
-            const Positioned(left: 24, top: 248.2, child: _Subtitle()),
-            const Positioned(left: 24, top: 330.89, child: _SectionTitle()),
-            const Positioned(right: 24.5, top: 326, child: _PillNote()),
-            // Field rows.
-            const Positioned(left: 24, top: 380.5, child: _TileName()),
-            const Positioned(left: 43, top: 419.5, child: _Connector1()),
-            const Positioned(left: 89, top: 438, child: _Divider1()),
-            const Positioned(left: 89, top: 383.8, child: _LabelName()),
-            Positioned(
-              left: 89,
-              top: 405.04,
-              child: _FieldInput(
-                fieldKey: const Key('businessName'),
-                width: 299,
-                controller: _name,
-                hint: 'Enter your name..',
-              ),
+      body: Stack(
+        children: [
+          Artboard(
+            designWidth: Step03BusinessDetailsScreen.designWidth,
+            designHeight: Step03BusinessDetailsScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
+            child: Stack(
+              children: [
+                const Positioned(left: 200, top: 0, child: _Leaves()),
+                const Positioned(left: 22, top: 105.63, child: _StepLabel()),
+                const Positioned(left: 25, top: 139, child: _ProgressTrack()),
+                const Positioned(left: 22, top: 162.33, child: _TitleLead()),
+                const Positioned(left: 22, top: 196.83, child: _TitleYour()),
+                const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
+                const Positioned(left: 22, top: 248.2, child: _Subtitle()),
+                const Positioned(left: 22, top: 330.89, child: _SectionTitle()),
+                const Positioned(right: 24.5, top: 326, child: _PillNote()),
+                // Field rows.
+                const Positioned(left: 22, top: 380.5, child: _TileName()),
+                const Positioned(left: 43, top: 419.5, child: _Connector1()),
+                const Positioned(left: 89, top: 438, child: _Divider1()),
+                const Positioned(left: 89, top: 383.8, child: _LabelName()),
+                Positioned(
+                  left: 89,
+                  top: 405.04,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessName'),
+                    width: 299,
+                    controller: _name,
+                    hint: 'Enter your name..',
+                  ),
+                ),
+                const Positioned(left: 22, top: 457.5, child: _TileBusiness()),
+                const Positioned(left: 43, top: 496.5, child: _Connector2()),
+                const Positioned(left: 89, top: 515, child: _Divider2()),
+                const Positioned(
+                  left: 89,
+                  top: 460.64,
+                  child: _LabelBusiness(),
+                ),
+                Positioned(
+                  left: 89,
+                  top: 481.68,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessFarm'),
+                    width: 299,
+                    controller: _business,
+                    hint: 'Enter Business name',
+                  ),
+                ),
+                const Positioned(left: 22, top: 533.5, child: _TilePhone()),
+                const Positioned(left: 43, top: 572.5, child: _Connector3()),
+                const Positioned(left: 89, top: 593, child: _Divider3()),
+                const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
+                Positioned(
+                  left: 89,
+                  top: 557.69,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessPhone'),
+                    width: 200,
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
+                const Positioned(
+                  right: 24.5,
+                  top: 541,
+                  child: _VerifiedBadge(),
+                ),
+                const Positioned(left: 22, top: 611.5, child: _TileLocation()),
+                const Positioned(left: 43, top: 650.5, child: _Connector4()),
+                const Positioned(left: 89, top: 670, child: _Divider4()),
+                const Positioned(
+                  left: 89,
+                  top: 613.54,
+                  child: _LabelLocation(),
+                ),
+                Positioned(
+                  left: 89,
+                  top: 635.12,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessLocation'),
+                    width: 240,
+                    controller: _location,
+                  ),
+                ),
+                const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
+                const Positioned(left: 22, top: 688.5, child: _TileAddress()),
+                const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
+                Positioned(
+                  left: 89,
+                  top: 713.28,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessAddress'),
+                    width: 299,
+                    controller: _address,
+                    hint: 'Enter your full address....',
+                  ),
+                ),
+              ],
             ),
-            const Positioned(left: 24, top: 457.5, child: _TileBusiness()),
-            const Positioned(left: 43, top: 496.5, child: _Connector2()),
-            const Positioned(left: 89, top: 515, child: _Divider2()),
-            const Positioned(left: 89, top: 460.64, child: _LabelBusiness()),
-            Positioned(
-              left: 89,
-              top: 481.68,
-              child: _FieldInput(
-                fieldKey: const Key('businessFarm'),
-                width: 299,
-                controller: _business,
-                hint: 'Enter Business name',
-              ),
-            ),
-            const Positioned(left: 24, top: 533.5, child: _TilePhone()),
-            const Positioned(left: 43, top: 572.5, child: _Connector3()),
-            const Positioned(left: 89, top: 593, child: _Divider3()),
-            const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
-            Positioned(
-              left: 89,
-              top: 557.69,
-              child: _FieldInput(
-                fieldKey: const Key('businessPhone'),
-                width: 200,
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-              ),
-            ),
-            const Positioned(right: 24.5, top: 541, child: _VerifiedBadge()),
-            const Positioned(left: 24, top: 611.5, child: _TileLocation()),
-            const Positioned(left: 43, top: 650.5, child: _Connector4()),
-            const Positioned(left: 89, top: 670, child: _Divider4()),
-            const Positioned(left: 89, top: 613.54, child: _LabelLocation()),
-            Positioned(
-              left: 89,
-              top: 635.12,
-              child: _FieldInput(
-                fieldKey: const Key('businessLocation'),
-                width: 240,
-                controller: _location,
-              ),
-            ),
-            const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
-            const Positioned(left: 24, top: 688.5, child: _TileAddress()),
-            const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
-            Positioned(
-              left: 89,
-              top: 713.28,
-              child: _FieldInput(
-                fieldKey: const Key('businessAddress'),
-                width: 299,
-                controller: _address,
-                hint: 'Enter your full address....',
-              ),
-            ),
-            Positioned(
-              left: 24,
-              top: 818,
-              child: _ContinueButton(onTap: _openVerifyDetails),
-            ),
-          ],
-        ),
+          ),
+          ContinueButton(
+            buttonKey: const Key('business-continue'),
+            enabled: _allFilled,
+            onTap: _openVerifyDetails,
+          ),
+        ],
       ),
     );
   }
@@ -200,7 +312,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 02', style: AppTextStyles.stepLabelMuted);
+    return const Text('STEP 03', style: AppTextStyles.stepLabelMuted);
   }
 }
 
@@ -304,12 +416,8 @@ class _PillNote extends StatelessWidget {
       height: 27,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.pillNoteGradientStart,
-            AppColors.pillNoteGradientEnd,
-          ],
-        ),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.verifyPillBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       // Scales the note down under the Ahem test font (glyphs render one em
@@ -317,7 +425,7 @@ class _PillNote extends StatelessWidget {
       child: const FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fiedls are required',
+          'All fields are required',
           style: AppTextStyles.pillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -630,40 +738,5 @@ class _ChangeLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text('Change', style: AppTextStyles.changeLink);
-  }
-}
-
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 364,
-        height: 54,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: const Text('Continue', style: AppTextStyles.button),
-      ),
-    );
   }
 }

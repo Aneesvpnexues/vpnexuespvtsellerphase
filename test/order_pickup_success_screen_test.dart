@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/order_pickup_success_screen.dart';
-import 'package:seller_app/screens/order_privew.dart';
 
 const List<String> _assets = [
   'assets/order/ic_back.png',
@@ -65,7 +65,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 2));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24.8, 3));
+    expect(rectOf(find.text('Order Details')).top, closeTo(28, 3));
     expect(rectOf(find.text('Ready for Pickup')).left, closeTo(41, 2));
     expect(rectOf(find.text('Ready for Pickup')).top, closeTo(153.6, 3));
     expect(rectOf(find.text('Total Amount')).center.dx, closeTo(205.5, 3));
@@ -103,13 +103,13 @@ void main() {
     expect(title.left, closeTo(68 * scale, 1.5));
   });
 
-  testWidgets('swiping back to orders opens the order preview', (tester) async {
+  testWidgets('swiping back to orders returns to My Orders', (tester) async {
     await pumpPickupSuccess(tester);
 
     await tester.drag(find.text('Back to orders'), const Offset(320, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderPrivewScreen), findsOneWidget);
+    expect(find.byType(MyOrdersScreen), findsOneWidget);
   });
 
   testWidgets('a short swipe on the bar springs back', (tester) async {
@@ -118,7 +118,7 @@ void main() {
     await tester.drag(find.text('Back to orders'), const Offset(40, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderPrivewScreen), findsNothing);
+    expect(find.byType(MyOrdersScreen), findsNothing);
     expect(find.text('Back to orders'), findsOneWidget);
   });
 

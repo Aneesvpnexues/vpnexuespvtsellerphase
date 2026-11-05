@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/order_delivery_screen.dart';
 import 'package:seller_app/screens/order_pickup_code_screen.dart';
 
@@ -21,6 +22,16 @@ Finder slideArrow() => find.byWidgetPredicate(
 );
 
 void main() {
+  setUp(() {
+    // The route guard only opens authenticated screens while a session is
+    // active; these tests exercise the in-app navigation directly.
+    SessionStore.instance.startSession(
+      phone: '9876543210',
+      userName: 'Test Seller',
+      method: 'login',
+    );
+  });
+
   testWidgets('renders the 141 out for delivery content', (tester) async {
     await pumpDelivery(tester);
 
@@ -76,7 +87,7 @@ void main() {
 
     // The canvas trims the 49px status bar, so screen y = design y - 49.
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Order Details')).top, closeTo(22, 4));
     expect(rectOf(find.text('ORDER #NX4582')).left, closeTo(41, 3));
     expect(rectOf(find.text('ORDER #NX4582')).top, closeTo(135, 4));
     expect(rectOf(find.text('Ready for Pickup')).left, closeTo(41, 3));
@@ -247,3 +258,4 @@ void main() {
     expect(find.text('Delivery Details'), findsOneWidget);
   });
 }
+

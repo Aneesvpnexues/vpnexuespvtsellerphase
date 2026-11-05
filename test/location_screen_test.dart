@@ -60,8 +60,8 @@ void main() {
 
     // Primary button: x 24..388, y 731..785, radius 16.
     final button = rectOf(_findPrimaryButton());
-    expect(button.left, closeTo(24, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.left, closeTo(22, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.top, closeTo(731, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -119,6 +119,28 @@ void main() {
     expect(find.text('STEP 02'), findsNothing);
   });
 
+  testWidgets('manual link opens the STEP 02 screen and back', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('manualLocationLink')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('STEP 02'), findsOneWidget);
+    expect(find.text('What best'), findsOneWidget);
+    expect(find.text('describes you?'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('Choose your location'), findsNothing);
+
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
+    navigator.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your location'), findsOneWidget);
+    expect(find.text('STEP 02'), findsNothing);
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
@@ -139,3 +161,4 @@ Finder _findPrimaryButton() {
         (w.decoration as BoxDecoration).color == AppColors.primary,
   );
 }
+

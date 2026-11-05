@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
+import 'help_support_screen.dart';
 import 'personal_details_screen.dart';
 import 'profile_business.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-import 'welcome_seller_screen.dart';
 
 /// "Profile / App" — replica of Zeplin "Android Compact - 153"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af876c561fe517e62391).
 ///
 /// App tab of the seller profile; shares [ProfileShell] with
 /// [ProfileScreen] (Account) and [ProfileBusinessScreen] (Business). The
-/// list card holds Settings, Help & Suppport and Log out (design typos
-/// kept); Settings opens the settings page, Log out returns to the login
-/// flow.
+/// list card holds Settings and Help & Support; Settings opens the settings
+/// page, where Log out lives.
 class ProfileAppScreen extends StatelessWidget {
   const ProfileAppScreen({super.key});
 
@@ -40,36 +39,29 @@ class ProfileAppScreen extends StatelessWidget {
   }
 }
 
-/// App-tab list card (Zeplin 153): white card x24..388, y616..803 (364x187),
-/// three content-sized rows split by dividers at y682/y738, icon tiles
-/// 34x34 at card-rel x22, no chevron on Log out.
+/// App-tab list card (Zeplin 153): white card x24..388, icon tiles 34x34 at
+/// card-rel x22. Holds Settings and Help & Support split by a divider; Log
+/// out lives in the Settings page instead.
 class _AppListCard extends StatelessWidget {
   const _AppListCard();
 
   static const _title = TextStyle(
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.0,
     color: AppColors.textPrimary,
   );
   static const _subtitle = TextStyle(
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.listSubtitle,
   );
-  static const _logoutText = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    height: 1.0,
-    color: AppColors.logoutInk,
-  );
-
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 364,
-      height: 187,
+      height: 136,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
@@ -124,54 +116,38 @@ class _AppListCard extends StatelessWidget {
           ),
           const Positioned(left: 16, right: 16, top: 66, child: _Divider()),
 
-          // Help & Suppport (design: cap top y706.5, title only).
-          const Positioned(
-            left: 22,
-            top: 78,
-            child: _AppIconTile(
-              icon: Icons.help_outline,
-              tileColor: AppColors.listIconTile,
-              ink: AppColors.appIconInk,
-            ),
-          ),
-          const Positioned(
-            left: 68,
-            top: 89,
-            child: Text('Help & Suppport', style: _title),
-          ),
-          const Positioned(left: 332, top: 87, child: _AppChevron()),
-          const Positioned(left: 16, right: 16, top: 122, child: _Divider()),
-
-          // Log out (design: cap top y761, pink tile, no chevron) — returns
-          // to the login flow.
+          // Help & Support (design: cap top y706.5, title only).
           Positioned(
-            left: 22,
-            top: 133,
-            width: 326,
-            height: 34,
+            left: 16,
+            top: 66,
+            width: 332,
+            height: 56,
             child: GestureDetector(
+              key: const Key('profile-help'),
               behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeSellerScreen()),
-                (route) => false,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const HelpSupportScreen(),
+                ),
               ),
               child: const Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: 0,
-                    top: 0,
+                    left: 6,
+                    top: 12,
                     child: _AppIconTile(
-                      icon: Icons.logout,
-                      tileColor: AppColors.logoutTile,
-                      ink: AppColors.logoutInk,
+                      icon: Icons.help_outline,
+                      tileColor: AppColors.listIconTile,
+                      ink: AppColors.appIconInk,
                     ),
                   ),
                   Positioned(
-                    left: 46,
-                    top: 10,
-                    child: Text('Log out', style: _logoutText),
+                    left: 52,
+                    top: 23,
+                    child: Text('Help & Support', style: _title),
                   ),
+                  Positioned(left: 316, top: 21, child: _AppChevron()),
                 ],
               ),
             ),

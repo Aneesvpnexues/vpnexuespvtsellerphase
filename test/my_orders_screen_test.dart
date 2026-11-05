@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/order_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
@@ -16,6 +18,16 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // The route guard only opens authenticated screens while a session is
+    // active; these tests exercise the in-app navigation directly.
+    SessionStore.instance.startSession(
+      phone: '9876543210',
+      userName: 'Test Seller',
+      method: 'login',
+    );
+  });
+
   testWidgets('renders the 132 orders content', (tester) async {
     await pumpScreen(tester);
 
@@ -36,6 +48,23 @@ void main() {
     expect(find.text('Orders'), findsOneWidget);
   });
 
+  testWidgets('order thumbnails show real product photos', (tester) async {
+    await pumpScreen(tester);
+
+    const expected = [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ];
+    for (var i = 0; i < expected.length; i++) {
+      final image = tester.widget<Image>(
+        find.byKey(ValueKey<String>('order-thumb-$i')).first,
+      );
+      expect((image.image as AssetImage).assetName, expected[i]);
+    }
+    expect(find.text('+1'), findsWidgets);
+  });
+
   testWidgets('layout matches the 412x1154 design geometry', (tester) async {
     await pumpScreen(tester);
 
@@ -43,10 +72,109 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('My Orders')).left, closeTo(74, 2));
-    expect(rectOf(find.text('My Orders')).top, closeTo(24, 3));
+    final back = rectOf(find.byKey(const ValueKey('my-orders-back')));
+    expect(back.left, closeTo(22, 1));
+    expect(back.top, closeTo(22, 1));
+    expect(back.size, const Size(26, 26));
+    final title = rectOf(find.text('My Orders'));
+    expect(title.left, closeTo(68, 2));
+    expect(title.top, closeTo(28, 2));
+    expect(title.height, closeTo(20, 1));
     expect(rectOf(find.text('Akash Stores')).left, closeTo(89, 2));
     expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
+  });
+
+  testWidgets('the header back opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const ValueKey('my-orders-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyOrdersScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
+  testWidgets('every order row opens the order process', (tester) async {
+    await pumpScreen(tester);
+
+    for (final String store in ['Akash Stores', 'Hotel Green Leaf']) {
+      await tester.tap(find.text(store));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderDetailsScreen), findsOneWidget);
+      expect(find.text('ORDER #NX4582'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('page-header-back')));
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('status tabs filter the order list', (tester) async {
+    await pumpScreen(tester);
+
+    expect(find.text('Akash Stores'), findsOneWidget);
+    expect(find.text('Hotel Green Leaf'), findsOneWidget);
+    expect(find.text('Annapoorna Mess'), findsOneWidget);
+    expect(find.text('Daily Needs'), findsNWidgets(2));
+    expect(find.text('Delivered'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('order-filter-active')));
+    await tester.pumpAndSettle();
+    expect(find.text('Akash Stores'), findsOneWidget);
+    expect(find.text('Hotel Green Leaf'), findsOneWidget);
+    expect(find.text('Annapoorna Mess'), findsNothing);
+    expect(find.text('Daily Needs'), findsNothing);
+    expect(find.text('Delivered'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('order-filter-pending')));
+    await tester.pumpAndSettle();
+    expect(find.text('Annapoorna Mess'), findsOneWidget);
+    expect(find.text('Akash Stores'), findsNothing);
+    expect(find.text('Hotel Green Leaf'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('order-filter-confirmed')));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily Needs'), findsOneWidget);
+    expect(find.text('\u20B93,000'), findsOneWidget);
+    expect(find.text('\u20B93,500'), findsNothing);
+    expect(find.text('Annapoorna Mess'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('order-filter-all')));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily Needs'), findsNWidgets(2));
+    expect(find.text('Annapoorna Mess'), findsOneWidget);
+  });
+
+  testWidgets('Sort by opens the sort sheet and reorders the list', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    final origin = tester.getTopLeft(find.byType(MaterialApp));
+    Rect rectOf(Finder finder) =>
+        tester.getRect(finder).translate(-origin.dx, -origin.dy);
+
+    await tester.tap(find.byKey(const ValueKey('order-sort-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Newest first'), findsOneWidget);
+    expect(find.text('Oldest first'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('order-sort-oldest')));
+    await tester.pumpAndSettle();
+    expect(find.text('Newest first'), findsNothing);
+
+    final oldest = rectOf(find.text('\u20B93,000'));
+    final newest = rectOf(find.text('Akash Stores'));
+    expect(oldest.top, closeTo(241 + 105 - 49, 3));
+    expect(oldest.top, lessThan(newest.top));
+
+    await tester.tap(find.byKey(const ValueKey('order-sort-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('order-sort-priceHigh')));
+    await tester.pumpAndSettle();
+
+    final highest = rectOf(find.text('\u20B93,500'));
+    final lowest = rectOf(find.text('\u20B91,400'));
+    expect(highest.top, lessThan(lowest.top));
   });
 
   testWidgets('the bottom nav is pinned with Orders selected', (tester) async {
@@ -110,3 +238,4 @@ void main() {
     expect(find.text('My Orders'), findsOneWidget);
   });
 }
+

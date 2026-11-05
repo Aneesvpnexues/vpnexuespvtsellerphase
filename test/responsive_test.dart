@@ -31,7 +31,7 @@ void main() {
 
   final screens = <String, Widget Function()>{
     'WelcomeSellerScreen': () => const WelcomeSellerScreen(),
-    'OtpScreen': () => const OtpScreen(),
+    'OtpScreen': () => const OtpScreen(phone: '+91 1234567890'),
     'Step01LocationScreen': () => const Step01LocationScreen(),
     'Step02SellerTypeScreen': () => const Step02SellerTypeScreen(),
     'Step03BusinessDetailsScreen': () => const Step03BusinessDetailsScreen(),
@@ -44,7 +44,7 @@ void main() {
     'ReviewRatingsPage': () => const ReviewRatingsPage(),
   };
   final landmarks = <String, String>{
-    'WelcomeSellerScreen': 'Phone Number',
+    'WelcomeSellerScreen': 'Send OTP',
     'OtpScreen': 'Enter OTP',
     'Step01LocationScreen': 'Choose your location',
     'Step02SellerTypeScreen': 'What best',
@@ -117,7 +117,7 @@ void main() {
     // rel x68 -> 691 + 68*1.5 = 793.
     final header = tester.getRect(find.text('Profile').first);
     expect(header.left, closeTo(793, 2));
-    expect(header.top, closeTo(20 * 1.5, 2));
+    expect(header.top, closeTo(28 * 1.5, 2));
   });
 
   testWidgets('Add Products nav scales with the scrollable artboard', (

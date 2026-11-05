@@ -15,6 +15,7 @@ abstract final class AppColors {
   static const Color paleCircle = Color(0xFFF5FDF7);
   static const Color linkGreen = Color(0xFF3F9E49);
   static const Color welcomeBg = Color(0xFFF6FCF7);
+  static const Color splashBg = Color(0xFFF3F8EF);
   static const Color sellerGreen = Color(0xFF3CA248);
   static const Color darkGreen = Color(0xFF14472F);
   static const Color fieldFill = Color(0xFFF6F6F6);
@@ -180,6 +181,8 @@ abstract final class AppColors {
   static const Color continueGradientStart = Color(0xFF57C663);
   static const Color continueGradientEnd = Color(0xFF088F16);
   static const Color continueGlow = Color(0x2E57C663);
+  static const Color continueDisabledGradientStart = Color(0xFFAAE0AC);
+  static const Color continueDisabledGradientEnd = Color(0xFF82C586);
   static const Color verifyPageBg = Color(0xFFF3F0E9);
   static const Color verifyAccent = Color(0xFF83F38F);
   static const Color verifySubtitle = Color(0xFF8D8C8A);
@@ -198,7 +201,8 @@ abstract final class AppColors {
   static const Color docDivider = Color(0xFFE3E3E3);
   static const Color docCardBorder = Color(0xFFE0E0E0);
   static const Color docCardSubtitle = Color(0xFF969696);
-  static const Color bankPageBg = Color(0xFFFBF8EF);
+  static const Color bankPageBg = Color(0xFFFAFDF7);
+  static const Color bankPageBgEnd = Color(0xFFF3F9F0);
   static const Color bankHeadingGreenStart = Color(0xFF00B013);
   static const Color bankHeadingGreenEnd = Color(0xFF02590B);
   static const Color bankSubtitle = Color(0xFF8F8E8C);
@@ -272,4 +276,8 @@ abstract final class AppColors {
   static const Color cameraBadgeInk = Color(0xFF1A482B);
   static const Color reviewStar = Color(0xFF0D3B20);
   static const Color ratingStar = Color(0xFF0D3B20);
+
+  /// Inline form-validation error text (the red message shown inside or
+  /// right below an invalid field).
+  static const Color fieldError = Color(0xFFD32F2F);
 }

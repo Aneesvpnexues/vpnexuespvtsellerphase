@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/bank_detaile.dart';
+import 'package:seller_app/screens/business_details_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the verify screen on the 412x873 artboard (top headroom removed).
-Future<void> pumpScreen(WidgetTester tester) async {
+Future<void> pumpScreen(WidgetTester tester, {Widget? screen}) async {
   tester.view.physicalSize = const Size(412, 873);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: VerifyDetaileScreen()));
+  await tester.pumpWidget(
+    MaterialApp(home: screen ?? const VerifyDetaileScreen()),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -41,6 +47,9 @@ Finder _continueButton() => find.byWidgetPredicate(
 );
 
 void main() {
+  setUp(SellerProfileStore.instance.resetCompletionFlags);
+  tearDown(SellerProfileStore.instance.resetCompletionFlags);
+
   testWidgets('renders the verify content', (tester) async {
     await pumpScreen(tester);
 
@@ -51,7 +60,7 @@ void main() {
     expect(find.text('Profile Completion'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
     expect(find.text('Verification Details'), findsOneWidget);
-    expect(find.text('All fiedls are required'), findsOneWidget);
+    expect(find.text('All fields are required'), findsOneWidget);
     expect(find.text('Aadhaar card'), findsOneWidget);
     expect(find.text('For individual farmers'), findsOneWidget);
     expect(find.text('PAN Card'), findsOneWidget);
@@ -82,12 +91,12 @@ void main() {
     expect(back.top, closeTo(30, 2));
 
     // Heading: left 24, design glyph tops 102 / 138.
-    expect(rectOf(find.text('Verify your')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Verify your')).left, closeTo(22, 1));
     expect(rectOf(find.text('Verify your')).top, closeTo(99.15, 1));
     expect(rectOf(find.text('details')).top, closeTo(134.79, 1));
 
     // Subtitle.
-    expect(rectOf(find.text('A quick verification')).left, closeTo(24, 1));
+    expect(rectOf(find.text('A quick verification')).left, closeTo(22, 1));
     expect(rectOf(find.text('A quick verification')).top, closeTo(180.74, 1));
 
     // Profile completion card: x 24..386, y 367..428.
@@ -99,7 +108,7 @@ void main() {
             (w.decoration as BoxDecoration).color == AppColors.pcCardBg,
       ),
     );
-    expect(pcCard.left, closeTo(24, 1));
+    expect(pcCard.left, closeTo(22, 1));
     expect(pcCard.top, closeTo(367, 1));
     expect(pcCard.width, closeTo(362, 1));
     expect(pcCard.height, closeTo(61, 1));
@@ -142,7 +151,7 @@ void main() {
     // Section tick + title + pill + divider.
     expect(rectOf(find.text('Verification Details')).left, closeTo(40.5, 1));
     expect(rectOf(find.text('Verification Details')).top, closeTo(452.07, 1));
-    final pill = rectOf(find.text('All fiedls are required'));
+    final pill = rectOf(find.text('All fields are required'));
     expect(pill.center.dx, closeTo((260 + 387) / 2, 2));
     expect(pill.top, greaterThanOrEqualTo(447));
     expect(pill.bottom, lessThanOrEqualTo(474));
@@ -154,7 +163,7 @@ void main() {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(23, 1), reason: 'card $i left');
       expect(rect.top, closeTo(cardTops[i], 1), reason: 'card $i top');
-      expect(rect.width, closeTo(364, 1), reason: 'card $i width');
+      expect(rect.width, closeTo(368, 1), reason: 'card $i width');
       expect(rect.height, closeTo(62, 1), reason: 'card $i height');
     }
 
@@ -169,11 +178,11 @@ void main() {
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 10..402, y 803..857 (10px side padding), radius 18.
+    // Continue button: x 24..388, y 803..857, radius 18.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(10, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(803, 1));
-    expect(button.width, closeTo(392, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -205,30 +214,30 @@ void main() {
     expect(accent.style?.color, AppColors.verifyAccent);
 
     final subtitle = tester.widget<Text>(find.text('A quick verification'));
-    expect(subtitle.style?.fontSize, 15.5);
+    expect(subtitle.style?.fontSize, 14);
     expect(subtitle.style?.color, AppColors.verifySubtitle);
 
     final pcLabel = tester.widget<Text>(find.text('Profile Completion'));
-    expect(pcLabel.style?.fontSize, 13.5);
+    expect(pcLabel.style?.fontSize, 14);
     expect(pcLabel.style?.color, AppColors.pcLabel);
 
     final pcPercent = tester.widget<Text>(find.text('75%'));
-    expect(pcPercent.style?.fontSize, 13.5);
+    expect(pcPercent.style?.fontSize, 14);
     expect(pcPercent.style?.color, AppColors.pcPercent);
 
     final section = tester.widget<Text>(find.text('Verification Details'));
-    expect(section.style?.fontSize, 17.5);
+    expect(section.style?.fontSize, 16);
     expect(section.style?.color, AppColors.verifyInk);
 
-    final note = tester.widget<Text>(find.text('All fiedls are required'));
+    final note = tester.widget<Text>(find.text('All fields are required'));
     expect(note.style?.fontSize, 11);
 
     final title = tester.widget<Text>(find.text('Aadhaar card'));
-    expect(title.style?.fontSize, 15);
+    expect(title.style?.fontSize, 16);
     expect(title.style?.color, AppColors.verifyInk);
 
     final sub = tester.widget<Text>(find.text('For individual farmers'));
-    expect(sub.style?.fontSize, 13);
+    expect(sub.style?.fontSize, 14);
     expect(sub.style?.color, AppColors.docCardSubtitle);
 
     final button = tester.widget<Text>(find.text('Continue'));
@@ -256,14 +265,133 @@ void main() {
     ]);
   });
 
-  testWidgets('Continue opens the bank-details screen', (tester) async {
+  testWidgets('document cards open the picker and show the selected files', (
+    tester,
+  ) async {
+    final picks = <PickedDocument>[
+      const PickedDocument(name: 'aadhaar-card.pdf', path: '/tmp/aadhaar.pdf'),
+      const PickedDocument(name: 'pan-card.png', path: '/tmp/pan.png'),
+      const PickedDocument(name: 'gst-certificate.pdf'),
+    ];
+    var calls = 0;
+
+    Future<PickedDocument?> picker() async => picks[calls++];
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-aadhaar')));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text('aadhaar-card.pdf'), findsOneWidget);
+    expect(find.text('For individual farmers'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('verify-doc-pan')));
+    await tester.pumpAndSettle();
+    expect(calls, 2);
+    expect(find.text('pan-card.png'), findsOneWidget);
+    expect(find.text('For businesses / traders'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('verify-doc-business')));
+    await tester.pumpAndSettle();
+    expect(calls, 3);
+    expect(find.text('gst-certificate.pdf'), findsOneWidget);
+    expect(find.text('FSSAI / Udyam / GST (if available)'), findsNothing);
+
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+    expect(find.byIcon(Icons.check_circle), findsNWidgets(3));
+  });
+
+  testWidgets('cancelling the file picker keeps the card unchanged', (
+    tester,
+  ) async {
+    var calls = 0;
+    Future<PickedDocument?> picker() async {
+      calls++;
+      return null;
+    }
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-aadhaar')));
+    await tester.pumpAndSettle();
+
+    expect(calls, 1);
+    expect(find.text('For individual farmers'), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(3));
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+  });
+
+  testWidgets('shows an error when the file picker fails', (tester) async {
+    Future<PickedDocument?> picker() async {
+      throw Exception('picker unavailable');
+    }
+
+    await pumpScreen(
+      tester,
+      screen: VerifyDetaileScreen(documentPicker: picker),
+    );
+
+    await tester.tap(find.byKey(const Key('verify-doc-pan')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not open the file picker.'), findsOneWidget);
+    expect(find.text('For businesses / traders'), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(3));
+  });
+
+  testWidgets('Continue opens the registration page when the profile section '
+      'is not done yet', (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
+    // Verify -> Registration -> Bank is the onboarding order, so the missing
+    // profile section comes next.
+    expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
+    expect(find.text('Fill Your Bank Details'), findsNothing);
+  });
+
+  testWidgets('Continue opens the bank-details screen when only the profile '
+      'section is done', (tester) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: true,
+      bankComplete: false,
+      verificationComplete: false,
+    );
+
+    await pumpScreen(tester);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Fill Your Bank Details'), findsOneWidget);
     expect(find.text('Account Holder Name'), findsOneWidget);
+  });
+
+  testWidgets('Continue opens Home when profile and bank are already done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: true,
+      bankComplete: true,
+      verificationComplete: false,
+    );
+
+    await pumpScreen(tester);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.byType(BankDetaileScreen), findsNothing);
+    // Nothing was uploaded, so KYC stays incomplete while bank stays done.
+    expect(SellerProfileStore.instance.verificationComplete, isFalse);
+    expect(SellerProfileStore.instance.bankComplete, isTrue);
   });
 
   testWidgets('back arrow pops the route', (tester) async {
@@ -324,3 +452,4 @@ void main() {
     );
   });
 }
+

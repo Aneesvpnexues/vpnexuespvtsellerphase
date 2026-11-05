@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
@@ -15,6 +16,16 @@ Future<void> pumpDetails(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // The route guard only opens authenticated screens while a session is
+    // active; these tests exercise the in-app navigation directly.
+    SessionStore.instance.startSession(
+      phone: '9876543210',
+      userName: 'Test Seller',
+      method: 'login',
+    );
+  });
+
   testWidgets('renders the 135 order details content', (tester) async {
     await pumpDetails(tester);
 
@@ -69,7 +80,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Order Details')).top, closeTo(22, 4));
     expect(rectOf(find.text('New Order')).left, closeTo(41, 3));
     expect(rectOf(find.text('New Order')).top, closeTo(155, 5));
     expect(rectOf(find.text('ORDER #NX4582')).left, closeTo(41, 3));
@@ -221,3 +232,4 @@ void main() {
     expect(find.text('My Products'), findsOneWidget);
   });
 }
+

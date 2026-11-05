@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:seller_app/screens/app_language_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
+import 'package:seller_app/theme/app_colors.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -24,8 +26,8 @@ void main() {
     expect(find.text('Alert me the moment an order arrives'), findsOneWidget);
     expect(find.text('Stock alerts'), findsNWidgets(2));
     expect(find.text('When a product is running low'), findsNWidgets(2));
-    expect(find.text('Help & Support'), findsOneWidget);
-    expect(find.text('Talk to our team'), findsOneWidget);
+    // Help & Support lives on the Profile tab, not in Settings.
+    expect(find.text('Help & Support'), findsNothing);
     expect(find.text('About VP NEXUES'), findsOneWidget);
     expect(find.text('version 1.0'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
@@ -39,7 +41,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Settings')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Settings')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Settings')).top, closeTo(22, 4));
     expect(rectOf(find.text('Preferences').first).left, closeTo(47, 3));
     expect(rectOf(find.text('Preferences').first).top, closeTo(91, 4));
     expect(rectOf(find.text('Language')).left, closeTo(91, 3));
@@ -62,14 +64,11 @@ void main() {
     expect(rectOf(find.text('Stock alerts').first).top, closeTo(315, 5));
     expect(rectOf(find.text('Stock alerts').last).left, closeTo(89, 3));
     expect(rectOf(find.text('Stock alerts').last).top, closeTo(373, 5));
-    expect(rectOf(find.text('Help & Support')).left, closeTo(91, 3));
-    expect(rectOf(find.text('Help & Support')).top, closeTo(500, 5));
-    expect(rectOf(find.text('Talk to our team')).top, closeTo(515, 4));
     expect(rectOf(find.text('About VP NEXUES')).left, closeTo(91, 3));
-    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(558, 5));
-    expect(rectOf(find.text('version 1.0')).top, closeTo(573, 4));
+    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(500, 5));
+    expect(rectOf(find.text('version 1.0')).top, closeTo(515, 4));
     expect(rectOf(find.text('Log out')).left, closeTo(92, 3));
-    expect(rectOf(find.text('Log out')).top, closeTo(656, 5));
+    expect(rectOf(find.text('Log out')).top, closeTo(600, 5));
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
@@ -82,6 +81,70 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
+  });
+
+  testWidgets('notification toggles flip on tap', (tester) async {
+    await pumpScreen(tester);
+
+    final toggles = find.byWidgetPredicate(
+      (w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).borderRadius ==
+              BorderRadius.circular(9) &&
+          [AppColors.businessToggle, AppColors.settingsToggleOff]
+              .contains((w.decoration as BoxDecoration).color),
+    );
+    expect(toggles, findsNWidgets(3));
+
+    // New orders starts on (green), tap it -> off (gray).
+    final first = toggles.at(0);
+    expect(
+      (tester.widget<Container>(first).decoration! as BoxDecoration).color,
+      AppColors.businessToggle,
+    );
+    await tester.tap(first);
+    await tester.pumpAndSettle();
+    expect(
+      (tester.widget<Container>(first).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
+
+    // First Stock alerts starts off (gray), tap it -> on (green).
+    final second = toggles.at(1);
+    expect(
+      (tester.widget<Container>(second).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
+    await tester.tap(second);
+    await tester.pumpAndSettle();
+    expect(
+      (tester.widget<Container>(second).decoration! as BoxDecoration).color,
+      AppColors.businessToggle,
+    );
+
+    // Second Stock alerts unchanged (still off).
+    final third = toggles.at(2);
+    expect(
+      (tester.widget<Container>(third).decoration! as BoxDecoration).color,
+      AppColors.settingsToggleOff,
+    );
+  });
+
+  testWidgets('Language opens the app language screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('settings-language')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLanguageScreen), findsOneWidget);
+    expect(find.text('Apply language'), findsOneWidget);
+
+    await tester.tapAt(const Offset(36, 36));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLanguageScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
   });
 
   testWidgets('the settings icon of the home opens this screen', (
@@ -106,3 +169,4 @@ void main() {
     expect(find.text('Hello,'), findsOneWidget);
   });
 }
+

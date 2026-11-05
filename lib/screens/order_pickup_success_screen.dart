@@ -4,9 +4,11 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details ├óΓé¼” pickup completed state. Static replica of Zeplin
+/// Order Details — pickup completed state. Static replica of Zeplin
 /// "Android Compact - 165".
 class OrderPickupSuccessScreen extends StatelessWidget {
   const OrderPickupSuccessScreen({super.key});
@@ -29,26 +31,15 @@ class OrderPickupSuccessScreen extends StatelessWidget {
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
               children: [
-                const Positioned(left: 24, top: 73, child: _BackCircle()),
-                Positioned(
-                  left: 68,
+                const Positioned(
+                  left: 0,
                   top: 73,
-                  width: 200,
-                  height: 25,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Order Details',
-                      style: AppTextStyles.orderTitle.copyWith(
-                        letterSpacing: 1.05,
-                      ),
-                    ),
-                  ),
+                  child: PageHeader(title: 'Order Details'),
                 ),
-                const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 22, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
                 const Positioned(left: 25, top: 359, child: _SuccessCard()),
-                const Positioned(left: 24, top: 847, child: _BackButton()),
+                const Positioned(left: 22, top: 847, child: _BackButton()),
               ],
             ),
           ),
@@ -79,51 +70,18 @@ class _Label extends StatelessWidget {
   }
 }
 
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        alignment: Alignment.center,
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
-        ),
-      ),
-    );
-  }
-}
-
 class _SegmentTabs extends StatelessWidget {
   const _SegmentTabs();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -828,7 +786,7 @@ class _BackButtonState extends State<_BackButton>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
       setState(() => _knobX = _end);
-      goToOrderPrivew(context);
+      goToOrdersRoot(context);
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -837,59 +795,61 @@ class _BackButtonState extends State<_BackButton>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => Navigator.of(context).maybePop(),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(29)),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0E3B1F), AppColors.orderSlideEnd],
-          ),
-          border: Border.all(color: const Color(0x14000000)),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 3,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderSlideLime,
-                  shape: BoxShape.circle,
-                ),
-                child: const Image(
-                  image: AssetImage('assets/order/ic_slide.png'),
-                  width: 26,
-                  height: 26,
-                ),
-              ),
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: () => Navigator.of(context).maybePop(),
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          width: 368,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(29)),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0E3B1F), AppColors.orderSlideEnd],
             ),
-            Positioned(
-              left: 87,
-              top: 0,
-              width: 200,
-              height: 58,
-              child: Align(
-                alignment: Alignment.center,
-                child: Text(
-                  'Back to orders',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
-                    color: Colors.white,
+            border: Border.all(color: const Color(0x14000000)),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 3,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
                   ),
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                left: 87,
+                top: 0,
+                width: 200,
+                height: 58,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Back to orders',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

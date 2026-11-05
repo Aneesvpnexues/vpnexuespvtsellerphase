@@ -1,3 +1,5 @@
 {
-    "cmake.sourceDirectory": "J:/Flutter/seller_app/linux"
+    "cmake.sourceDirectory": "J:/Flutter/seller_app/linux",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic"
 }

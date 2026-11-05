@@ -1,11 +1,38 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../data/cloudinary_upload_api.dart';
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
+import 'business_details_screen.dart';
+import 'seller_home_screen.dart';
 
-/// "Verify your details" — static replica of Zeplin "Android Compact - 84"
+typedef DocumentPicker = Future<PickedDocument?> Function();
+
+/// A document selected from the device's file browser.
+class PickedDocument {
+  const PickedDocument({required this.name, this.path, this.bytes, this.mimeType});
+
+  final String name;
+  final String? path;
+  final List<int>? bytes;
+  final String? mimeType;
+
+  bool get isPdf => name.toLowerCase().endsWith('.pdf');
+}
+
+enum _DocumentSlot { aadhaar, pan, business }
+
+/// "Verify your details" — replica of Zeplin "Android Compact - 84"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb13fd164a524fed4e6).
 ///
 /// Built against a 412x873 artboard (the design's 44px top headroom removed).
@@ -13,13 +40,187 @@ import 'bank_detaile.dart';
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
 /// sizes the [Artboard] viewport scales it down on small screens and up (capped
 /// at 1.5x) on large ones instead of overflowing. The back arrow pops
-/// the route; cards are visual only; Continue opens [BankDetaileScreen].
-class VerifyDetaileScreen extends StatelessWidget {
-  const VerifyDetaileScreen({super.key});
+/// the route; each document card opens the system file browser for an image or
+/// PDF; Continue uploads images to Cloudinary, saves URLs to Supabase, then
+/// opens [BankDetaileScreen].
+class VerifyDetaileScreen extends StatefulWidget {
+  const VerifyDetaileScreen({super.key, this.documentPicker});
+
+  final DocumentPicker? documentPicker;
 
   static const String illustrationAsset = 'assets/verify/illustration.png';
   static const double designWidth = 412;
   static const double designHeight = 873;
+
+  @override
+  State<VerifyDetaileScreen> createState() => _VerifyDetaileScreenState();
+}
+
+class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
+  final Map<_DocumentSlot, PickedDocument> _documents = {};
+  _DocumentSlot? _pickingSlot;
+  bool _saving = false;
+
+  Future<void> _pickDocument(_DocumentSlot slot) async {
+    if (_pickingSlot != null) return;
+    setState(() => _pickingSlot = slot);
+
+    PickedDocument? document;
+    try {
+      document = await (widget.documentPicker ?? _pickDocumentFromDevice)();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the file picker.')),
+        );
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _pickingSlot = null;
+      if (document != null) _documents[slot] = document;
+    });
+  }
+
+  Future<PickedDocument?> _pickDocumentFromDevice() async {
+    // file_picker 13 exposes static methods (there is no `.platform`).
+    final List<PlatformFile> files = await FilePicker.pickFiles(
+      dialogTitle: 'Select document',
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
+    );
+    if (files.isEmpty) return null;
+    final PlatformFile file = files.first;
+
+    // The platform returns a handle, so read it once here; Continue needs the
+    // bytes to upload the document to Cloudinary.
+    Uint8List? bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      bytes = null;
+    }
+    return PickedDocument(
+      name: file.name,
+      path: file.path,
+      bytes: bytes == null || bytes.isEmpty ? null : bytes,
+      mimeType: _mimeFromName(file.name),
+    );
+  }
+
+  String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  /// Uploads a picked document to Cloudinary and returns the secure URL.
+  /// Returns null if the document has no bytes (e.g. only path was available).
+  Future<String?> _uploadDocument(PickedDocument doc) async {
+    final List<int>? bytes = doc.bytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    final uploader = CloudinaryUploadApi(folder: 'seller_kyc');
+    return uploader.upload(
+      ProductPhoto(
+        bytes: Uint8List.fromList(bytes),
+        mimeType: doc.mimeType ?? 'image/jpeg',
+        filename: doc.name,
+      ),
+    );
+  }
+
+  Future<void> _onContinue() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      // Upload each picked document to Cloudinary.
+      String? aadhaarUrl;
+      String? panUrl;
+      String? businessUrl;
+
+      if (_documents.containsKey(_DocumentSlot.aadhaar)) {
+        aadhaarUrl = await _uploadDocument(_documents[_DocumentSlot.aadhaar]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.pan)) {
+        panUrl = await _uploadDocument(_documents[_DocumentSlot.pan]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.business)) {
+        businessUrl = await _uploadDocument(_documents[_DocumentSlot.business]!);
+      }
+
+      // Save URLs to Supabase.
+      final bool savedThisSession = aadhaarUrl != null ||
+          panUrl != null ||
+          businessUrl != null;
+      if (savedThisSession) {
+        final api = SupabaseProductApi();
+        await api.saveVerifyDetails(
+          aadhaarUrl: aadhaarUrl,
+          panUrl: panUrl,
+          businessUrl: businessUrl,
+        );
+      }
+
+      if (!mounted) return;
+
+      // KYC counts as done if anything was just uploaded, or if an earlier
+      // session already stored a document.
+      final SellerProfileStore profile = SellerProfileStore.instance;
+      final bool verificationComplete =
+          savedThisSession || profile.verificationComplete;
+      profile.setCompletion(
+        profileComplete: profile.profileComplete,
+        bankComplete: profile.bankComplete,
+        verificationComplete: verificationComplete,
+      );
+
+      // Verify -> Registration -> Bank -> Home: skip whatever is already
+      // done so a returning seller never re-enters completed pages.
+      if (profile.profileComplete && profile.bankComplete) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      }
+
+      // Registration is the second step — open it while the profile section
+      // is still missing, then Bank Details, then Home.
+      if (!profile.profileComplete) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Step03BusinessDetailsScreen(),
+          ),
+        );
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,57 +229,149 @@ class VerifyDetaileScreen extends StatelessWidget {
       body: Stack(
         children: [
           Artboard(
-            designWidth: designWidth,
-            designHeight: designHeight,
+            designWidth: VerifyDetaileScreen.designWidth,
+            designHeight: VerifyDetaileScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
             child: Stack(
-              children: const [
-                Positioned(left: 0, top: 0, child: _HeaderBackground()),
-                Positioned(left: 200, top: 0, child: _Illustration()),
-                Positioned(left: 21, top: 30, child: _BackButton()),
-                Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
-                Positioned(left: 24, top: 99.15, child: _TitleLead()),
-                Positioned(left: 24, top: 134.79, child: _TitleAccent()),
-                Positioned(left: 24, top: 180.74, child: _Subtitle()),
-                Positioned(left: 23, top: 209.75, child: _ProgressTrack()),
-                Positioned(left: 0, top: 342, child: _Sheet()),
+              children: [
+                const Positioned(left: 0, top: 0, child: _HeaderBackground()),
+                const Positioned(left: 200, top: 0, child: _Illustration()),
+                const Positioned(left: 21, top: 30, child: _BackButton()),
+                const Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
+                const Positioned(left: 22, top: 99.15, child: _TitleLead()),
+                const Positioned(left: 22, top: 134.79, child: _TitleAccent()),
+                const Positioned(left: 22, top: 180.74, child: _Subtitle()),
+                const Positioned(
+                  left: 23,
+                  top: 209.75,
+                  child: _ProgressTrack(),
+                ),
+                const Positioned(left: 0, top: 342, child: _Sheet()),
                 // Profile completion card.
-                Positioned(left: 24, top: 367, child: _PcCard()),
-                Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
-                Positioned(right: 40, top: 384.37, child: _PcPercent()),
-                Positioned(left: 34, top: 406, child: _PcBar()),
+                const Positioned(left: 22, top: 367, child: _PcCard()),
+                const Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
+                const Positioned(right: 40, top: 384.37, child: _PcPercent()),
+                const Positioned(left: 34, top: 406, child: _PcBar()),
                 // Verification details section.
-                Positioned(left: 26, top: 452, child: _SectionTick()),
-                Positioned(left: 40.5, top: 452.07, child: _SectionTitle()),
-                Positioned(left: 260, top: 447, child: _PillNote()),
-                Positioned(left: 25, top: 483, child: _Divider()),
+                const Positioned(left: 26, top: 452, child: _SectionTick()),
+                const Positioned(
+                  left: 40.5,
+                  top: 452.07,
+                  child: _SectionTitle(),
+                ),
+                const Positioned(left: 260, top: 447, child: _PillNote()),
+                const Positioned(left: 25, top: 483, child: _Divider()),
                 // Document cards.
-                Positioned(left: 23, top: 497, child: _CardAadhaar()),
-                Positioned(left: 34, top: 508, child: _TileAadhaar()),
-                Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
-                Positioned(left: 89, top: 532.94, child: _SubAadhaar()),
-                Positioned(right: 41, top: 519, child: _Chevron()),
-                Positioned(left: 23, top: 573, child: _CardPan()),
-                Positioned(left: 34, top: 585, child: _TilePan()),
-                Positioned(left: 89, top: 587.12, child: _TitlePan()),
-                Positioned(left: 89, top: 609.81, child: _SubPan()),
-                Positioned(right: 41, top: 595, child: _Chevron()),
-                Positioned(left: 23, top: 650, child: _CardBusiness()),
-                Positioned(left: 34, top: 661, child: _TileBusiness()),
-                Positioned(left: 89, top: 663.43, child: _TitleBusiness()),
-                Positioned(left: 89, top: 686.49, child: _SubBusiness()),
-                Positioned(right: 41, top: 672, child: _Chevron()),
+                const Positioned(left: 23, top: 497, child: _CardAadhaar()),
+                const Positioned(left: 34, top: 508, child: _TileAadhaar()),
+                const Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
+                Positioned(
+                  left: 89,
+                  top: 532.94,
+                  width: 246,
+                  child: _DocSubtitle(
+                    defaultText: 'For individual farmers',
+                    document: _documents[_DocumentSlot.aadhaar],
+                  ),
+                ),
+                Positioned(
+                  right: 41,
+                  top: 519,
+                  child: _Chevron(
+                    selected: _documents.containsKey(_DocumentSlot.aadhaar),
+                  ),
+                ),
+                const Positioned(left: 23, top: 573, child: _CardPan()),
+                const Positioned(left: 34, top: 585, child: _TilePan()),
+                const Positioned(left: 89, top: 587.12, child: _TitlePan()),
+                Positioned(
+                  left: 89,
+                  top: 609.81,
+                  width: 246,
+                  child: _DocSubtitle(
+                    defaultText: 'For businesses / traders',
+                    document: _documents[_DocumentSlot.pan],
+                  ),
+                ),
+                Positioned(
+                  right: 41,
+                  top: 595,
+                  child: _Chevron(
+                    selected: _documents.containsKey(_DocumentSlot.pan),
+                  ),
+                ),
+                const Positioned(left: 23, top: 650, child: _CardBusiness()),
+                const Positioned(left: 34, top: 661, child: _TileBusiness()),
+                const Positioned(
+                  left: 89,
+                  top: 663.43,
+                  child: _TitleBusiness(),
+                ),
+                Positioned(
+                  left: 89,
+                  top: 686.49,
+                  width: 246,
+                  child: _DocSubtitle(
+                    defaultText: 'FSSAI / Udyam / GST (if available)',
+                    document: _documents[_DocumentSlot.business],
+                  ),
+                ),
+                Positioned(
+                  right: 41,
+                  top: 672,
+                  child: _Chevron(
+                    selected: _documents.containsKey(_DocumentSlot.business),
+                  ),
+                ),
+                // Transparent hit targets covering each full card so taps on
+                // any part of it open the picker.
+                Positioned(
+                  left: 23,
+                  top: 497,
+                  width: 368,
+                  height: 62,
+                  child: GestureDetector(
+                    key: const Key('verify-doc-aadhaar'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _pickDocument(_DocumentSlot.aadhaar),
+                  ),
+                ),
+                Positioned(
+                  left: 23,
+                  top: 573,
+                  width: 368,
+                  height: 62,
+                  child: GestureDetector(
+                    key: const Key('verify-doc-pan'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _pickDocument(_DocumentSlot.pan),
+                  ),
+                ),
+                Positioned(
+                  left: 23,
+                  top: 650,
+                  width: 368,
+                  height: 62,
+                  child: GestureDetector(
+                    key: const Key('verify-doc-business'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _pickDocument(_DocumentSlot.business),
+                  ),
+                ),
+                // Loading overlay while uploading / saving.
+                if (_saving)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Color(0x66FFFFFF),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
               ],
             ),
           ),
-          // Anchored to the physical screen bottom so it stays there on
-          // taller devices; on the 873-tall artboard this matches the
-          // design offset (873 - 54 - 16 = 803).
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
-              child: SizedBox(height: 54, child: const _ContinueButton()),
-            ),
+          ContinueButton(
+            buttonKey: const Key('verify-continue'),
+            onTap: _onContinue,
           ),
         ],
       ),
@@ -120,10 +413,12 @@ class _BackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
-      child: const Icon(
-        Icons.arrow_back,
-        size: 22,
-        color: AppColors.textPrimary,
+      child: HoverPress.icon(
+        child: const Icon(
+          Icons.arrow_back,
+          size: 22,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -342,7 +637,7 @@ class _PillNote extends StatelessWidget {
       child: const FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fiedls are required',
+          'All fields are required',
           style: AppTextStyles.verifyPillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -367,7 +662,7 @@ class _DocCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 62,
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.docCardBorder),
@@ -562,14 +857,24 @@ class _TitleAadhaar extends StatelessWidget {
   }
 }
 
-class _SubAadhaar extends StatelessWidget {
-  const _SubAadhaar();
+class _DocSubtitle extends StatelessWidget {
+  const _DocSubtitle({required this.defaultText, this.document});
+
+  final String defaultText;
+  final PickedDocument? document;
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'For individual farmers',
-      style: AppTextStyles.docCardSubtitle,
+    final selected = document != null;
+    return Text(
+      document?.name ?? defaultText,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: selected
+          ? AppTextStyles.docCardSubtitle.copyWith(
+              color: AppColors.verifiedText,
+            )
+          : AppTextStyles.docCardSubtitle,
     );
   }
 }
@@ -580,18 +885,6 @@ class _TitlePan extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text('PAN Card', style: AppTextStyles.docCardTitle);
-  }
-}
-
-class _SubPan extends StatelessWidget {
-  const _SubPan();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'For businesses / traders',
-      style: AppTextStyles.docCardSubtitle,
-    );
   }
 }
 
@@ -607,61 +900,17 @@ class _TitleBusiness extends StatelessWidget {
   }
 }
 
-class _SubBusiness extends StatelessWidget {
-  const _SubBusiness();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'FSSAI / Udyam / GST (if available)',
-      style: AppTextStyles.docCardSubtitle,
-    );
-  }
-}
-
 class _Chevron extends StatelessWidget {
-  const _Chevron();
+  const _Chevron({required this.selected});
+
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(
-      Icons.keyboard_arrow_down,
+    return Icon(
+      selected ? Icons.check_circle : Icons.keyboard_arrow_down,
       size: 18,
       color: AppColors.verifiedText,
-    );
-  }
-}
-
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-      ),
-      child: Container(
-        height: 54,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: const Text('Continue', style: AppTextStyles.button),
-      ),
     );
   }
 }

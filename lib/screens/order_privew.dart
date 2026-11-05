@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_navigation.dart';
 import '../widgets/artboard.dart';
+import '../widgets/page_header.dart';
 
 /// "Fresh Tomatoes is live!" product preview screen (Zeplin
 /// "Android Compact - 172", project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1b035415e3d8370f20e1c).
 ///
-/// Standalone 412x917 artboard with no status bar and no back button: the
-/// Android system back gesture is the only way out, per the design. A baked
-/// hero image (pale-green card + shadow, title erased so the text can be
-/// rendered as a real widget) sits at the top, followed by the success
-/// title/subtitle, the Fresh Tomatoes product card with its Active pill,
-/// and the two action buttons. Opened from the My Orders order blocks;
-/// both buttons are inert (the design specifies no destinations).
+/// Standalone 412x917 artboard with no status bar. A baked hero image
+/// (pale-green card + shadow, title erased so the text can be rendered as a
+/// real widget) sits at the top, followed by the success title/subtitle, the
+/// Fresh Tomatoes product card with its Active pill, and the two action
+/// buttons. Opened from the My Orders order blocks; the floating back circle
+/// in the empty band above the hero pops the route, "Preview product" opens
+/// the product details page (Zeplin 171) and "Add another product" opens the
+/// Add Products flow (Zeplin 124).
 class OrderPrivewScreen extends StatelessWidget {
   const OrderPrivewScreen({super.key});
 
@@ -31,6 +34,14 @@ class OrderPrivewScreen extends StatelessWidget {
         designHeight: designHeight,
         child: Stack(
           children: [
+            Positioned(
+              left: 0,
+              top: 56,
+              child: PageHeader(
+                title: '',
+                backButtonKey: const Key('order-preview-back'),
+              ),
+            ),
             Positioned(
               left: 0,
               top: 103,
@@ -69,9 +80,17 @@ class OrderPrivewScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(left: 24, top: 479, child: _ProductCard()),
-            const Positioned(left: 24, top: 782, child: _PreviewButton()),
-            const Positioned(left: 24, top: 846, child: _AddProductButton()),
+            const Positioned(left: 22, top: 479, child: _ProductCard()),
+            Positioned(
+              left: 22,
+              top: 782,
+              child: _PreviewButton(onTap: () => goToProductDetails(context)),
+            ),
+            Positioned(
+              left: 22,
+              top: 846,
+              child: _AddProductButton(onTap: () => goToAddProduct(context)),
+            ),
           ],
         ),
       ),
@@ -89,7 +108,7 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 97,
       child: Stack(
         clipBehavior: Clip.none,
@@ -98,7 +117,7 @@ class _ProductCard extends StatelessWidget {
             left: 0,
             top: 0,
             child: Container(
-              width: 364,
+              width: 368,
               height: 97,
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -252,39 +271,46 @@ class _ActivePill extends StatelessWidget {
 }
 
 /// Primary "Preview product" button (24,782 364x53, pill, horizontal
-/// #104525 → #28AA59 gradient, drop shadow). Inert per the design.
+/// #104525 → #28AA59 gradient, drop shadow). Opens the product details page.
 class _PreviewButton extends StatelessWidget {
-  const _PreviewButton();
+  const _PreviewButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 53,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(26.5)),
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF104525), Color(0xFF28AA59)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x47000000),
-            blurRadius: 20,
-            offset: Offset(0, 8),
+    return GestureDetector(
+      key: const Key('order-preview-product'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 368,
+        height: 53,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(26.5)),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF104525), Color(0xFF28AA59)],
           ),
-        ],
-      ),
-      child: const Text(
-        'Preview product',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-          height: 1.0,
-          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x47000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Text(
+          'Preview product',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+            height: 1.0,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -292,46 +318,53 @@ class _PreviewButton extends StatelessWidget {
 }
 
 /// Secondary "+ Add another product" button (24,846 364x53, pill, white
-/// with 1px #EBEBEB border, no shadow). Inert per the design.
+/// with 1px #EBEBEB border, no shadow). Opens the Add Products flow.
 class _AddProductButton extends StatelessWidget {
-  const _AddProductButton();
+  const _AddProductButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 53,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(26.5)),
-        border: Border.fromBorderSide(BorderSide(color: Color(0xFFEBEBEB))),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Text(
-            '+',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-              height: 1.0,
-              color: Color(0xFF0D3B26),
+    return GestureDetector(
+      key: const Key('order-add-product'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 368,
+        height: 53,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(26.5)),
+          border: Border.fromBorderSide(BorderSide(color: Color(0xFFEBEBEB))),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text(
+              '+',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+                height: 1.0,
+                color: Color(0xFF0D3B26),
+              ),
             ),
-          ),
-          SizedBox(width: 10.7),
-          Text(
-            'Add another product',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-              height: 1.0,
-              color: Color(0xFF0D3B26),
+            SizedBox(width: 10.7),
+            Text(
+              'Add another product',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+                height: 1.0,
+                color: Color(0xFF0D3B26),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

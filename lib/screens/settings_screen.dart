@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'about_vpnexues_screen.dart';
+import 'app_language_screen.dart';
+import 'welcome_seller_screen.dart';
 
-/// Settings — static replica of Zeplin "Android Compact - 164"
+/// Settings — replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
 ///
 /// Built against a 412x917 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only — no network, no state.
+/// Notification toggles are functional (tap to flip) and persist while the
+/// screen is mounted; no network.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -29,21 +38,32 @@ class SettingsScreen extends StatelessWidget {
           designWidth: designWidth,
           designHeight: designHeight,
           trimTop: trimTop,
-          child: const Stack(
+          child: Stack(
             children: [
               Positioned(left: 25, top: 127, child: _PreferencesCard()),
               Positioned(left: 25, top: 253, child: _NotificationsCard()),
               Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(left: 25, top: 678, child: _LogoutCard()),
-              Positioned(left: 24, top: 73, child: _BackCircle()),
               Positioned(
-                left: 68,
-                top: 73,
-                child: LabelText(
-                  'Settings',
-                  AppTextStyles.productsTitle,
-                  width: 83,
+                left: 25,
+                top: 622,
+                child: _LogoutCard(
+                  onTap: () async {
+                    final navigator = Navigator.of(context);
+                    ProductStore.instance.clear();
+                    SellerProfileStore.instance.reset();
+                    await AuthFlow.instance.signOut();
+                    navigator.pushReplacement(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const WelcomeSellerScreen(),
+                      ),
+                    );
+                  },
                 ),
+              ),
+              Positioned(
+                left: 0,
+                top: 73,
+                child: PageHeader(title: 'Settings'),
               ),
             ],
           ),
@@ -53,66 +73,48 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: const Image(
-          image: AssetImage('assets/order/ic_back.png'),
-          width: 15,
-          height: 15,
-        ),
-      ),
-    );
-  }
-}
-
-class _PreferencesCard extends StatelessWidget {
+class _PreferencesCard extends StatefulWidget {
   const _PreferencesCard();
 
   @override
+  State<_PreferencesCard> createState() => _PreferencesCardState();
+}
+
+class _PreferencesCardState extends State<_PreferencesCard> {
+  @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 112,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
             'Preferences',
             AppTextStyles.orderCardTitle,
-            width: 86,
+            width: 100,
           ),
         ),
         Positioned(
           left: 21,
           top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_globe.png',
-            iconSize: 16,
-            title: 'Language',
-            titleWidth: 59,
-            subtitle: 'English',
-            subtitleWidth: 35,
-            chevron: true,
+          child: GestureDetector(
+            key: const Key('settings-language'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AppLanguageScreen(),
+              ),
+            ),
+            child: const _MenuRow(
+              icon: 'assets/settings/ic_globe.png',
+              iconSize: 16,
+              title: 'Language',
+              titleWidth: 59,
+              subtitle: 'English',
+              subtitleWidth: 35,
+              chevron: true,
+            ),
           ),
         ),
       ],
@@ -120,12 +122,23 @@ class _PreferencesCard extends StatelessWidget {
   }
 }
 
-class _NotificationsCard extends StatelessWidget {
+class _NotificationsCard extends StatefulWidget {
   const _NotificationsCard();
 
   @override
+  State<_NotificationsCard> createState() => _NotificationsCardState();
+}
+
+class _NotificationsCardState extends State<_NotificationsCard> {
+  final List<bool> _toggleStates = [true, false, false];
+
+  void _onToggleChanged(int index) {
+    setState(() => _toggleStates[index] = !_toggleStates[index]);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const _Card(
+    return _Card(
       height: 229,
       children: [
         Positioned(
@@ -134,7 +147,7 @@ class _NotificationsCard extends StatelessWidget {
           child: LabelText(
             'Notifications',
             AppTextStyles.orderCardTitle,
-            width: 92,
+            width: 104,
           ),
         ),
         Positioned(
@@ -147,7 +160,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 68,
             subtitle: 'Alert me the moment an order arrives',
             subtitleWidth: 181,
-            toggle: true,
+            toggle: _toggleStates[0],
+            onToggleChanged: () => _onToggleChanged(0),
           ),
         ),
         Positioned(left: 21, top: 102, child: _Divider()),
@@ -161,7 +175,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 71,
             subtitle: 'When a product is running low',
             subtitleWidth: 146,
-            toggle: false,
+            toggle: _toggleStates[1],
+            onToggleChanged: () => _onToggleChanged(1),
           ),
         ),
         Positioned(left: 21, top: 160, child: _Divider()),
@@ -175,7 +190,8 @@ class _NotificationsCard extends StatelessWidget {
             titleWidth: 71,
             subtitle: 'When a product is running low',
             subtitleWidth: 146,
-            toggle: false,
+            toggle: _toggleStates[2],
+            onToggleChanged: () => _onToggleChanged(2),
           ),
         ),
       ],
@@ -188,43 +204,38 @@ class _SupportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
-      height: 168,
+    return _Card(
+      height: 112,
       children: [
-        Positioned(
+        const Positioned(
           left: 22,
           top: 13,
           child: LabelText(
             'Preferences',
             AppTextStyles.orderCardTitle,
-            width: 86,
+            width: 100,
           ),
         ),
         Positioned(
           left: 21,
           top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_help.png',
-            iconSize: 16,
-            title: 'Help & Support',
-            titleWidth: 90,
-            subtitle: 'Talk to our team',
-            subtitleWidth: 78,
-            chevron: true,
-          ),
-        ),
-        Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
-          left: 21,
-          top: 111,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_alert.png',
-            iconSize: 16,
-            title: 'About VP NEXUES',
-            titleWidth: 108,
-            subtitle: 'version 1.0',
-            subtitleWidth: 52,
-            chevron: true,
+          child: GestureDetector(
+            key: const Key('settings-about'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AboutVpnexuesScreen(),
+              ),
+            ),
+            child: const _MenuRow(
+              icon: 'assets/settings/ic_alert.png',
+              iconSize: 16,
+              title: 'About VP NEXUES',
+              titleWidth: 108,
+              subtitle: 'version 1.0',
+              subtitleWidth: 52,
+              chevron: true,
+            ),
           ),
         ),
       ],
@@ -233,44 +244,50 @@ class _SupportCard extends StatelessWidget {
 }
 
 class _LogoutCard extends StatelessWidget {
-  const _LogoutCard();
+  const _LogoutCard({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const _Card(
-      height: 81,
-      children: [
-        Positioned(
-          left: 22,
-          top: 23,
-          child: SizedBox(
-            width: 324,
-            height: 34,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: _Tile(
-                    icon: 'assets/settings/ic_logout.png',
-                    iconSize: 16,
-                    color: AppColors.outOfStockBg,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: const _Card(
+        height: 81,
+        children: [
+          Positioned(
+            left: 22,
+            top: 23,
+            child: SizedBox(
+              width: 324,
+              height: 34,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: _Tile(
+                      icon: 'assets/settings/ic_logout.png',
+                      iconSize: 16,
+                      color: AppColors.outOfStockBg,
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: 45,
-                  top: 4,
-                  child: LabelText(
-                    'Log out',
-                    AppTextStyles.settingsLogout,
-                    width: 45,
+                  Positioned(
+                    left: 45,
+                    top: 4,
+                    child: LabelText(
+                      'Log out',
+                      AppTextStyles.settingsLogout,
+                      width: 45,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -328,6 +345,7 @@ class _MenuRow extends StatelessWidget {
     required this.subtitleWidth,
     this.toggle,
     this.chevron = false,
+    this.onToggleChanged,
   });
 
   final String icon;
@@ -338,6 +356,7 @@ class _MenuRow extends StatelessWidget {
   final double subtitleWidth;
   final bool? toggle;
   final bool chevron;
+  final VoidCallback? onToggleChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +393,18 @@ class _MenuRow extends StatelessWidget {
             ),
           ),
           if (toggle != null)
-            Positioned(left: 283, top: 11, child: _Toggle(on: toggle!)),
+            Positioned(
+              left: 283,
+              top: 11,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onToggleChanged?.call(),
+                child: HoverPress.control(
+                  enabled: onToggleChanged != null,
+                  child: _Toggle(on: toggle!),
+                ),
+              ),
+            ),
           if (chevron)
             const Positioned(
               left: 312,

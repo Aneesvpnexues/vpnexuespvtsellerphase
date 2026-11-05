@@ -1,0 +1,5 @@
+{
+  "CLOUDINARY_CLOUD_NAME": "your-cloud-name",
+  "CLOUDINARY_UPLOAD_PRESET": "seller_products_unsigned",
+  "CLOUDINARY_FOLDER": "seller_products"
+}

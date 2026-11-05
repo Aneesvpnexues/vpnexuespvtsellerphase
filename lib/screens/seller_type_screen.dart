@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/keyboard_aware_canvas.dart';
 
 /// "STEP 02 — What best describes you?" — static replica of Zeplin
 /// "Android Compact - 82" (project 6a8d49709e27bd8b35213d35,
@@ -32,97 +35,85 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: Step02SellerTypeScreen.designWidth,
-              height: Step02SellerTypeScreen.designHeight,
-              child: Stack(
-                children: [
-                  const Positioned(right: 25, top: 84.2, child: _StepLabel()),
-                  const Positioned(left: 40, top: 97, child: _Illustration()),
-                  const Positioned(left: 24, top: 441.5, child: _TitleLead()),
-                  const Positioned(left: 24, top: 473.5, child: _TitleAccent()),
-                  const Positioned(left: 24, top: 512, child: _Subtitle()),
-                  Positioned(
-                    left: 33,
-                    top: 582,
-                    child: _SellerTypePill(
-                      width: 151.5,
-                      icon: Icons.spa,
-                      label: 'Farmer',
-                      selected: _selectedIndex == 0,
-                      onTap: () => _select(0),
-                    ),
+      body: Stack(
+        children: [
+          KeyboardAwareCanvas(
+            designWidth: Step02SellerTypeScreen.designWidth,
+            designHeight: Step02SellerTypeScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
+            child: Stack(
+              children: [
+                const Positioned(right: 25, top: 84.2, child: _StepLabel()),
+                const Positioned(left: 40, top: 97, child: _Illustration()),
+                const Positioned(left: 22, top: 441.5, child: _TitleLead()),
+                const Positioned(left: 22, top: 473.5, child: _TitleAccent()),
+                const Positioned(left: 22, top: 512, child: _Subtitle()),
+                Positioned(
+                  left: 33,
+                  top: 582,
+                  child: _SellerTypePill(
+                    width: 151.5,
+                    icon: Icons.spa,
+                    label: 'Farmer',
+                    selected: _selectedIndex == 0,
+                    onTap: () => _select(0),
                   ),
-                  Positioned(
-                    left: 227,
-                    top: 582,
-                    child: _SellerTypePill(
-                      width: 151.5,
-                      icon: Icons.storefront,
-                      label: 'Shop Owner',
-                      selected: _selectedIndex == 1,
-                      onTap: () => _select(1),
-                    ),
+                ),
+                Positioned(
+                  left: 227,
+                  top: 582,
+                  child: _SellerTypePill(
+                    width: 151.5,
+                    icon: Icons.storefront,
+                    label: 'Shop Owner',
+                    selected: _selectedIndex == 1,
+                    onTap: () => _select(1),
                   ),
-                  Positioned(
-                    left: 93,
-                    top: 649,
-                    child: _SellerTypePill(
-                      width: 223.5,
-                      icon: Icons.local_dining,
-                      label: 'Restaurant Supplier',
-                      selected: _selectedIndex == 2,
-                      onTap: () => _select(2),
-                    ),
+                ),
+                Positioned(
+                  left: 93,
+                  top: 649,
+                  child: _SellerTypePill(
+                    width: 223.5,
+                    icon: Icons.local_dining,
+                    label: 'Restaurant Supplier',
+                    selected: _selectedIndex == 2,
+                    onTap: () => _select(2),
                   ),
-                  Positioned(
-                    left: 46,
-                    top: 716,
-                    child: _SellerTypePill(
-                      width: 151.5,
-                      icon: Icons.directions_bus,
-                      label: 'Shop Owner',
-                      selected: _selectedIndex == 3,
-                      onTap: () => _select(3),
-                    ),
+                ),
+                Positioned(
+                  left: 130.3,
+                  top: 716,
+                  child: _SellerTypePill(
+                    width: 151.5,
+                    icon: Icons.inventory_2,
+                    label: 'Wholesaler',
+                    selected: _selectedIndex == 3,
+                    onTap: () => _select(3),
                   ),
-                  Positioned(
-                    left: 214,
-                    top: 716,
-                    child: _SellerTypePill(
-                      width: 151.5,
-                      icon: Icons.inventory_2,
-                      label: 'Wholesaler',
-                      selected: _selectedIndex == 4,
-                      onTap: () => _select(4),
-                    ),
+                ),
+                Positioned(
+                  left: 113,
+                  top: 781,
+                  child: _SellerTypePill(
+                    width: 183.5,
+                    icon: Icons.apartment,
+                    label: 'Business seller',
+                    selected: _selectedIndex == 4,
+                    onTap: () => _select(4),
                   ),
-                  Positioned(
-                    left: 113,
-                    top: 781,
-                    child: _SellerTypePill(
-                      width: 183.5,
-                      icon: Icons.apartment,
-                      label: 'Business seller',
-                      selected: _selectedIndex == 5,
-                      onTap: () => _select(5),
-                    ),
-                  ),
-                  const Positioned(
-                    left: 24,
-                    top: 866,
-                    child: _ContinueButton(),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ),
+          ContinueButton(
+            buttonKey: const Key('seller-type-continue'),
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              goToBusinessDetails(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -137,16 +128,55 @@ class _StepLabel extends StatelessWidget {
   }
 }
 
-class _Illustration extends StatelessWidget {
+class _Illustration extends StatefulWidget {
   const _Illustration();
 
   @override
+  State<_Illustration> createState() => _IllustrationState();
+}
+
+class _IllustrationState extends State<_Illustration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final CurvedAnimation _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      Step02SellerTypeScreen.illustrationAsset,
-      width: 348.5,
-      height: 347.5,
-      fit: BoxFit.fill,
+    return FadeTransition(
+      opacity: _curve,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(_curve),
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.94, end: 1).animate(_curve),
+          child: Image.asset(
+            Step02SellerTypeScreen.illustrationAsset,
+            width: 348.5,
+            height: 347.5,
+            fit: BoxFit.fill,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -204,58 +234,38 @@ class _SellerTypePill extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        width: width,
-        height: 50,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
-          border: Border.fromBorderSide(
-            BorderSide(
-              color: selected ? AppColors.primary : AppColors.pillBorder,
+      child: HoverPress.chip(
+        child: Container(
+          width: width,
+          height: 50,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : AppColors.surface,
+            border: Border.fromBorderSide(
+              BorderSide(
+                color: selected ? AppColors.primary : AppColors.pillBorder,
+              ),
+            ),
+            borderRadius: const BorderRadius.all(Radius.circular(25)),
+          ),
+          // Scales the icon+label row down when the label cannot fit the pill
+          // (the test font renders every glyph one em wide); on device with the
+          // bundled Roboto it renders 1:1.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: foreground),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: AppTextStyles.pillLabel.copyWith(color: foreground),
+                ),
+              ],
             ),
           ),
-          borderRadius: const BorderRadius.all(Radius.circular(25)),
         ),
-        // Scales the icon+label row down when the label cannot fit the pill
-        // (the test font renders every glyph one em wide); on device with the
-        // bundled Roboto it renders 1:1.
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: foreground),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: AppTextStyles.pillLabel.copyWith(color: foreground),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => goToBusinessDetails(context),
-      child: Container(
-        width: 364,
-        height: 54,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-        ),
-        child: const Text('Continue', style: AppTextStyles.button),
       ),
     );
   }

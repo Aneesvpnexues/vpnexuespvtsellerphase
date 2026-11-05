@@ -20,12 +20,7 @@ Finder _pills() => find.byWidgetPredicate(
       (w.decoration as BoxDecoration).border != null,
 );
 
-Finder _continueButton() => find.byWidgetPredicate(
-  (w) =>
-      w is Container &&
-      w.decoration is BoxDecoration &&
-      (w.decoration as BoxDecoration).color == AppColors.primary,
-);
+Finder _continueButton() => find.byKey(const Key('seller-type-continue'));
 
 void main() {
   testWidgets('renders the STEP 02 content', (tester) async {
@@ -42,7 +37,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Farmer'), findsOneWidget);
-    expect(find.text('Shop Owner'), findsNWidgets(2));
+    expect(find.text('Shop Owner'), findsOneWidget);
     expect(find.text('Restaurant Supplier'), findsOneWidget);
     expect(find.text('Wholesaler'), findsOneWidget);
     expect(find.text('Business seller'), findsOneWidget);
@@ -64,15 +59,15 @@ void main() {
     expect(illustration.height, closeTo(347.5, 1));
 
     // Heading: two 32px lines starting at x 24, design glyph tops 444.5/476.5.
-    expect(rectOf(find.text('What best')).left, closeTo(24, 1));
+    expect(rectOf(find.text('What best')).left, closeTo(22, 1));
     expect(rectOf(find.text('What best')).top, closeTo(441.5, 1));
-    expect(rectOf(find.text('describes you?')).left, closeTo(24, 1));
+    expect(rectOf(find.text('describes you?')).left, closeTo(22, 1));
     expect(rectOf(find.text('describes you?')).top, closeTo(473.5, 1));
 
     // Subtitle: x 24, design glyph top 517.5 (line box sits 5.4px higher).
     expect(
       rectOf(find.text('Choose your seller type\nto get started.')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(
       rectOf(find.text('Choose your seller type\nto get started.')).top,
@@ -84,14 +79,15 @@ void main() {
     expect(step.right, closeTo(387, 2));
     expect(step.top, closeTo(84.2, 1));
 
-    // Six pills: height 50, radius 25, at the rows measured from the design.
-    expect(_pills(), findsNWidgets(6));
+    // Five pills: height 50, radius 25, at the rows measured from the design.
+    // The design repeats "Shop Owner" twice; only one is shown, and the
+    // Wholesaler pill is centred in its row.
+    expect(_pills(), findsNWidgets(5));
     const expected = <(double, double, double)>[
       (33, 582, 151.5),
       (227, 582, 151.5),
       (93, 649, 223.5),
-      (46, 716, 151.5),
-      (214, 716, 151.5),
+      (130.3, 716, 151.5),
       (113, 781, 183.5),
     ];
     for (var i = 0; i < expected.length; i++) {
@@ -102,11 +98,11 @@ void main() {
       expect(rect.height, closeTo(50, 1), reason: 'pill $i height');
     }
 
-    // Continue button: x 24..388, y 866..920, radius 18.
+    // Continue button: x 24..388, y 873..927, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
-    expect(button.top, closeTo(866, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.left, closeTo(22, 1));
+    expect(button.top, closeTo(873, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -115,6 +111,11 @@ void main() {
       decoration.borderRadius,
       const BorderRadius.all(Radius.circular(18)),
     );
+    final gradient = decoration.gradient! as LinearGradient;
+    expect(gradient.colors, const [
+      AppColors.continueGradientStart,
+      AppColors.continueGradientEnd,
+    ]);
   });
 
   testWidgets('text styles follow the design', (tester) async {
@@ -152,7 +153,7 @@ void main() {
   ) async {
     await pumpScreen(tester);
 
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 5; i++) {
       final container = tester.widget<Container>(_pills().at(i));
       final decoration = container.decoration! as BoxDecoration;
       final border = decoration.border! as Border;
@@ -166,7 +167,7 @@ void main() {
     }
 
     final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
-    expect(icons.length, 6);
+    expect(icons.length, 5);
     expect(icons.every((i) => i.size == 16), isTrue);
     expect(
       icons.map((i) => i.icon),
@@ -174,7 +175,6 @@ void main() {
         Icons.spa,
         Icons.storefront,
         Icons.local_dining,
-        Icons.directions_bus,
         Icons.inventory_2,
         Icons.apartment,
       ]),
@@ -233,6 +233,36 @@ void main() {
     expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
   });
 
+  testWidgets('illustration animates in on the first frame', (tester) async {
+    tester.view.physicalSize = const Size(412, 943);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: Step02SellerTypeScreen()));
+    await tester.pump();
+
+    final image = find.byType(Image).first;
+    final fade = find
+        .ancestor(of: image, matching: find.byType(FadeTransition))
+        .first;
+    final scale = find
+        .ancestor(of: image, matching: find.byType(ScaleTransition))
+        .first;
+
+    expect(tester.widget<FadeTransition>(fade).opacity.value, lessThan(1));
+    expect(tester.widget<ScaleTransition>(scale).scale.value, lessThan(1));
+
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+    expect(tester.widget<ScaleTransition>(scale).scale.value, 1);
+
+    final rect = tester.getRect(find.byType(Image).first);
+    expect(rect.left, closeTo(40, 1));
+    expect(rect.top, closeTo(97, 1));
+    expect(rect.width, closeTo(348.5, 1));
+    expect(rect.height, closeTo(347.5, 1));
+  });
+
   testWidgets('uses the step02 illustration asset', (tester) async {
     await pumpScreen(tester);
 
@@ -248,3 +278,4 @@ void main() {
     );
   });
 }
+

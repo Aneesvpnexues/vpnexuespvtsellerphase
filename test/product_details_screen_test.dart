@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/product_store.dart';
 import 'package:seller_app/screens/product_details_screen.dart';
 
 const List<String> _assets = [
@@ -16,19 +19,80 @@ const List<String> _assets = [
   'assets/order/ic_back.png',
 ];
 
-Future<void> pumpProductDetails(WidgetTester tester) async {
+final _photoBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6Q'
+  'AAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhX'
+  'Y/jPwPAfAAUAAf+mXJtdAAAAAElFTkSuQmCC',
+);
+
+Future<void> pumpProductDetails(
+  WidgetTester tester, {
+  Product? product,
+  ProductShare? shareProduct,
+}) async {
   tester.view.physicalSize = const Size(412, 1515);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: ProductDetailsScreen()));
+  await tester.pumpWidget(
+    MaterialApp(
+      home: ProductDetailsScreen(product: product, shareProduct: shareProduct),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> pumpPushedProductDetails(
+  WidgetTester tester, {
+  Product? product,
+  ProductUpdater? productUpdater,
+  ProductDeleter? productDeleter,
+}) async {
+  tester.view.physicalSize = const Size(412, 1515);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ProductDetailsScreen(
+                    product: product,
+                    productUpdater:
+                        productUpdater ??
+                        (Product updated) async {
+                          ProductStore.instance.updateProduct(updated);
+                          return updated;
+                        },
+                    productDeleter:
+                        productDeleter ??
+                        (String id) async {
+                          ProductStore.instance.removeProduct(id);
+                        },
+                  ),
+                ),
+              ),
+              child: const Text('Open details'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open details'));
   await tester.pumpAndSettle();
 }
 
 Finder assetImage(String asset) => find.byWidgetPredicate(
-  (widget) => widget is Image && (widget.image as AssetImage).assetName == asset,
+  (widget) =>
+      widget is Image && (widget.image as AssetImage).assetName == asset,
 );
 
 void main() {
+  setUp(ProductStore.instance.clear);
+
   testWidgets('renders the 171 product details content', (tester) async {
     await pumpProductDetails(tester);
 
@@ -72,6 +136,246 @@ void main() {
     expect(find.text('Go back to order'), findsOneWidget);
   });
 
+  testWidgets('renders a saved product with its image and details', (
+    tester,
+  ) async {
+    final product = Product(
+      id: 'P1',
+      userId: '',
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+      photos: <ProductPhoto>[ProductPhoto(bytes: _photoBytes)],
+    );
+
+    await pumpProductDetails(tester, product: product);
+
+    expect(find.text('Alphonso Mango'), findsOneWidget);
+    expect(find.text('\u20B9120.50'), findsNWidgets(2));
+    expect(find.text('Fruits, 7 kg available'), findsOneWidget);
+    expect(find.text('Fruits'), findsOneWidget);
+    expect(find.text('Price per kg'), findsOneWidget);
+    expect(find.text('Kilogram (kg)'), findsOneWidget);
+    expect(find.text('Sweet mangoes from the farm.'), findsOneWidget);
+    expect(find.text('Fresh Tomatoes'), findsNothing);
+
+    final Image image = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const ValueKey('product-details-photo')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(image.image, isA<MemoryImage>());
+  });
+
+  testWidgets('slides through every photo added to the product', (
+    tester,
+  ) async {
+    final product = Product(
+      id: 'P1',
+      userId: '',
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+      photos: <ProductPhoto>[
+        ProductPhoto(bytes: _photoBytes),
+        ProductPhoto(bytes: _photoBytes),
+        ProductPhoto(bytes: _photoBytes),
+      ],
+    );
+
+    await pumpProductDetails(tester, product: product);
+
+    final Finder carousel = find.byKey(
+      const ValueKey('product-details-photo-carousel'),
+    );
+    final Finder indicators = find.byKey(
+      const ValueKey('product-photo-indicators'),
+    );
+    expect(carousel, findsOneWidget);
+    expect(
+      find.descendant(of: indicators, matching: find.byType(AnimatedContainer)),
+      findsNWidgets(3),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('product-photo-indicator-0')))
+          .width,
+      closeTo(43.5, 0.1),
+    );
+
+    await tester.drag(carousel, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<PageView>(carousel).controller!.page,
+      closeTo(1, 0.01),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('product-photo-indicator-0')))
+          .width,
+      closeTo(9.5, 0.1),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('product-photo-indicator-1')))
+          .width,
+      closeTo(43.5, 0.1),
+    );
+
+    await tester.drag(carousel, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<PageView>(carousel).controller!.page,
+      closeTo(2, 0.01),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('product-photo-indicator-2')))
+          .width,
+      closeTo(43.5, 0.1),
+    );
+  });
+
+  testWidgets('sharing sends the product link through the share sheet', (
+    tester,
+  ) async {
+    Product? shared;
+    final product = Product(
+      id: 'P1',
+      userId: '',
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+      photos: const <ProductPhoto>[],
+    );
+
+    await pumpProductDetails(
+      tester,
+      product: product,
+      shareProduct: (value) async => shared = value,
+    );
+    await tester.tap(find.byKey(const ValueKey('share-product')));
+    await tester.pump();
+
+    expect(shared, same(product));
+    final String link = ProductDetailsScreen.productShareUri(product)
+        .toString();
+    expect(link, '${ProductDetailsScreen.shareBaseUrl}/P1');
+    final String text = ProductDetailsScreen.productShareText(product);
+    expect(text, contains('Alphonso Mango'));
+    expect(text, contains('\u20B9120.50/kg'));
+    expect(text, contains('7 kg available'));
+    expect(text, contains(link));
+  });
+
+  testWidgets('fulfillment toggles update the product', (tester) async {
+    final product = ProductStore.instance.addProduct(
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+    );
+
+    await pumpPushedProductDetails(tester, product: product);
+
+    await tester.tap(find.byKey(const ValueKey('buyer-pickup-toggle')));
+    await tester.pumpAndSettle();
+    expect(ProductStore.instance.products.single.buyerPickupEnabled, isFalse);
+    expect(
+      tester
+          .widget<AnimatedAlign>(
+            find.descendant(
+              of: find.byKey(const ValueKey('buyer-pickup-toggle')),
+              matching: find.byType(AnimatedAlign),
+            ),
+          )
+          .alignment,
+      Alignment.centerLeft,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('delivery-toggle')));
+    await tester.pumpAndSettle();
+    expect(ProductStore.instance.products.single.deliveryEnabled, isFalse);
+    expect(
+      tester
+          .widget<AnimatedAlign>(
+            find.descendant(
+              of: find.byKey(const ValueKey('delivery-toggle')),
+              matching: find.byType(AnimatedAlign),
+            ),
+          )
+          .alignment,
+      Alignment.centerLeft,
+    );
+  });
+
+  testWidgets('deleting a product confirms, removes it, and goes back', (
+    tester,
+  ) async {
+    final product = ProductStore.instance.addProduct(
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+    );
+
+    await pumpPushedProductDetails(tester, product: product);
+
+    await tester.tap(find.byKey(const ValueKey('delete-product')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete product?'), findsOneWidget);
+    expect(
+      find.text('Remove Alphonso Mango from your listings?'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('confirm-delete-product')));
+    await tester.pumpAndSettle();
+
+    expect(ProductStore.instance.products, isEmpty);
+    expect(find.byType(ProductDetailsScreen), findsNothing);
+    expect(find.text('Open details'), findsOneWidget);
+    expect(find.text('Product deleted'), findsOneWidget);
+  });
+
+  testWidgets('the bottom button goes back', (tester) async {
+    final product = ProductStore.instance.addProduct(
+      name: 'Alphonso Mango',
+      category: 'Fruits',
+      price: 120.5,
+      unit: 'kg',
+      quantity: 7,
+      description: 'Sweet mangoes from the farm.',
+      status: ProductStatus.active,
+    );
+
+    await pumpPushedProductDetails(tester, product: product);
+    await tester.tap(find.byKey(const ValueKey('product-details-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProductDetailsScreen), findsNothing);
+    expect(find.text('Open details'), findsOneWidget);
+  });
+
   testWidgets('layout matches the 412x1564 design geometry', (tester) async {
     await pumpProductDetails(tester);
 
@@ -104,7 +408,7 @@ void main() {
     expect(rectOf(find.text('Delete product')).top, closeTo(1373.8, 5));
 
     final Rect photo = rectOf(assetImage('assets/product_details/photo.png'));
-    expect(photo.left, closeTo(24, 1));
+    expect(photo.left, closeTo(22, 1));
     expect(photo.top, closeTo(88, 1));
     expect(photo.width, closeTo(363.5, 1));
     expect(photo.height, closeTo(251.5, 1));
@@ -115,7 +419,9 @@ void main() {
     expect(illus.width, closeTo(122, 1));
     expect(illus.height, closeTo(66, 1));
 
-    final Rect tile = rectOf(assetImage('assets/product_details/tile_price.png'));
+    final Rect tile = rectOf(
+      assetImage('assets/product_details/tile_price.png'),
+    );
     expect(tile.left, closeTo(44, 1));
     expect(tile.top, closeTo(490, 1));
     expect(tile.size, const Size(34, 34));
@@ -154,7 +460,7 @@ void main() {
     final Rect photo = tester.getRect(
       assetImage('assets/product_details/photo.png'),
     );
-    expect(photo.left, closeTo(24 * scale, 1));
+    expect(photo.left, closeTo(22 * scale, 1));
     expect(photo.width, closeTo(363.5 * scale, 1));
   });
 
@@ -183,3 +489,5 @@ void main() {
     );
   });
 }
+
+

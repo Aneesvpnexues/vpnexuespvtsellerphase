@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "850952355071",
+    "project_id": "vpnexues-otp-and-img-s",
+    "storage_bucket": "vpnexues-otp-and-img-s.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850952355071:android:c1a96706d5893f6290e0ca",
+        "android_client_info": {
+          "package_name": "com.example.seller_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKm-20wdYuY8xxZ2mqoPlIkfhoySZERjc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850952355071:android:65d61f6990c27a7090e0ca",
+        "android_client_info": {
+          "package_name": "com.vpnexues"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKm-20wdYuY8xxZ2mqoPlIkfhoySZERjc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

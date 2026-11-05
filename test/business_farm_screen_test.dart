@@ -46,7 +46,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Business & Farm').first).left, closeTo(68, 3));
-    expect(rectOf(find.text('Business & Farm').first).top, closeTo(24, 4));
+    expect(rectOf(find.text('Business & Farm').first).top, closeTo(22, 4));
     expect(rectOf(find.text('Kumar Organic Farm').last).left, closeTo(92, 3));
     expect(rectOf(find.text('Kumar Organic Farm').last).top, closeTo(309, 5));
     expect(rectOf(find.text('Farm / Business Name')).left, closeTo(46, 3));
@@ -93,3 +93,4 @@ void main() {
     expect(find.text('Address & Location'), findsOneWidget);
   });
 }
+
