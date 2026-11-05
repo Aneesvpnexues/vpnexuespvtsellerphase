@@ -137,6 +137,7 @@ class _Step03BusinessDetailsScreenState
       phone: _phone.text,
       location: _location.text,
       address: _address.text,
+      farmSize: SellerProfileStore.instance.farmSize,
     );
     FocusScope.of(context).unfocus();
     Navigator.of(context).push(
