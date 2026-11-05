@@ -74,6 +74,7 @@ class OtpFieldRowState extends State<OtpFieldRow> {
           ),
           Positioned.fill(
             child: TextField(
+              scrollPadding: const EdgeInsets.only(bottom: 180),
               controller: _controller,
               focusNode: _focusNode,
               maxLength: OtpFieldRow.boxCount,

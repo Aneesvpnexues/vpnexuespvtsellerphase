@@ -44,6 +44,9 @@ dependencies:
   firebase_messaging: ^17.0.1
   flutter_local_notifications: ^22.3.3
   supabase_flutter: ^2.18.3
+  # Persistent local storage: seller profile, products, registered sign-up
+  # accounts and the active session all survive app restarts through this.
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
