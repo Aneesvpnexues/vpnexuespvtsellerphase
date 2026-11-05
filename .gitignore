@@ -59,7 +59,7 @@ assets/config/cloudinary.json
 .kilo/
 backend/
 
-# Maven build output (seller-backend)
+# Maven/Java build output
 target/
 
 # Android Gradle build outputs
