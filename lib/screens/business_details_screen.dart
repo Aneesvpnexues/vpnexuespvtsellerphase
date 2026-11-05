@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -92,7 +95,8 @@ class _Step03BusinessDetailsScreenState
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    final SellerProfileSaver save = widget.profileSaver ??
+    final SellerProfileSaver save =
+        widget.profileSaver ??
         Step03BusinessDetailsScreen.debugProfileSaver ??
         _saveToSupabase;
     try {
@@ -106,17 +110,28 @@ class _Step03BusinessDetailsScreenState
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
       return;
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save business profile. Please try again.')),
+        const SnackBar(
+          content: Text('Could not save business profile. Please try again.'),
+        ),
       );
       return;
     }
+
+    unawaited(
+      SellerBackendSync.saveBusiness(
+        ownerName: _name.text.trim(),
+        businessName: _business.text.trim(),
+        phone: _phone.text.trim(),
+        businessLocation: _location.text.trim(),
+        businessAddress: _address.text.trim(),
+      ),
+    );
 
     final SellerProfileStore profile = SellerProfileStore.instance;
     profile.save(

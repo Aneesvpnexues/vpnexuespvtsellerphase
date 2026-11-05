@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/hover_press.dart';
@@ -116,6 +119,7 @@ class _LocationButton extends StatelessWidget {
 
   void _openSellerTypePage(BuildContext context) {
     FocusScope.of(context).unfocus();
+    unawaited(SellerBackendSync.saveLocation());
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
@@ -149,6 +153,7 @@ class _ManualLink extends StatelessWidget {
   const _ManualLink();
 
   void _openSellerTypePage(BuildContext context) {
+    unawaited(SellerBackendSync.saveLocation());
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );

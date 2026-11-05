@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -27,9 +31,36 @@ class Step02SellerTypeScreen extends StatefulWidget {
 }
 
 class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
+  static const List<String> _backendSellerTypes = <String>[
+    'FARMER',
+    'SHOP_OWNER',
+    'RESTAURANT_SUPPLIER',
+    'WHOLESALER',
+    'BUSINESS_SELLER',
+  ];
+
   int? _selectedIndex;
 
   void _select(int index) => setState(() => _selectedIndex = index);
+
+  void _continue() {
+    FocusScope.of(context).unfocus();
+    final int? index = _selectedIndex;
+    if (index != null && index >= 0 && index < _backendSellerTypes.length) {
+      final SellerType type = index == 0
+          ? SellerType.farmer
+          : SellerType.trader;
+      final SellerProfileStore profile = SellerProfileStore.instance;
+      profile.save(
+        name: profile.name,
+        mobile: profile.mobile,
+        email: profile.email,
+        sellerType: type,
+      );
+      unawaited(SellerBackendSync.saveSellerType(_backendSellerTypes[index]));
+    }
+    goToBusinessDetails(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,10 +139,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
           ),
           ContinueButton(
             buttonKey: const Key('seller-type-continue'),
-            onTap: () {
-              FocusScope.of(context).unfocus();
-              goToBusinessDetails(context);
-            },
+            onTap: _continue,
           ),
         ],
       ),

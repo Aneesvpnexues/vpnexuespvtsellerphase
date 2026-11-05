@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../data/api_error.dart';
 import '../data/supabase_product_api.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -148,7 +150,8 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       _showMessage('Enter the account holder name.');
       return;
     }
-    if (_bankName == 'Other / Manual entry' && _manualBank.text.trim().isEmpty) {
+    if (_bankName == 'Other / Manual entry' &&
+        _manualBank.text.trim().isEmpty) {
       _showMessage('Enter your bank name.');
       return;
     }
@@ -164,6 +167,17 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
         accountNumber: accountNumber,
         ifsc: ifsc,
       );
+
+      unawaited(
+        SellerBackendSync.syncBank(
+          holderName: holderName,
+          bankName: bankName,
+          accountNumber: accountNumber,
+          ifsc: ifsc,
+          ifscVerified: _ifscVerified,
+        ),
+      );
+
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
@@ -172,7 +186,9 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Could not save bank details. Please try again.');
+      if (mounted) {
+        _showMessage('Could not save bank details. Please try again.');
+      }
     }
   }
 

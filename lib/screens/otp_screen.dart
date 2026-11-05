@@ -7,6 +7,7 @@ import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/bottom_deco.dart';
@@ -175,8 +176,9 @@ class _OtpScreenState extends State<OtpScreen> {
           userId: firebaseUid,
         );
 
-        final String profileUserId =
-            (profile?['user_id'] ?? '').toString().trim();
+        final String profileUserId = (profile?['user_id'] ?? '')
+            .toString()
+            .trim();
 
         // Products are written under the Firebase UID, so keep that as the
         // store's user_id. Profile/bank/KYC rows may live under a legacy
@@ -197,15 +199,15 @@ class _OtpScreenState extends State<OtpScreen> {
         Map<String, dynamic>? verificationDetails;
         if (candidateIds.isNotEmpty) {
           bankDetails = await api.getBankDetailsForUsers(candidateIds);
-          verificationDetails =
-              await api.getVerificationForUsers(candidateIds);
+          verificationDetails = await api.getVerificationForUsers(candidateIds);
         }
 
         final bool profileComplete =
             profile != null && _isProfileComplete(profile);
         final bool bankComplete =
             bankDetails != null && _isBankComplete(bankDetails);
-        final bool verificationComplete = verificationDetails != null &&
+        final bool verificationComplete =
+            verificationDetails != null &&
             _isVerificationComplete(verificationDetails);
 
         SellerProfileStore.instance.setCompletion(
@@ -214,20 +216,44 @@ class _OtpScreenState extends State<OtpScreen> {
           verificationComplete: verificationComplete,
         );
 
+        final bool supabaseHasProgress =
+            profileComplete || bankComplete || verificationComplete;
+        if (supabaseHasProgress) {
+          // Supabase already knows this seller; sync the backend in the
+          // background so login is not blocked by a cold Render instance.
+          unawaited(SellerBackendSync.mergeCompletion());
+        } else {
+          await SellerBackendSync.mergeCompletion();
+        }
+
         if (!mounted) return;
+        final SellerProfileStore merged = SellerProfileStore.instance;
         _navigateBasedOnCompletion(
-          profileComplete: profileComplete,
-          bankComplete: bankComplete,
-          verificationComplete: verificationComplete,
+          profileComplete: merged.profileComplete,
+          bankComplete: merged.bankComplete,
+          verificationComplete: merged.verificationComplete,
         );
         return;
       } catch (_) {
-        // Supabase lookup failed — fall through to onboarding.
+        // Supabase lookup failed — try the backend before falling back.
+        await SellerBackendSync.mergeCompletion();
+        if (!mounted) return;
+        final SellerProfileStore merged = SellerProfileStore.instance;
+        if (merged.profileComplete ||
+            merged.bankComplete ||
+            merged.verificationComplete) {
+          _navigateBasedOnCompletion(
+            profileComplete: merged.profileComplete,
+            bankComplete: merged.bankComplete,
+            verificationComplete: merged.verificationComplete,
+          );
+          return;
+        }
       }
     }
 
-    // No Supabase data found for this number — new user starts onboarding
-    // at Verify Your Details, the first of the three steps.
+    // No Supabase or backend data found for this number — new user starts
+    // onboarding at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
@@ -244,9 +270,7 @@ class _OtpScreenState extends State<OtpScreen> {
       profile['location'] ?? '',
       profile['business_address'] ?? '',
     ];
-    return fields.every(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.every((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Determines whether bank details are complete based on required fields.
@@ -257,9 +281,7 @@ class _OtpScreenState extends State<OtpScreen> {
       bank['account_number'] ?? '',
       bank['IFSC_code'] ?? '',
     ];
-    return fields.every(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.every((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Determines whether verification/KYC is complete based on at least one
@@ -270,9 +292,7 @@ class _OtpScreenState extends State<OtpScreen> {
       verification['pan_card'] ?? '',
       verification['business_registration'] ?? '',
     ];
-    return fields.any(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.any((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Navigates to the first incomplete onboarding step (Verify Your Details ->
@@ -286,17 +306,17 @@ class _OtpScreenState extends State<OtpScreen> {
   }) {
     if (!mounted) return;
 
-    print('ONBOARDING ROUTE: profile=$profileComplete '
-        'bank=$bankComplete kyc=$verificationComplete');
+    print(
+      'ONBOARDING ROUTE: profile=$profileComplete '
+      'bank=$bankComplete kyc=$verificationComplete',
+    );
 
     // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
     // so verification is always the first section to check.
     if (!verificationComplete) {
       print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
       );
       return;
     }
@@ -314,9 +334,7 @@ class _OtpScreenState extends State<OtpScreen> {
     if (!bankComplete) {
       print('DESTINATION: Bank Details');
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
       );
       return;
     }
@@ -332,8 +350,10 @@ class _OtpScreenState extends State<OtpScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    final String sellerTypeStr =
-        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
+    final String sellerTypeStr = (profile['seller_type'] ?? 'farmer')
+        .toString()
+        .trim()
+        .toLowerCase();
     SellerType sellerType;
     switch (sellerTypeStr) {
       case 'trader':
@@ -412,7 +432,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         child: Text(
                           _secondsLeft > 0
                               ? 'Resent OTP in 00:'
-                                  '${_secondsLeft.toString().padLeft(2, '0')}'
+                                    '${_secondsLeft.toString().padLeft(2, '0')}'
                               : 'Resend OTP',
                           style: AppTextStyles.resend,
                         ),

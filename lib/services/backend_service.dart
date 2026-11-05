@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 /// Thin HTTP client for the Spring Boot seller API.
 ///
@@ -112,6 +113,38 @@ class BackendService {
     return _decode(res.body)['valid'] == true;
   }
 
+  /// Uploads one KYC document (AADHAAR, PAN or BUSINESS_REGISTRATION).
+  ///
+  /// The file is stored in the backend's private Supabase bucket; only a
+  /// pointer row comes back.
+  static Future<void> uploadKycDocument(
+    String idToken, {
+    required String docType,
+    required List<int> bytes,
+    required String filename,
+    String? contentType,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/onboarding/kyc/documents'),
+    )..headers['Authorization'] = 'Bearer $idToken';
+    request.fields['docType'] = docType;
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: contentType == null ? null : MediaType.parse(contentType),
+      ),
+    );
+
+    final http.StreamedResponse streamed = await request.send();
+    final http.Response res = await http.Response.fromStream(streamed);
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, _messageOf(res.body));
+    }
+  }
+
   /// Which onboarding step is next — use this after login so a returning
   /// seller resumes instead of restarting at step 01.
   static Future<Map<String, dynamic>> onboardingStatus(String idToken) async {
@@ -167,16 +200,23 @@ class SessionResult {
     required this.sellerId,
     required this.newSeller,
     required this.onboardingStep,
+    required this.profile,
   });
 
   final String sellerId;
   final bool newSeller;
   final String onboardingStep;
 
+  /// The seller profile returned by `POST /auth/session`.
+  final Map<String, dynamic> profile;
+
   factory SessionResult.fromMap(Map<String, dynamic> map) => SessionResult(
     sellerId: map['sellerId'] as String? ?? '',
     newSeller: map['newSeller'] == true,
     onboardingStep: map['onboardingStep'] as String? ?? 'LOCATION',
+    profile: map['profile'] is Map<String, dynamic>
+        ? map['profile'] as Map<String, dynamic>
+        : <String, dynamic>{},
   );
 }
 

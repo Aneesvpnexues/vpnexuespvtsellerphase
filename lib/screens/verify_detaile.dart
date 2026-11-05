@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -7,6 +8,7 @@ import '../data/cloudinary_upload_api.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -20,7 +22,12 @@ typedef DocumentPicker = Future<PickedDocument?> Function();
 
 /// A document selected from the device's file browser.
 class PickedDocument {
-  const PickedDocument({required this.name, this.path, this.bytes, this.mimeType});
+  const PickedDocument({
+    required this.name,
+    this.path,
+    this.bytes,
+    this.mimeType,
+  });
 
   final String name;
   final String? path;
@@ -140,6 +147,31 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     );
   }
 
+  String _backendDocType(_DocumentSlot slot) {
+    switch (slot) {
+      case _DocumentSlot.aadhaar:
+        return 'AADHAAR';
+      case _DocumentSlot.pan:
+        return 'PAN';
+      case _DocumentSlot.business:
+        return 'BUSINESS_REGISTRATION';
+    }
+  }
+
+  Future<void> _syncKycToBackend() async {
+    for (final entry in _documents.entries) {
+      final PickedDocument doc = entry.value;
+      final List<int>? bytes = doc.bytes;
+      if (bytes == null || bytes.isEmpty) continue;
+      await SellerBackendSync.uploadKyc(
+        docType: _backendDocType(entry.key),
+        bytes: bytes,
+        filename: doc.name,
+        contentType: doc.mimeType,
+      );
+    }
+  }
+
   Future<void> _onContinue() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -157,13 +189,14 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
         panUrl = await _uploadDocument(_documents[_DocumentSlot.pan]!);
       }
       if (_documents.containsKey(_DocumentSlot.business)) {
-        businessUrl = await _uploadDocument(_documents[_DocumentSlot.business]!);
+        businessUrl = await _uploadDocument(
+          _documents[_DocumentSlot.business]!,
+        );
       }
 
       // Save URLs to Supabase.
-      final bool savedThisSession = aadhaarUrl != null ||
-          panUrl != null ||
-          businessUrl != null;
+      final bool savedThisSession =
+          aadhaarUrl != null || panUrl != null || businessUrl != null;
       if (savedThisSession) {
         final api = SupabaseProductApi();
         await api.saveVerifyDetails(
@@ -172,6 +205,12 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
           businessUrl: businessUrl,
         );
       }
+
+      // Mirror the same bytes into the backend's private KYC bucket so the
+      // onboarding status is accurate even if Cloudinary is unavailable.
+      // Runs in the background so a cold Render instance never blocks
+      // navigation.
+      unawaited(_syncKycToBackend());
 
       if (!mounted) return;
 
@@ -208,15 +247,12 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
       }
 
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

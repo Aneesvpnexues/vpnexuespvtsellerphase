@@ -9,6 +9,7 @@ import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
+import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/keyboard_aware_canvas.dart';
@@ -103,8 +104,10 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
     final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
     if (digits.length != _country.maxDigits) {
-      print('VALIDATION FAILED: digits="$digits" '
-          '(need ${_country.maxDigits}) - staying on welcome');
+      print(
+        'VALIDATION FAILED: digits="$digits" '
+        '(need ${_country.maxDigits}) - staying on welcome',
+      );
       _showError('Enter a valid ${_country.maxDigits}-digit mobile number.');
       return;
     }
@@ -165,7 +168,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       // Home still opens with whatever products are cached locally.
     }
 
-    SellerProfileStore.instance.mobile = firebasePhone ?? AuthFlow.instance.displayPhone;
+    SellerProfileStore.instance.mobile =
+        firebasePhone ?? AuthFlow.instance.displayPhone;
 
     // Look up the seller's Supabase rows for the verified phone number. The
     // match is number-agnostic: exact E.164 -> last 10 digits -> Firebase
@@ -179,8 +183,9 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
           userId: firebaseUid,
         );
 
-        final String profileUserId =
-            (profile?['user_id'] ?? '').toString().trim();
+        final String profileUserId = (profile?['user_id'] ?? '')
+            .toString()
+            .trim();
 
         // Products live under the Firebase UID; profile/bank/KYC rows may
         // also carry a legacy backend id, so check both.
@@ -199,15 +204,15 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
         Map<String, dynamic>? verificationDetails;
         if (candidateIds.isNotEmpty) {
           bankDetails = await api.getBankDetailsForUsers(candidateIds);
-          verificationDetails =
-              await api.getVerificationForUsers(candidateIds);
+          verificationDetails = await api.getVerificationForUsers(candidateIds);
         }
 
         final bool profileComplete =
             profile != null && _isProfileComplete(profile);
         final bool bankComplete =
             bankDetails != null && _isBankComplete(bankDetails);
-        final bool verificationComplete = verificationDetails != null &&
+        final bool verificationComplete =
+            verificationDetails != null &&
             _isVerificationComplete(verificationDetails);
 
         SellerProfileStore.instance.setCompletion(
@@ -216,20 +221,44 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
           verificationComplete: verificationComplete,
         );
 
+        final bool supabaseHasProgress =
+            profileComplete || bankComplete || verificationComplete;
+        if (supabaseHasProgress) {
+          // Supabase already knows this seller; sync the backend in the
+          // background so login is not blocked by a cold Render instance.
+          unawaited(SellerBackendSync.mergeCompletion());
+        } else {
+          await SellerBackendSync.mergeCompletion();
+        }
+
         if (!mounted) return;
+        final SellerProfileStore merged = SellerProfileStore.instance;
         _navigateBasedOnCompletion(
-          profileComplete: profileComplete,
-          bankComplete: bankComplete,
-          verificationComplete: verificationComplete,
+          profileComplete: merged.profileComplete,
+          bankComplete: merged.bankComplete,
+          verificationComplete: merged.verificationComplete,
         );
         return;
       } catch (_) {
-        // Supabase lookup failed — fall through to onboarding.
+        // Supabase lookup failed — try the backend before falling back.
+        await SellerBackendSync.mergeCompletion();
+        if (!mounted) return;
+        final SellerProfileStore merged = SellerProfileStore.instance;
+        if (merged.profileComplete ||
+            merged.bankComplete ||
+            merged.verificationComplete) {
+          _navigateBasedOnCompletion(
+            profileComplete: merged.profileComplete,
+            bankComplete: merged.bankComplete,
+            verificationComplete: merged.verificationComplete,
+          );
+          return;
+        }
       }
     }
 
-    // No Supabase data found for this number — new user starts onboarding
-    // at Verify Your Details, the first of the three steps.
+    // No Supabase or backend data found for this number — new user starts
+    // onboarding at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     setState(() => _sending = false);
     Navigator.of(context).push(
@@ -247,9 +276,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       profile['location'] ?? '',
       profile['business_address'] ?? '',
     ];
-    return fields.every(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.every((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Determines whether bank details are complete based on required fields.
@@ -260,9 +287,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       bank['account_number'] ?? '',
       bank['IFSC_code'] ?? '',
     ];
-    return fields.every(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.every((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Determines whether verification/KYC is complete based on at least one
@@ -273,9 +298,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       verification['pan_card'] ?? '',
       verification['business_registration'] ?? '',
     ];
-    return fields.any(
-      (value) => value.toString().trim().isNotEmpty,
-    );
+    return fields.any((value) => value.toString().trim().isNotEmpty);
   }
 
   /// Navigates to the first incomplete onboarding step (Verify Your Details ->
@@ -288,17 +311,17 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
 
-    print('ONBOARDING ROUTE: profile=$profileComplete '
-        'bank=$bankComplete kyc=$verificationComplete');
+    print(
+      'ONBOARDING ROUTE: profile=$profileComplete '
+      'bank=$bankComplete kyc=$verificationComplete',
+    );
 
     // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
     // so verification is always the first section to check.
     if (!verificationComplete) {
       print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
       );
       return;
     }
@@ -316,9 +339,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (!bankComplete) {
       print('DESTINATION: Bank Details');
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
       );
       return;
     }
@@ -334,8 +355,10 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    final String sellerTypeStr =
-        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
+    final String sellerTypeStr = (profile['seller_type'] ?? 'farmer')
+        .toString()
+        .trim()
+        .toLowerCase();
     SellerType sellerType;
     switch (sellerTypeStr) {
       case 'trader':
@@ -401,157 +424,127 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
         designHeight: WelcomeSellerScreen.designHeight,
         child: Stack(
           children: [
-                  const Positioned(left: 0, top: 64, child: _Leaf()),
-                  const Positioned(left: 0, top: 225, child: _Hero()),
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 504,
-                    bottom: 0,
-                    child: _Card(),
-                  ),
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 127.4,
-                    child: _Title(),
-                  ),
-                  const Positioned(
-                    left: 0,
-                    right: 6,
-                    top: 168.7,
-                    child: _Subtitle(),
-                  ),
-                  const Positioned(left: 22, top: 506, child: _SegmentTrack()),
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    left: _signUp ? 195 : 24,
-                    top: 505,
-                    width: 191,
-                    height: 53,
-                    child: _SegmentPill(),
-                  ),
-                  Positioned(
-                    left: 22,
-                    width: 191,
-                    top: 522.6,
-                    child: _SegmentLabel('Login', active: !_signUp),
-                  ),
-                  Positioned(
-                    left: 215,
-                    width: 171,
-                    top: 522.6,
-                    child: _SegmentLabel('Sign Up', active: _signUp),
-                  ),
-                  Positioned(
-                    left: 22,
-                    width: 191,
-                    top: 506,
-                    height: 53,
-                    child: GestureDetector(
-                      key: const Key('welcomeTabLogin'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _signUp ? _showLogin : null,
-                      child: const SizedBox.expand(),
+            const Positioned(left: 0, top: 64, child: _Leaf()),
+            const Positioned(left: 0, top: 225, child: _Hero()),
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 504,
+              bottom: 0,
+              child: _Card(),
+            ),
+            const Positioned(left: 0, right: 0, top: 127.4, child: _Title()),
+            const Positioned(left: 0, right: 6, top: 168.7, child: _Subtitle()),
+            const Positioned(left: 22, top: 506, child: _SegmentTrack()),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              left: _signUp ? 195 : 24,
+              top: 505,
+              width: 191,
+              height: 53,
+              child: _SegmentPill(),
+            ),
+            Positioned(
+              left: 22,
+              width: 191,
+              top: 522.6,
+              child: _SegmentLabel('Login', active: !_signUp),
+            ),
+            Positioned(
+              left: 215,
+              width: 171,
+              top: 522.6,
+              child: _SegmentLabel('Sign Up', active: _signUp),
+            ),
+            Positioned(
+              left: 22,
+              width: 191,
+              top: 506,
+              height: 53,
+              child: GestureDetector(
+                key: const Key('welcomeTabLogin'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _signUp ? _showLogin : null,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            Positioned(
+              left: 215,
+              width: 171,
+              top: 506,
+              height: 53,
+              child: GestureDetector(
+                key: const Key('welcomeTabSignUp'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _signUp ? null : _showSignUp,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            if (_signUp) ...[
+              Positioned(
+                left: 22,
+                top: 574,
+                child: _SignUpField(hint: 'Name', controller: _name),
+              ),
+              Positioned(
+                left: 22,
+                top: 644,
+                child: _SignUpField(
+                  hint: 'Phone Number',
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+              ),
+              Positioned(
+                left: 22,
+                top: 714,
+                child: _SignUpField(
+                  hint: 'Password',
+                  obscure: true,
+                  controller: _password,
+                ),
+              ),
+              Positioned(
+                left: 22,
+                top: 784,
+                child: _CreateAccountButton(onTap: _createAccount),
+              ),
+            ] else ...[
+              const Positioned(left: 22, top: 587.8, child: _WelcomeBack()),
+              const Positioned(
+                left: 22,
+                right: 0,
+                top: 612.3,
+                child: _PhoneHint(),
+              ),
+              const Positioned(left: 22, top: 656.5, child: _PhoneLabel()),
+              Positioned(
+                left: 22,
+                top: 684,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _CountrySelector(
+                      country: _country,
+                      onTap: _showCountryPicker,
                     ),
-                  ),
-                  Positioned(
-                    left: 215,
-                    width: 171,
-                    top: 506,
-                    height: 53,
-                    child: GestureDetector(
-                      key: const Key('welcomeTabSignUp'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _signUp ? null : _showSignUp,
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                  if (_signUp) ...[
-                    Positioned(
-                      left: 22,
-                      top: 574,
-                      child: _SignUpField(hint: 'Name', controller: _name),
-                    ),
-                    Positioned(
-                      left: 22,
-                      top: 644,
-                      child: _SignUpField(
-                        hint: 'Phone Number',
-                        controller: _phone,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      left: 22,
-                      top: 714,
-                      child: _SignUpField(
-                        hint: 'Password',
-                        obscure: true,
-                        controller: _password,
-                      ),
-                    ),
-                  Positioned(
-                    left: 22,
-                    top: 784,
-                    child: _CreateAccountButton(
-                      onTap: _createAccount,
-                    ),
-                  ),
-                  ] else ...[
-                    const Positioned(
-                      left: 22,
-                      top: 587.8,
-                      child: _WelcomeBack(),
-                    ),
-                    const Positioned(
-                      left: 22,
-                      right: 0,
-                      top: 612.3,
-                      child: _PhoneHint(),
-                    ),
-                    const Positioned(
-                      left: 22,
-                      top: 656.5,
-                      child: _PhoneLabel(),
-                    ),
-                    Positioned(
-                      left: 22,
-                      top: 684,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _CountrySelector(
-                            country: _country,
-                            onTap: _showCountryPicker,
-                          ),
-                          const SizedBox(width: 5),
-                          _PhoneBox(
-                            controller: _phone,
-                            maxLength: _country.maxDigits,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      left: 22,
-                      top: 749,
-                      child: _SendOtpButton(
-                        loading: _sending,
-                        onTap: _sendOtp,
-                      ),
+                    const SizedBox(width: 5),
+                    _PhoneBox(
+                      controller: _phone,
+                      maxLength: _country.maxDigits,
                     ),
                   ],
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 859,
-                    child: _Footer(),
-                  ),
+                ),
+              ),
+              Positioned(
+                left: 22,
+                top: 749,
+                child: _SendOtpButton(loading: _sending, onTap: _sendOtp),
+              ),
+            ],
+            const Positioned(left: 0, right: 0, top: 859, child: _Footer()),
           ],
         ),
       ),
@@ -935,11 +928,7 @@ class _PhoneCaretState extends State<_PhoneCaret> {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: _visible ? 1 : 0,
-      child: Container(
-        width: 2,
-        height: 19,
-        color: AppColors.inputCaret,
-      ),
+      child: Container(width: 2, height: 19, color: AppColors.inputCaret),
     );
   }
 }
@@ -1152,7 +1141,6 @@ class _CreateAccountButton extends StatelessWidget {
     );
   }
 }
-
 
 /// Redesigned "Select country" popup: a tall bottom sheet with a search
 /// field that filters the full [kCountryCodes] list (name, ISO code or dial
