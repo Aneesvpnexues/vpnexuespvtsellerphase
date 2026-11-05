@@ -39,6 +39,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   bool _signUp = false;
   CountryCode _country = CountryCode.india;
 
+  final GlobalKey<_PhoneBoxState> _phoneBoxKey = GlobalKey<_PhoneBoxState>();
+
   void _showLogin() => setState(() => _signUp = false);
 
   void _showSignUp() => setState(() => _signUp = true);
@@ -218,17 +220,25 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     Positioned(
                       left: 112,
                       top: 684,
-                      child: _PhoneBox(maxLength: _country.maxDigits),
+                      child: _PhoneBox(
+                        key: _phoneBoxKey,
+                        maxLength: _country.maxDigits,
+                      ),
                     ),
                     Positioned(
                       left: 24,
                       top: 749,
                       child: _SendOtpButton(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const OtpScreen(),
-                          ),
-                        ),
+                        onTap: () {
+                          final String digits =
+                              _phoneBoxKey.currentState?.phoneDigits ?? '';
+                          final String display = '${_country.dial} $digits';
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => OtpScreen(phone: display),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -467,7 +477,7 @@ class _DialCode extends StatelessWidget {
 /// selected country's dial code (truncating any longer number when the
 /// country changes).
 class _PhoneBox extends StatefulWidget {
-  const _PhoneBox({required this.maxLength});
+  const _PhoneBox({super.key, required this.maxLength});
 
   final int maxLength;
 
@@ -478,6 +488,9 @@ class _PhoneBox extends StatefulWidget {
 class _PhoneBoxState extends State<_PhoneBox> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
+  /// Digits-only phone number entered by the user.
+  String get phoneDigits => _controller.text.replaceAll(RegExp(r'\D'), '');
 
   @override
   void initState() {
