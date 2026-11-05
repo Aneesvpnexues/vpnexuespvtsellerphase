@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/inline_error.dart';
 import 'verify_detaile.dart';
 
 /// "STEP 03 — Tell us about your business" — static replica of Zeplin
@@ -40,6 +42,21 @@ class _Step03BusinessDetailsScreenState
   );
   final TextEditingController _address = TextEditingController();
 
+  // Per-field validation errors, rendered inline in red right under the
+  // offending field. Each one clears as soon as its own field is edited.
+  String _nameError = '';
+  String _businessError = '';
+  String _phoneError = '';
+  String _locationError = '';
+  String _addressError = '';
+
+  bool get _hasErrors =>
+      _nameError.isNotEmpty ||
+      _businessError.isNotEmpty ||
+      _phoneError.isNotEmpty ||
+      _locationError.isNotEmpty ||
+      _addressError.isNotEmpty;
+
   bool get _allFilled =>
       _name.text.isNotEmpty &&
       _business.text.isNotEmpty &&
@@ -50,9 +67,11 @@ class _Step03BusinessDetailsScreenState
   @override
   void initState() {
     super.initState();
-    for (final controller in _controllers) {
-      controller.addListener(_onChanged);
-    }
+    _name.addListener(_onNameChanged);
+    _business.addListener(_onBusinessChanged);
+    _phone.addListener(_onPhoneChanged);
+    _location.addListener(_onLocationChanged);
+    _address.addListener(_onAddressChanged);
   }
 
   Iterable<TextEditingController> get _controllers => [
@@ -63,37 +82,55 @@ class _Step03BusinessDetailsScreenState
     _address,
   ];
 
-  void _onChanged() => setState(() {});
+  void _onNameChanged() => setState(() {
+    if (_nameError.isNotEmpty) _nameError = '';
+  });
+
+  void _onBusinessChanged() => setState(() {
+    if (_businessError.isNotEmpty) _businessError = '';
+  });
+
+  void _onPhoneChanged() => setState(() {
+    if (_phoneError.isNotEmpty) _phoneError = '';
+  });
+
+  void _onLocationChanged() => setState(() {
+    if (_locationError.isNotEmpty) _locationError = '';
+  });
+
+  void _onAddressChanged() => setState(() {
+    if (_addressError.isNotEmpty) _addressError = '';
+  });
 
   @override
   void dispose() {
     for (final controller in _controllers) {
-      controller.removeListener(_onChanged);
       controller.dispose();
     }
     super.dispose();
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-          // Keep the message clear of the bottom Continue button.
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-        ),
-      );
-  }
-
-  /// Requires every field (the button is dimmed otherwise), saves the five
-  /// values and opens the KYC step.
+  /// Validates every field and reports each problem inline, in red, under its
+  /// own field so all of them are visible at once; then saves the five values
+  /// and opens the KYC step.
   void _openVerifyDetails() {
-    if (!_allFilled) {
-      _showMessage('Fill in all fields to continue.');
-      return;
-    }
+    final String phoneDigits = _phone.text.replaceAll(RegExp(r'\D'), '');
+    setState(() {
+      _nameError = _name.text.trim().isEmpty ? 'Enter your name' : '';
+      _businessError = _business.text.trim().isEmpty
+          ? 'Enter business name'
+          : '';
+      _phoneError = (phoneDigits.length < 10 || phoneDigits.length > 13)
+          ? 'Enter a valid phone number'
+          : '';
+      _locationError = _location.text.trim().isEmpty
+          ? 'Enter your business location'
+          : '';
+      _addressError = _address.text.trim().isEmpty
+          ? 'Enter your full address'
+          : '';
+    });
+    if (_hasErrors) return;
     SellerProfileStore.instance.saveBusinessDetails(
       name: _name.text,
       business: _business.text,
@@ -139,6 +176,7 @@ class _Step03BusinessDetailsScreenState
                 width: 299,
                 controller: _name,
                 hint: 'Enter your name..',
+                errorText: _nameError,
               ),
             ),
             const Positioned(left: 24, top: 457.5, child: _TileBusiness()),
@@ -153,6 +191,7 @@ class _Step03BusinessDetailsScreenState
                 width: 299,
                 controller: _business,
                 hint: 'Enter Business name',
+                errorText: _businessError,
               ),
             ),
             const Positioned(left: 24, top: 533.5, child: _TilePhone()),
@@ -167,6 +206,7 @@ class _Step03BusinessDetailsScreenState
                 width: 200,
                 controller: _phone,
                 keyboardType: TextInputType.phone,
+                errorText: _phoneError,
               ),
             ),
             const Positioned(right: 24.5, top: 541, child: _VerifiedBadge()),
@@ -181,6 +221,7 @@ class _Step03BusinessDetailsScreenState
                 fieldKey: const Key('businessLocation'),
                 width: 240,
                 controller: _location,
+                errorText: _locationError,
               ),
             ),
             const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
@@ -194,6 +235,7 @@ class _Step03BusinessDetailsScreenState
                 width: 299,
                 controller: _address,
                 hint: 'Enter your full address....',
+                errorText: _addressError,
               ),
             ),
             Positioned(
@@ -547,6 +589,10 @@ class _LabelName extends StatelessWidget {
 
 /// One editable row: a borderless [TextField] laid out where the design puts
 /// the placeholder/value text (box top == design glyph top, zero padding).
+///
+/// When [errorText] is set, the red validation message is drawn directly
+/// under the value line, inside the gap the design leaves before the row's
+/// divider, so the rest of the layout does not move.
 class _FieldInput extends StatelessWidget {
   const _FieldInput({
     required this.fieldKey,
@@ -554,6 +600,7 @@ class _FieldInput extends StatelessWidget {
     required this.controller,
     this.hint,
     this.keyboardType,
+    this.errorText = '',
   });
 
   final Key fieldKey;
@@ -561,26 +608,37 @@ class _FieldInput extends StatelessWidget {
   final TextEditingController controller;
   final String? hint;
   final TextInputType? keyboardType;
+  final String errorText;
 
   @override
   Widget build(BuildContext context) {
+    final bool hasError = errorText.isNotEmpty;
     return SizedBox(
       width: width,
-      child: TextField(
-        key: fieldKey,
-        controller: controller,
-        keyboardType: keyboardType,
-        style: AppTextStyles.fieldValue,
-        cursorColor: AppColors.inputCaret,
-        cursorWidth: 2,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.fieldPlaceholder,
-          isDense: true,
-          border: InputBorder.none,
-          filled: false,
-          contentPadding: EdgeInsets.zero,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: fieldKey,
+            controller: controller,
+            keyboardType: keyboardType,
+            style: AppTextStyles.fieldValue,
+            cursorColor: AppColors.inputCaret,
+            cursorWidth: 2,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.fieldPlaceholder,
+              isDense: true,
+              border: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          if (hasError) ...[
+            const SizedBox(height: 4),
+            InlineErrorText(errorText, maxLines: 1),
+          ],
+        ],
       ),
     );
   }

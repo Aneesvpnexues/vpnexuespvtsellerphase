@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
+import '../widgets/inline_error.dart';
 import 'bank_detaile.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
@@ -49,6 +50,10 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
   final Map<_DocumentSlot, PickedDocument> _documents = {};
   _DocumentSlot? _pickingSlot;
 
+  /// True while the mandatory Aadhaar document is missing; draws the red
+  /// border + message on its card and clears once a document is picked.
+  bool _aadhaarError = false;
+
   /// How many of the three document slots are filled, as a percentage shown
   /// on the "Profile Completion" card (0 -> 0%, 1 -> 33%, 2 -> 67%, 3 -> 100%).
   int get _completionPercent {
@@ -56,29 +61,17 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     return (_documents.length * 100 / slots).round();
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-          // Keep the message clear of the bottom Continue button.
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-        ),
-      );
-  }
-
   /// KYC cannot be skipped: the Aadhaar document is mandatory, the other two
-  /// slots are optional.
+  /// slots are optional. A missing Aadhaar upload is reported inline, in red,
+  /// on the card itself.
   void _openBankDetails() {
     if (!_documents.containsKey(_DocumentSlot.aadhaar)) {
-      _showMessage('Upload your Aadhaar card to continue');
+      setState(() => _aadhaarError = true);
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()));
   }
 
   Future<void> _pickDocument(_DocumentSlot slot) async {
@@ -100,6 +93,9 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     setState(() {
       _pickingSlot = null;
       if (document != null) _documents[slot] = document;
+      if (slot == _DocumentSlot.aadhaar && document != null) {
+        _aadhaarError = false;
+      }
     });
   }
 
@@ -161,7 +157,21 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 const Positioned(left: 260, top: 447, child: _PillNote()),
                 const Positioned(left: 25, top: 483, child: _Divider()),
                 // Document cards.
-                const Positioned(left: 23, top: 497, child: _CardAadhaar()),
+                Positioned(
+                  left: 23,
+                  top: 497,
+                  child: _CardAadhaar(highlight: _aadhaarError),
+                ),
+                if (_aadhaarError)
+                  const Positioned(
+                    left: 89,
+                    top: 561,
+                    width: 246,
+                    child: InlineErrorText(
+                      'Upload your Aadhaar card to continue',
+                      maxLines: 1,
+                    ),
+                  ),
                 const Positioned(left: 34, top: 508, child: _TileAadhaar()),
                 const Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
                 Positioned(
@@ -563,7 +573,10 @@ class _Divider extends StatelessWidget {
 }
 
 class _DocCard extends StatelessWidget {
-  const _DocCard();
+  const _DocCard({this.highlight = false});
+
+  /// When true the card is outlined in red (its document is missing).
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -571,7 +584,9 @@ class _DocCard extends StatelessWidget {
       width: 364,
       height: 62,
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.docCardBorder),
+        border: Border.all(
+          color: highlight ? AppColors.fieldError : AppColors.docCardBorder,
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
     );
@@ -579,10 +594,12 @@ class _DocCard extends StatelessWidget {
 }
 
 class _CardAadhaar extends StatelessWidget {
-  const _CardAadhaar();
+  const _CardAadhaar({this.highlight = false});
+
+  final bool highlight;
 
   @override
-  Widget build(BuildContext context) => const _DocCard();
+  Widget build(BuildContext context) => _DocCard(highlight: highlight);
 }
 
 class _CardPan extends StatelessWidget {

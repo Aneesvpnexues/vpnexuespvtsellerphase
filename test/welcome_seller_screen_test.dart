@@ -1,6 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/data/session_store.dart';
+import 'package:seller_app/data/user_store.dart';
+import 'package:seller_app/screens/location_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
@@ -15,6 +20,13 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // Sign-up registers an account and opens a session; start every test
+    // signed out with an empty registry so they stay independent.
+    SessionStore.instance.endSession();
+    UserStore.instance.clear();
+    SellerProfileStore.instance.reset();
+  });
   testWidgets('renders the Welcome Seller content', (tester) async {
     await pumpScreen(tester);
 
@@ -323,8 +335,8 @@ void main() {
     expect(find.text('+91'), findsNothing);
   });
 
-  testWidgets('send OTP validates the phone, opens the OTP screen with the '
-      'real number and back returns', (tester) async {
+  testWidgets('send OTP validates the phone, rejects any number that is not '
+      'the login number and opens the OTP screen for it', (tester) async {
     await pumpScreen(tester);
 
     // Empty number: validation message, no navigation.
@@ -342,8 +354,18 @@ void main() {
     expect(find.text('Enter a valid phone number'), findsOneWidget);
     expect(find.text('Enter OTP'), findsNothing);
 
-    // Full 10 digits: the OTP screen shows the typed number with the dial
-    // code instead of the mockup's placeholder.
+    // Full-length but not the fixed login number: rejected even though it
+    // could belong to a registered account.
+    await tester.enterText(find.byType(TextField), '1234567890');
+    await tester.pump();
+    await tester.tap(find.text('Send OTP'));
+    await tester.pumpAndSettle();
+    expect(find.text('Invalid phone number'), findsOneWidget);
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
+
+    // The fixed login number: the OTP screen shows it with the dial code
+    // instead of the mockup's placeholder.
     await tester.enterText(find.byType(TextField), '9876543210');
     await tester.pump();
     await tester.tap(find.text('Send OTP'));
@@ -362,41 +384,98 @@ void main() {
     expect(find.text('Enter OTP'), findsNothing);
   });
 
-  testWidgets('create account validates the fields and opens the location '
-      'step', (tester) async {
+  testWidgets('create account validates all four fields and starts the '
+      'onboarding steps at STEP 01 without an OTP step', (tester) async {
     await pumpScreen(tester);
     await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
     await tester.pumpAndSettle();
 
     Finder fieldAt(int index) => find.byType(TextField).at(index);
 
-    // Empty form is blocked with a message per problem, in order.
+    // Empty form: every problem is reported inline at once.
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
     expect(find.text('Enter your name'), findsOneWidget);
-    expect(find.text('Choose your location'), findsNothing);
+    expect(find.text('Enter a valid phone number'), findsOneWidget);
+    expect(find.text('Enter a valid email address'), findsOneWidget);
+    expect(find.text('Password must be at least 6 characters'), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
 
     await tester.enterText(fieldAt(0), 'Ananya');
     await tester.pump();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter a valid email address'), findsOneWidget);
-    expect(find.text('Choose your location'), findsNothing);
+    expect(find.text('Enter your name'), findsNothing);
+    expect(find.text('Enter a valid phone number'), findsOneWidget);
 
-    await tester.enterText(fieldAt(1), 'ananya@example.com');
+    await tester.enterText(fieldAt(1), '98765'); // too short for India
+    await tester.pump();
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a valid phone number'), findsOneWidget);
+    expect(find.text('Enter a valid email address'), findsOneWidget);
+
+    await tester.enterText(fieldAt(1), '9876543210');
+    await tester.enterText(fieldAt(2), 'ananya@example.com');
     await tester.pump();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
     expect(find.text('Password must be at least 6 characters'), findsOneWidget);
-    expect(find.text('Choose your location'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
 
-    await tester.enterText(fieldAt(2), 'secret123');
+    await tester.enterText(fieldAt(3), 'secret123');
     await tester.pump();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose your location'), findsOneWidget);
+    // Signup starts the onboarding steps at STEP 01 — the new seller has no
+    // business data yet, and no OTP entry happens afterwards.
+    expect(find.byType(Step01LocationScreen), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(find.text('Enter OTP'), findsNothing);
     expect(find.text('STEP 01'), findsOneWidget);
+
+    // The session is open for the new seller and the details are stored.
+    expect(SessionStore.instance.isAuthenticated, isTrue);
+    expect(SessionStore.instance.userName, 'Ananya');
+    expect(SessionStore.instance.method, 'signup');
+    final SellerAccount? account =
+        UserStore.instance.findByPhone('+91 9876543210');
+    expect(account, isNotNull);
+    expect(account!.name, 'Ananya');
+    expect(account.email, 'ananya@example.com');
+    expect(SellerProfileStore.instance.name, 'Ananya');
+    expect(SellerProfileStore.instance.mobile, '+91 9876543210');
+  });
+
+  testWidgets('create account rejects a phone number that is already '
+      'registered', (tester) async {
+    UserStore.instance.register(
+      const SellerAccount(
+        name: 'Ananya',
+        phone: '+91 9876543210',
+        email: 'ananya@example.com',
+        password: 'secret123',
+      ),
+    );
+
+    await pumpScreen(tester);
+    await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'Ananya');
+    await tester.enterText(find.byType(TextField).at(1), '9876543210');
+    await tester.enterText(find.byType(TextField).at(2), 'ananya@example.com');
+    await tester.enterText(find.byType(TextField).at(3), 'secret123');
+    await tester.pump();
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Phone number already registered'), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(SessionStore.instance.isAuthenticated, isFalse);
+    expect(UserStore.instance.accounts, hasLength(1));
   });
 
   testWidgets('terms and privacy policy span shows a placeholder', (
@@ -422,14 +501,15 @@ void main() {
     );
   });
 
-  testWidgets('switching to Sign Up swaps the phone form for Name, E-Mail '
-      'and Password', (tester) async {
+  testWidgets('switching to Sign Up swaps the phone form for Name, Phone, '
+      'E-Mail and Password', (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
     await tester.pumpAndSettle();
 
     expect(find.text('Name', findRichText: true), findsOneWidget);
+    expect(find.text('Phone Number', findRichText: true), findsOneWidget);
     expect(find.text('E-Mail', findRichText: true), findsOneWidget);
     expect(find.text('Password', findRichText: true), findsOneWidget);
     expect(find.text('Create account'), findsOneWidget);
@@ -445,12 +525,12 @@ void main() {
       findsOneWidget,
     );
 
-    // The phone form is gone in this state.
+    // The login phone form is gone in this state (the sign-up form has its
+    // own plain phone field instead of the country box + dial code row).
     expect(find.text('Welcome back'), findsNothing);
     expect(find.text('Send OTP'), findsNothing);
-    expect(find.text('Phone Number'), findsNothing);
     expect(find.text('+91'), findsNothing);
-    expect(find.byType(TextField), findsNWidgets(3));
+    expect(find.byType(TextField), findsNWidgets(4));
 
     // The fields are typeable.
     await tester.enterText(find.byType(TextField).first, 'Ananya');
@@ -470,7 +550,7 @@ void main() {
     final button =
         tester.getRect(green.last).translate(-origin.dx, -origin.dy);
     expect(button.left, closeTo(24, 2));
-    expect(button.top, closeTo(784, 2));
+    expect(button.top, closeTo(800, 2));
     expect(button.width, closeTo(364, 2));
     expect(button.height, closeTo(52, 2));
   });
@@ -530,9 +610,13 @@ void main() {
     expect(hero.top, closeTo(225, 1));
 
     final boxes = _findBorderedBoxes(tester);
-    expect(boxes.length, 3, reason: 'Name, E-Mail and Password fields');
-    const tops = [574, 644, 714];
-    for (var i = 0; i < 3; i++) {
+    expect(
+      boxes.length,
+      4,
+      reason: 'Name, Phone Number, E-Mail and Password fields',
+    );
+    const tops = [560, 620, 680, 740];
+    for (var i = 0; i < 4; i++) {
       final field = rectOf(boxes[i]);
       expect(field.left, closeTo(24, 1));
       expect(field.width, closeTo(364, 1));
@@ -543,7 +627,7 @@ void main() {
     // Placeholder sits inside the first field.
     final name = rectOf(find.text('Name', findRichText: true));
     expect(name.left, closeTo(44, 3));
-    expect(name.center.dy, closeTo(601, 4));
+    expect(name.center.dy, closeTo(587, 4));
 
     // Terms footer stays at the design position.
     expect(

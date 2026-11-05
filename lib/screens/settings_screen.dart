@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/session_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -7,6 +8,7 @@ import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import 'app_language_screen.dart';
 import 'help_support_screen.dart';
+import 'welcome_seller_screen.dart';
 
 /// Settings — static replica of Zeplin "Android Compact - 164"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
@@ -32,13 +34,21 @@ class SettingsScreen extends StatelessWidget {
           designWidth: designWidth,
           designHeight: designHeight,
           trimTop: trimTop,
-          child: const Stack(
+          child: Stack(
             children: [
-              Positioned(left: 25, top: 127, child: _PreferencesCard()),
-              Positioned(left: 25, top: 253, child: _NotificationsCard()),
-              Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(left: 25, top: 678, child: _LogoutCard()),
-              Positioned(
+              const Positioned(
+                left: 25,
+                top: 127,
+                child: _PreferencesCard(),
+              ),
+              const Positioned(
+                left: 25,
+                top: 253,
+                child: _NotificationsCard(),
+              ),
+              const Positioned(left: 25, top: 496, child: _SupportCard()),
+              const Positioned(left: 25, top: 678, child: _LogoutCard()),
+              const Positioned(
                 left: 0,
                 top: 73,
                 child: PageHeader(title: 'Settings'),
@@ -219,42 +229,58 @@ class _SupportCard extends StatelessWidget {
 class _LogoutCard extends StatelessWidget {
   const _LogoutCard();
 
+  /// Ends the active session only (the seller profile and products stay
+  /// saved) and returns to the login flow — same action as the Log out row
+  /// on the Profile / App tab.
+  void _logout(BuildContext context) {
+    SessionStore.instance.endSession();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const _Card(
-      height: 81,
-      children: [
-        Positioned(
-          left: 22,
-          top: 23,
-          child: SizedBox(
-            width: 324,
-            height: 34,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: _Tile(
-                    icon: 'assets/settings/ic_logout.png',
-                    iconSize: 16,
-                    color: AppColors.outOfStockBg,
+    return GestureDetector(
+      key: const Key('settings-logout'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _logout(context),
+      child: const _Card(
+        height: 81,
+        children: [
+          Positioned(
+            left: 22,
+            top: 23,
+            child: SizedBox(
+              width: 324,
+              height: 34,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: _Tile(
+                      icon: 'assets/settings/ic_logout.png',
+                      iconSize: 16,
+                      color: AppColors.outOfStockBg,
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: 45,
-                  top: 4,
-                  child: LabelText(
-                    'Log out',
-                    AppTextStyles.settingsLogout,
-                    width: 45,
+                  Positioned(
+                    left: 45,
+                    top: 4,
+                    child: LabelText(
+                      'Log out',
+                      AppTextStyles.settingsLogout,
+                      width: 45,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

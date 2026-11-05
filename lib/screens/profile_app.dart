@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/session_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
 import 'help_support_screen.dart';
@@ -163,8 +164,9 @@ class _AppListCard extends StatelessWidget {
           ),
           const Positioned(left: 16, right: 16, top: 122, child: _Divider()),
 
-          // Log out (design: cap top y761, pink tile, no chevron) — returns
-          // to the login flow.
+          // Log out (design: cap top y761, pink tile, no chevron) — clears
+          // the active session (seller profile and products stay saved) and
+          // returns to the login flow.
           Positioned(
             left: 22,
             top: 133,
@@ -172,10 +174,13 @@ class _AppListCard extends StatelessWidget {
             height: 34,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeSellerScreen()),
-                (route) => false,
-              ),
+              onTap: () {
+                SessionStore.instance.endSession();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const WelcomeSellerScreen()),
+                  (route) => false,
+                );
+              },
               child: const Stack(
                 clipBehavior: Clip.none,
                 children: [

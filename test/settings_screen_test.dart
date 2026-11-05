@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/product_store.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/app_language_screen.dart';
 import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
+import 'package:seller_app/screens/welcome_seller_screen.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 917);
@@ -14,6 +18,16 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // The route guard only opens authenticated screens while a session is
+    // active; these tests exercise the in-app navigation directly.
+    SessionStore.instance.startSession(
+      phone: '9876543210',
+      userName: 'Test Seller',
+      method: 'login',
+    );
+  });
+
   testWidgets('renders the 164 settings content', (tester) async {
     await pumpScreen(tester);
 
@@ -132,5 +146,44 @@ void main() {
 
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.text('Hello,'), findsOneWidget);
+  });
+
+  testWidgets('the logout card ends the session but keeps the seller profile '
+      'and products', (tester) async {
+    // Saved business data that logging out must not touch.
+    SellerProfileStore.instance.saveBusinessDetails(
+      name: 'Ramesh Farms',
+      business: 'Ramesh Farms',
+      phone: '+91 9876543210',
+      location: 'Salem',
+      address: '12 Main Road, Salem',
+    );
+    ProductStore.instance.addProduct(
+      name: 'Tomato',
+      category: 'Vegetables',
+      price: 30,
+      unit: 'kg',
+      quantity: 20,
+      description: 'Fresh',
+      status: ProductStatus.active,
+    );
+    addTearDown(ProductStore.instance.clear);
+
+    expect(SessionStore.instance.isAuthenticated, isTrue);
+
+    await pumpScreen(tester);
+    await tester.tap(find.byKey(const Key('settings-logout')));
+    await tester.pumpAndSettle();
+
+    // Back on the login flow with no active session.
+    expect(find.byType(WelcomeSellerScreen), findsOneWidget);
+    expect(find.text('Send OTP'), findsOneWidget);
+    expect(SessionStore.instance.isAuthenticated, isFalse);
+
+    // The business data survives the logout.
+    expect(ProductStore.instance.count, 1);
+    expect(ProductStore.instance.products.single.name, 'Tomato');
+    expect(SellerProfileStore.instance.name, 'Ramesh Farms');
+    expect(SellerProfileStore.instance.mobile, '+91 9876543210');
   });
 }

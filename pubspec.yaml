@@ -41,6 +41,9 @@ dependencies:
   # Declared explicitly — it was previously only a transitive dependency, so
   # it could disappear from the lockfile and break the import.
   http: ^1.2.0
+  # Persistent local storage: seller profile, products, registered sign-up
+  # accounts and the active session all survive app restarts through this.
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:

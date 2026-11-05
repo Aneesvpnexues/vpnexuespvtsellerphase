@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
+import '../data/session_store.dart';
 import '../screens/add_products_screen.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
@@ -14,6 +15,7 @@ import '../screens/order_ready_screen.dart';
 import '../screens/product_details_screen.dart';
 import '../screens/review_ratings_page.dart';
 import '../screens/verify_detaile.dart';
+import '../screens/welcome_seller_screen.dart';
 import '../screens/wallet_page.dart';
 import '../screens/profile_screen.dart';
 import '../screens/seller_home_screen.dart';
@@ -47,11 +49,29 @@ abstract final class AppRoutes {
   static const String bankDetaile = '/bank-detaile';
 }
 
+/// Guards the authenticated part of the app.
+///
+/// Returns `true` when a session is active. Otherwise it clears the stack and
+/// returns the user to the Welcome (login) screen, reporting `false` so the
+/// caller skips its own navigation. Every route helper below calls this, so
+/// no authenticated screen can be opened after logout or on a cold start
+/// without a session.
+bool requireSession(BuildContext context) {
+  if (SessionStore.instance.isAuthenticated) return true;
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
+    (route) => false,
+  );
+  return false;
+}
+
 /// Switches the bottom navigation tab.
 ///
 /// The current tab is a no-op, any other tab replaces the current screen with
 /// the target one, so the stack never grows a duplicate of the same screen.
+/// Requires an active session (see [requireSession]).
 void switchTab(BuildContext context, Widget screen, String routeName) {
+  if (!requireSession(context)) return;
   final NavigatorState navigator = Navigator.of(context);
   final String? current = ModalRoute.of(context)?.settings.name;
   if (current == routeName) {
@@ -110,6 +130,7 @@ void goToProfile(BuildContext context) {
 
 /// Opens the Settings screen from the home header.
 void goToSettings(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.settings),
@@ -120,6 +141,7 @@ void goToSettings(BuildContext context) {
 
 /// Opens the Add Products flow from the My Products screen.
 void goToAddProduct(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.addProduct),
@@ -130,6 +152,7 @@ void goToAddProduct(BuildContext context) {
 
 /// Opens the ready-to-pickup state (every item packed) from the accepted order.
 void goToOrderReady(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderReady),
@@ -140,6 +163,7 @@ void goToOrderReady(BuildContext context) {
 
 /// Opens the out-for-delivery state from the ready order's slide CTA.
 void goToOrderDelivery(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderDelivery),
@@ -150,6 +174,7 @@ void goToOrderDelivery(BuildContext context) {
 
 /// Opens the order preview (Zeplin 153) from the My Orders list.
 void goToOrderPrivew(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderPrivew),
@@ -160,6 +185,7 @@ void goToOrderPrivew(BuildContext context) {
 
 /// Opens the product details page (Zeplin 171) for [product].
 void goToProductDetails(BuildContext context, {Product? product}) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.productDetails),
@@ -170,6 +196,7 @@ void goToProductDetails(BuildContext context, {Product? product}) {
 
 /// Opens the pickup code entry state (Zeplin 154).
 void goToOrderPickupCode(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderPickupCode),
@@ -180,6 +207,7 @@ void goToOrderPickupCode(BuildContext context) {
 
 /// Opens the pickup confirmed state (Zeplin 165).
 void goToOrderPickupSuccess(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderPickupSuccess),
@@ -190,6 +218,7 @@ void goToOrderPickupSuccess(BuildContext context) {
 
 /// Opens the review and ratings page (Zeplin 152) from the Business tab.
 void goToReviewRatings(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.reviewRatings),
@@ -200,6 +229,7 @@ void goToReviewRatings(BuildContext context) {
 
 /// Opens the wallet page (Zeplin 88) from the Business tab.
 void goToWallet(BuildContext context) {
+  if (!requireSession(context)) return;
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.wallet),

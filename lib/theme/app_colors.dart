@@ -272,4 +272,8 @@ abstract final class AppColors {
   static const Color cameraBadgeInk = Color(0xFF1A482B);
   static const Color reviewStar = Color(0xFF0D3B20);
   static const Color ratingStar = Color(0xFF0D3B20);
+
+  /// Inline form-validation error text (the red message shown inside or
+  /// right below an invalid field).
+  static const Color fieldError = Color(0xFFD32F2F);
 }

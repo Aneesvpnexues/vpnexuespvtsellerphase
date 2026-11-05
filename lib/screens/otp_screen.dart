@@ -1,12 +1,16 @@
 import 'dart:async';
-
+import 'dart:math' as math; // <-- Add this line
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
+import '../data/session_store.dart';
+import '../data/user_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/bottom_deco.dart';
+import '../widgets/inline_error.dart';
 import '../widgets/otp_field_row.dart';
-import 'location_screen.dart';
+import 'seller_home_screen.dart';
 
 /// Enter OTP screen — static replica of Zeplin "Android Compact - 50"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad063196da349aa4dae3c4).
@@ -19,7 +23,9 @@ import 'location_screen.dart';
 /// Zeplin mockup's placeholder number only shows when the screen is pumped on
 /// its own). The resend label counts down for [resendCountdown] seconds and
 /// turns into a tappable "Resend OTP" that restarts the timer, and Verify only
-/// navigates once all 6 digits are entered.
+/// succeeds once all 6 digits are entered and match the fixed test code
+/// [SessionStore.validOtp]; a wrong code is rejected inline. A successful
+/// verify opens the session and continues to the home page.
 class OtpScreen extends StatefulWidget {
   const OtpScreen({
     super.key,
@@ -29,6 +35,7 @@ class OtpScreen extends StatefulWidget {
 
   static const String illustrationAsset = 'assets/otp/illustration.png';
   static const double designWidth = 412;
+  static const double designHeight = 917; // <-- Add this line
 
   /// Country dial code shown under the "sent a 6-digit code" copy.
   final String dialCode;
@@ -48,6 +55,10 @@ class _OtpScreenState extends State<OtpScreen> {
   int _secondsLeft = OtpScreen.resendCountdown.inSeconds;
   String _otp = '';
 
+  /// Inline error shown under the OTP boxes when "Verify" is tapped before
+  /// all six digits are entered; cleared as soon as the row changes.
+  String _otpError = '';
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +76,15 @@ class _OtpScreenState extends State<OtpScreen> {
           _resendTimer = null;
         }
       });
+    });
+  }
+
+  void _onOtpChanged(String value) {
+    setState(() {
+      _otp = value;
+      if (_otpError.isNotEmpty && _otp.length == OtpFieldRow.boxCount) {
+        _otpError = '';
+      }
     });
   }
 
@@ -87,21 +107,37 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
+  /// Requires all six digits and the fixed test code [SessionStore.validOtp];
+  /// a missing code or a wrong code is reported inline, in red, directly
+  /// under the OTP boxes and never grants access. The correct code opens the
+  /// session for this phone number and goes straight to the home page — no
+  /// further OTP or phone entry afterwards.
   void _verify() {
     if (_otp.length != OtpFieldRow.boxCount) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Enter the 6-digit OTP'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      setState(() => _otpError = 'Enter the 6-digit OTP');
+      return;
+    }
+    if (_otp.trim() != SessionStore.validOtp) {
+      setState(() => _otpError = 'Invalid OTP. Please try again.');
       return;
     }
     FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+
+    final String phone = '${widget.dialCode} ${widget.phoneNumber}';
+    // The session's display name comes from the registered account for this
+    // number when one exists, so a returning seller sees their own name.
+    final SellerAccount? account = UserStore.instance.findByPhone(phone);
+    SessionStore.instance.startSession(
+      phone: phone,
+      userName: account?.name ?? SellerProfileStore.instance.name,
+      method: 'login',
+    );
+
+    // A successful login also lands on the home page; the stack is cleared
+    // so back never returns to the OTP screen.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      (route) => false,
     );
   }
 
@@ -117,12 +153,21 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double topInset = MediaQuery.of(context).padding.top;
+    final Size screenSize = MediaQuery.sizeOf(context);
+    final double scale = math.min(
+      1.0,
+      math.min(
+        screenSize.width / OtpScreen.designWidth,
+        screenSize.height / OtpScreen.designHeight,
+      ),
+    );
+    final double topInset = MediaQuery.paddingOf(context).top;
+    final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     // Design places the illustration at y=123 on the artboard.
     final double topGap = (123 - topInset).clamp(0, 240).toDouble();
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true, // <-- Changed from false to true
       backgroundColor: AppColors.surface,
       body: Stack(
         children: [
@@ -130,62 +175,76 @@ class _OtpScreenState extends State<OtpScreen> {
           SafeArea(
             top: true,
             bottom: false,
-            child: LayoutBuilder(
-              builder: (context, constraints) => Align(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Align(
                 alignment: Alignment.topCenter,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: SizedBox(
-                    width: OtpScreen.designWidth,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(24, topGap, 24, 132),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Image.asset(
-                              OtpScreen.illustrationAsset,
-                              width: 290,
-                              height: 210,
-                              fit: BoxFit.fill,
+                child: SizedBox(
+                  width: OtpScreen.designWidth * scale,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SizedBox(
+                      width: OtpScreen.designWidth,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          keyboardOpen ? 24 : topGap,
+                          24,
+                          keyboardOpen ? 24 : 132,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Image.asset(
+                                OtpScreen.illustrationAsset,
+                                width: 290,
+                                height: 210,
+                                fit: BoxFit.fill,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 40),
-                          const Text('Enter OTP', style: AppTextStyles.title),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'We\u2019ve sent a 6-digit code to',
-                            style: AppTextStyles.subtitle,
-                            softWrap: false,
-                            maxLines: 1,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(_phoneLabel, style: AppTextStyles.phone),
-                          const SizedBox(height: 42),
-                          OtpFieldRow(
-                            onChanged: (value) => setState(() => _otp = value),
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: _secondsLeft > 0
-                                ? Text(
-                                    _resendLabel,
-                                    style: AppTextStyles.resend,
-                                  )
-                                : GestureDetector(
-                                    key: const Key('resendOtp'),
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: _resend,
-                                    child: Text(
-                                      'Resend OTP',
+                            const SizedBox(height: 40),
+                            const Text('Enter OTP', style: AppTextStyles.title),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'We\u2019ve sent a 6-digit code to',
+                              style: AppTextStyles.subtitle,
+                              softWrap: false,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(_phoneLabel, style: AppTextStyles.phone),
+                            const SizedBox(height: 42),
+                            OtpFieldRow(onChanged: _onOtpChanged),
+                            if (_otpError.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              InlineErrorText(_otpError),
+                            ],
+                            const SizedBox(height: 16),
+                            Center(
+                              child: _secondsLeft > 0
+                                  ? Text(
+                                      _resendLabel,
                                       style: AppTextStyles.resend,
+                                    )
+                                  : GestureDetector(
+                                      key: const Key('resendOtp'),
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: _resend,
+                                      child: Text(
+                                        'Resend OTP',
+                                        style: AppTextStyles.resend,
+                                      ),
                                     ),
-                                  ),
-                          ),
-                          const SizedBox(height: 112),
-                          _VerifyButton(onTap: _verify),
-                        ],
+                            ),
+                            // Shrinks the 112px gap to 32px while the keyboard
+                            // is open so the Verify button sits right below the
+                            // OTP row and stays immediately reachable.
+                            SizedBox(height: keyboardOpen ? 16 : 60),
+                            _VerifyButton(onTap: _verify),
+                          ],
+                        ),
                       ),
                     ),
                   ),

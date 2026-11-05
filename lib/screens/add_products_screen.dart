@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/product_store.dart';
@@ -15,19 +18,7 @@ export '../data/product_store.dart' show ProductPhoto;
 
 typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
 
-/// "Add Products" — replica of Zeplin "Android Compact - 124"
-/// (project 6a8d49709e27bd8b35213d35, screen 6ad1ae18783597fd3b9a332f).
-///
-/// Scrollable form on a 412x1397 artboard (the full Zeplin 124 frame: form
-/// content above, the shared [BottomNavBar] pinned to the artboard bottom
-/// exactly like [ProfileShell]). Category
-/// and status chips select, the quantity stepper adjusts local state, the
-/// description counts characters to 500, the photos strip accepts up to five
-/// gallery images, and the back arrow pops.
-///
-/// Design copy quirks kept verbatim: "et your price and available quantity"
-/// (missing leading "S") and "Product Descrption" (used for both the
-/// description and status section titles).
+/// "Add Products" screen for farmers and grocery shop owners to list items.
 class AddProductsScreen extends StatefulWidget {
   const AddProductsScreen({super.key, this.photoPicker});
 
@@ -37,21 +28,28 @@ class AddProductsScreen extends StatefulWidget {
   static const String tomatoAsset = 'assets/products/tomato.png';
   static const double designWidth = 412;
 
-  /// The Zeplin frame extends to 1440 so the Continue button sits above the
-  /// pinned bottom-nav band and remains reachable at the end of the scroll.
-  static const double designHeight = 1440;
+  /// Extended height so the Continue button sits comfortably above the bottom
+  /// navigation bar and provides extra room when scrolling with the keyboard.
+  static const double designHeight = 1460;
 
   @override
   State<AddProductsScreen> createState() => _AddProductsScreenState();
 }
 
 class _AddProductsScreenState extends State<AddProductsScreen> {
-  int _category = -1;
+  int _category = 0; // Default to 'Vegetables' so a chip is visibly selected
   int _status = 0;
   int _quantity = 50;
+  String _selectedUnit = 'kg';
+
   final TextEditingController _name = TextEditingController();
   final TextEditingController _price = TextEditingController();
   final TextEditingController _description = TextEditingController();
+
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _priceFocus = FocusNode();
+  final FocusNode _descriptionFocus = FocusNode();
+
   final List<ProductPhoto> _photos = [];
   int _currentPage = 0;
   bool _isPicking = false;
@@ -60,6 +58,44 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   final PageController _photoController = PageController(viewportFraction: 0.6);
 
   static const _categories = ['Vegetables', 'Fruits', 'Grains & pulses'];
+  static const _units = ['kg', 'g', 'pc', 'dozen', 'bundle', 'L', 'ml'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild progress indicator dynamically when text fields change
+    _name.addListener(_onFormChanged);
+    _price.addListener(_onFormChanged);
+    _description.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Calculates completion steps (1 to 5) based on filled sections.
+  int get _completedSteps {
+    int steps = 1; // Step 1: Base / Status & Category ready
+    if (_photos.isNotEmpty) steps++;
+    if (_name.text.trim().isNotEmpty && _category >= 0) steps++;
+    final parsedPrice = double.tryParse(
+      _price.text.replaceAll('\u20B9', '').replaceAll(',', '').trim(),
+    );
+    if (parsedPrice != null && parsedPrice > 0 && _quantity > 0) steps++;
+    if (_description.text.trim().isNotEmpty) steps++;
+    return steps.clamp(1, 5);
+  }
+
+  String get _currentStepLabel {
+    if (_photos.isEmpty) return 'Product Photos';
+    if (_name.text.trim().isEmpty) return 'Basic Information';
+    final parsedPrice = double.tryParse(
+      _price.text.replaceAll('\u20B9', '').replaceAll(',', '').trim(),
+    );
+    if (parsedPrice == null || parsedPrice <= 0) return 'Pricing & Quantity';
+    if (_description.text.trim().isEmpty) return 'Product Description';
+    return 'Ready to Publish';
+  }
 
   int get _photoPageCount {
     if (_photos.isEmpty) return 0;
@@ -76,11 +112,24 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       );
       return;
     }
+
+    // If a custom photoPicker is injected (e.g. in tests), use it directly.
+    // Otherwise, let the seller choose between Camera or Gallery.
+    ImageSource? chosenSource;
+    if (widget.photoPicker == null) {
+      chosenSource = await _showImageSourceSheet();
+      if (chosenSource == null || !mounted) return;
+    }
+
     setState(() => _isPicking = true);
 
     ProductPhoto? photo;
     try {
-      photo = await (widget.photoPicker ?? _pickPhotoFromGallery)();
+      if (widget.photoPicker != null) {
+        photo = await widget.photoPicker!();
+      } else {
+        photo = await _pickPhoto(chosenSource!);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -108,9 +157,45 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     }
   }
 
-  Future<ProductPhoto?> _pickPhotoFromGallery() async {
+  Future<ImageSource?> _showImageSourceSheet() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.cardWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Add Product Photo', style: AppTextStyles.sectionHeader),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const _SectionIcon(icon: Icons.photo_library_outlined),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const _SectionIcon(icon: Icons.camera_alt_outlined),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<ProductPhoto?> _pickPhoto(ImageSource source) async {
     final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
+      source: source,
       maxWidth: 1600,
       imageQuality: 85,
     );
@@ -165,7 +250,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
         _photoController.position.isScrollingNotifier.value) {
       return;
     }
-    final target = (_currentPage + offset) % pageCount;
+    final target = (_currentPage + offset + pageCount) % pageCount;
     if (target == _currentPage) return;
     setState(() => _currentPage = target);
     if (!_photoController.hasClients) return;
@@ -181,12 +266,69 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     );
   }
 
+  Future<void> _editQuantityDialog() async {
+    final controller = TextEditingController(text: '$_quantity');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Enter Available Quantity',
+          style: AppTextStyles.sectionHeader,
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            suffixText: _selectedUnit,
+            hintText: 'e.g. 50',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.darkGreenInk,
+              foregroundColor: AppColors.cardWhite,
+            ),
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              Navigator.of(context).pop(parsed);
+            },
+            child: const Text('Set'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result != null && result >= 0 && mounted) {
+      setState(() => _quantity = result);
+    }
+  }
+
   void _saveProduct() {
     if (_isSaving) return;
     final String name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Enter a product name.')));
+      _nameFocus.requestFocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a product name.')),
+      );
+      return;
+    }
+    if (_category < 0 || _category >= _categories.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a product category.')),
+      );
       return;
     }
     final String rawPrice = _price.text
@@ -195,519 +337,629 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
         .trim();
     final double? price = double.tryParse(rawPrice);
     if (price == null || !price.isFinite || price <= 0) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Enter a valid price.')));
+      _priceFocus.requestFocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid price greater than 0.')),
+      );
+      return;
+    }
+    if (_quantity <= 0 && _status == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quantity must be greater than 0 for Active products.'),
+        ),
+      );
       return;
     }
 
-    _isSaving = true;
+    setState(() => _isSaving = true);
     FocusScope.of(context).unfocus();
-    ProductStore.instance.addProduct(
-      name: name,
-      category: _category >= 0 ? _categories[_category] : 'Vegetables',
-      price: price,
-      unit: 'kg',
-      quantity: _quantity,
-      description: _description.text.trim(),
-      status: ProductStatus.values[_status],
-      photos: _photos,
-    );
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Product added')));
-    Navigator.of(context).maybePop();
+
+    try {
+      ProductStore.instance.addProduct(
+        name: name,
+        category: _categories[_category],
+        price: price,
+        unit: _selectedUnit,
+        quantity: _quantity,
+        description: _description.text.trim(),
+        status: ProductStatus.values[_status],
+        photos: _photos,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product added successfully!')),
+      );
+      Navigator.of(context).maybePop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save product. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    _name.removeListener(_onFormChanged);
+    _price.removeListener(_onFormChanged);
+    _description.removeListener(_onFormChanged);
     _photoController.dispose();
     _name.dispose();
     _price.dispose();
     _description.dispose();
+    _nameFocus.dispose();
+    _priceFocus.dispose();
+    _descriptionFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.dashboardBg,
-      body: SafeArea(
-        bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // The bottom navigation is pinned to the viewport bottom so it
-            // never scrolls with the form content. It shares the artboard's
-            // width-driven scale to stay proportional on every screen size.
-            final scale = (constraints.maxWidth / AddProductsScreen.designWidth)
-                .clamp(0.0, Artboard.defaultMaxScale)
-                .toDouble();
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: Artboard(
-                    designWidth: AddProductsScreen.designWidth,
-                    designHeight: AddProductsScreen.designHeight,
-                    scrollable: true,
-                    child: Stack(
-                      children: [
-                        const Positioned(
-                          left: 0,
-                          top: 24,
-                          child: PageHeader(title: 'Add Products'),
-                        ),
-                        const Positioned(
-                          left: 24,
-                          top: 76,
-                          child: _ProgressCard(),
-                        ),
-                        // Product photos card.
-                        Positioned(
-                          left: 24,
-                          top: 148,
-                          child: _PhotosCard(
-                            photos: _photos,
-                            controller: _photoController,
-                            currentPage: _currentPage,
-                            isPicking: _isPicking,
-                            onAdd: _addPhoto,
-                            onRemove: _removeCurrentPhoto,
-                            onPreview: _previewPhoto,
-                            onNext: () => _showPhoto(1),
-                            onPrevious: () => _showPhoto(-1),
-                            onPageChanged: (index) {
-                              if (_currentPage != index) {
-                                setState(() => _currentPage = index);
-                              }
-                            },
+    final bool isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: AppColors.dashboardBg,
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final scale =
+                  (constraints.maxWidth / AddProductsScreen.designWidth)
+                      .clamp(0.0, Artboard.defaultMaxScale)
+                      .toDouble();
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: Artboard(
+                      designWidth: AddProductsScreen.designWidth,
+                      designHeight: AddProductsScreen.designHeight,
+                      scrollable: true,
+                      child: Stack(
+                        children: [
+                          const Positioned(
+                            left: 0,
+                            top: 24,
+                            child: PageHeader(title: 'Add Products'),
                           ),
-                        ),
-                        // Basic information card.
-                        Positioned(
-                          left: 24,
-                          top: 407,
-                          child: SizedBox(
-                            width: 364,
-                            height: 216,
-                            child: Stack(
-                              children: [
-                                const Positioned.fill(child: _CardBackground()),
-                                Positioned(
-                                  left: 16,
-                                  top: 20,
-                                  child: _SectionIcon(icon: Icons.subject),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 24,
-                                  child: Text(
-                                    'Basic Information',
-                                    style: AppTextStyles.sectionHeader,
+                          Positioned(
+                            left: 24,
+                            top: 76,
+                            child: _ProgressCard(
+                              step: _completedSteps,
+                              label: _currentStepLabel,
+                            ),
+                          ),
+                          // 1. Product photos card.
+                          Positioned(
+                            left: 24,
+                            top: 148,
+                            child: _PhotosCard(
+                              photos: _photos,
+                              controller: _photoController,
+                              currentPage: _currentPage,
+                              isPicking: _isPicking,
+                              onAdd: _addPhoto,
+                              onRemove: _removeCurrentPhoto,
+                              onPreview: _previewPhoto,
+                              onNext: () => _showPhoto(1),
+                              onPrevious: () => _showPhoto(-1),
+                              onPageChanged: (index) {
+                                if (_currentPage != index) {
+                                  setState(() => _currentPage = index);
+                                }
+                              },
+                            ),
+                          ),
+                          // 2. Basic information card.
+                          Positioned(
+                            left: 24,
+                            top: 407,
+                            child: SizedBox(
+                              width: 364,
+                              height: 225,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
                                   ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 50,
-                                  child: Text(
-                                    'Tell us about your product',
-                                    style: AppTextStyles.dashboardSubtitle,
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(icon: Icons.subject),
                                   ),
-                                ),
-                                const Positioned(
-                                  left: 16,
-                                  top: 88,
-                                  child: Text(
-                                    'Product Name',
-                                    style: AppTextStyles.fieldLabelSoft,
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'Basic Information',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
                                   ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 109,
-                                  child: _InputField(
-                                    icon: Icons.sell_outlined,
-                                    hint: 'e.g Fresh Tomates',
-                                    controller: _name,
-                                    fieldKey: const ValueKey('product-name'),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Tell us about your product',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
                                   ),
-                                ),
-                                const Positioned(
-                                  left: 16,
-                                  top: 166,
-                                  child: Text(
-                                    'Category',
-                                    style: AppTextStyles.fieldLabelSoft,
+                                  const Positioned(
+                                    left: 16,
+                                    top: 88,
+                                    child: Text(
+                                      'Product Name',
+                                      style: AppTextStyles.fieldLabelSoft,
+                                    ),
                                   ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 183,
-                                  child: Row(
-                                    children: [
-                                      for (
-                                        var i = 0;
-                                        i < _categories.length;
-                                        i++
-                                      ) ...[
-                                        if (i > 0) const SizedBox(width: 10),
-                                        _Chip(
-                                          label: _categories[i],
-                                          selected: _category == i,
-                                          onTap: () =>
-                                              setState(() => _category = i),
-                                        ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 109,
+                                    child: _InputField(
+                                      icon: Icons.sell_outlined,
+                                      hint: 'e.g. Fresh Tomatoes',
+                                      controller: _name,
+                                      focusNode: _nameFocus,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) =>
+                                          _priceFocus.requestFocus(),
+                                      fieldKey: const ValueKey('product-name'),
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 160,
+                                    child: Text(
+                                      'Category',
+                                      style: AppTextStyles.fieldLabelSoft,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 183,
+                                    child: Row(
+                                      children: [
+                                        for (var i = 0;
+                                            i < _categories.length;
+                                            i++) ...[
+                                          if (i > 0) const SizedBox(width: 10),
+                                          _Chip(
+                                            label: _categories[i],
+                                            selected: _category == i,
+                                            onTap: () =>
+                                                setState(() => _category = i),
+                                          ),
+                                        ],
                                       ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Pricing & quantity card.
-                        Positioned(
-                          left: 24,
-                          top: 638,
-                          child: SizedBox(
-                            width: 364,
-                            height: 244,
-                            child: Stack(
-                              children: [
-                                const Positioned.fill(child: _CardBackground()),
-                                Positioned(
-                                  left: 16,
-                                  top: 20,
-                                  child: _SectionIcon(
-                                    icon: Icons.currency_rupee,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 24,
-                                  child: Text(
-                                    'Pricing & Quantity',
-                                    style: AppTextStyles.sectionHeader,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 50,
-                                  child: Text(
-                                    'et your price and available quantity',
-                                    style: AppTextStyles.dashboardSubtitle,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 16,
-                                  top: 90,
-                                  child: Text(
-                                    'Price per unit',
-                                    style: AppTextStyles.fieldLabelSoft,
-                                  ),
-                                ),
-                                const Positioned(
-                                  right: 16,
-                                  top: 90,
-                                  child: Text(
-                                    'Unit',
-                                    style: AppTextStyles.fieldLabelSoft,
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 114,
-                                  child: _InputField(
-                                    icon: Icons.currency_rupee,
-                                    hint: 'e.g. 48',
-                                    width: 242,
-                                    controller: _price,
-                                    fieldKey: const ValueKey('product-price'),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 13,
-                                  top: 114,
-                                  child: Container(
-                                    width: 83,
-                                    height: 41,
-                                    alignment: Alignment.center,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.darkGreenInk,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Text(
-                                            'Unit',
-                                            style:
-                                                AppTextStyles.chipActiveLabel,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Icon(
-                                            Icons.keyboard_arrow_down,
-                                            size: 14,
-                                            color: AppColors.chipActiveText,
-                                          ),
-                                        ],
-                                      ),
                                     ),
                                   ),
-                                ),
-                                const Positioned(
-                                  left: 16,
-                                  top: 174,
-                                  child: Text(
-                                    'Available Quantity',
-                                    style: AppTextStyles.fieldLabelSoft,
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 195,
-                                  child: _QtyStepper(
-                                    quantity: _quantity,
-                                    onDecrement: () => setState(() {
-                                      if (_quantity > 0) _quantity--;
-                                    }),
-                                    onIncrement: () =>
-                                        setState(() => _quantity++),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Description card.
-                        Positioned(
-                          left: 24,
-                          top: 896,
-                          child: SizedBox(
-                            width: 364,
-                            height: 234,
-                            child: Stack(
-                              children: [
-                                const Positioned.fill(child: _CardBackground()),
-                                Positioned(
-                                  left: 16,
-                                  top: 20,
-                                  child: _SectionIcon(
-                                    icon: Icons.description_outlined,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 24,
-                                  child: Text(
-                                    'Product Descrption',
-                                    style: AppTextStyles.sectionHeader,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 50,
-                                  child: Text(
-                                    'Help buyers know more about your product.',
-                                    style: AppTextStyles.dashboardSubtitle,
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 88,
-                                  child: Container(
-                                    width: 332,
-                                    height: 103,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      14,
-                                      12,
-                                      14,
-                                      12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.fieldFillSoft,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: TextField(
-                                      key: const ValueKey(
-                                        'product-description',
-                                      ),
-                                      controller: _description,
-                                      maxLines: null,
-                                      expands: true,
-                                      maxLength: 500,
-                                      buildCounter: (
-                                        context, {
-                                        required currentLength,
-                                        required isFocused,
-                                        required maxLength,
-                                      }) => null,
-                                      style: AppTextStyles.inputInkSoft,
-                                      cursorColor: AppColors.inputCaret,
-                                      decoration: const InputDecoration(
-                                        isDense: true,
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.zero,
-                                        hintText:
-                                            'Tell buyers about your product',
-                                        hintStyle: AppTextStyles.inputHintSoft,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 16,
-                                  top: 198,
-                                  child:
-                                      ValueListenableBuilder<TextEditingValue>(
-                                        valueListenable: _description,
-                                        builder: (context, value, _) => Text(
-                                          '${value.text.length}/500',
-                                          style: AppTextStyles.descCounter,
-                                        ),
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Status card.
-                        Positioned(
-                          left: 24,
-                          top: 1122,
-                          child: SizedBox(
-                            width: 364,
-                            height: 136,
-                            child: Stack(
-                              children: [
-                                const Positioned.fill(child: _CardBackground()),
-                                Positioned(
-                                  left: 16,
-                                  top: 20,
-                                  child: _SectionIcon(
-                                    icon: Icons.visibility_outlined,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 24,
-                                  child: Text(
-                                    'Product Descrption',
-                                    style: AppTextStyles.sectionHeader,
-                                  ),
-                                ),
-                                const Positioned(
-                                  left: 72,
-                                  top: 50,
-                                  child: Text(
-                                    'Help buyers know more about your product.',
-                                    style: AppTextStyles.dashboardSubtitle,
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  top: 88,
-                                  child: SizedBox(
-                                    width: 332,
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerLeft,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _StatusChip(
-                                            label: 'Active',
-                                            dotColor:
-                                                AppColors.progressFillSoft,
-                                            selected: _status == 0,
-                                            onTap: () =>
-                                                setState(() => _status = 0),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          _StatusChip(
-                                            label: 'Out of stock',
-                                            dotColor: AppColors.statusOutOfDot,
-                                            selected: _status == 1,
-                                            onTap: () =>
-                                                setState(() => _status = 1),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          _StatusChip(
-                                            label: 'Draft',
-                                            dotColor: AppColors.darkGreenInk,
-                                            selected: _status == 2,
-                                            onTap: () =>
-                                                setState(() => _status = 2),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 24,
-                          top: 1274,
-                          child: SizedBox(
-                            width: 364,
-                            height: 54,
-                            child: _ContinueButton(onTap: _saveProduct),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Zeplin 124 nav band: fixed to the viewport bottom (outside
-                // the scroll view) so it never moves with the form. The outer
-                // box is sized to the scaled design dimensions (412x88 * scale,
-                // identical ratio) and FittedBox maps the unscaled nav onto it,
-                // so it matches the content scale with no constraint clamping.
-                // FAB returns to the previous screen; Orders opens My Orders;
-                // Profile opens the Account profile screen.
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SizedBox(
-                      width: BottomNavBar.designWidth * scale,
-                      height: BottomNavBar.barHeight * scale,
-                      child: FittedBox(
-                        fit: BoxFit.fill,
-                        child: SizedBox(
-                          width: BottomNavBar.designWidth,
-                          height: BottomNavBar.barHeight,
-                          child: BottomNavBar(
-                            selectedIndex: null,
-                            onHomeTap: () => goToHome(context),
-                            onProductsTap: () => goToProducts(context),
-                            onAddTap: () => Navigator.of(context).maybePop(),
-                            onOrdersTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const MyOrdersScreen(),
+                                ],
                               ),
                             ),
-                            onProfileTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const ProfileScreen(),
+                          ),
+                          // 3. Pricing & quantity card.
+                          Positioned(
+                            left: 24,
+                            top: 638,
+                            child: SizedBox(
+                              width: 364,
+                              height: 244,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(
+                                      icon: Icons.currency_rupee,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'Pricing & Quantity',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Set your price and available quantity',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 90,
+                                    child: Text(
+                                      'Price per unit',
+                                      style: AppTextStyles.fieldLabelSoft,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    right: 69,
+                                    top: 92,
+                                    child: Text(
+                                      'Unit',
+                                      style: AppTextStyles.fieldLabelSoft,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 114,
+                                    child: _InputField(
+                                      icon: Icons.currency_rupee,
+                                      hint: 'e.g. 48',
+                                      width: 242,
+                                      controller: _price,
+                                      focusNode: _priceFocus,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'^\d*\.?\d{0,2}'),
+                                        ),
+                                      ],
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) =>
+                                          _descriptionFocus.requestFocus(),
+                                      fieldKey: const ValueKey('product-price'),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 13,
+                                    top: 114,
+                                    child: _UnitSelector(
+                                      selectedUnit: _selectedUnit,
+                                      units: _units,
+                                      onSelected: (unit) {
+                                        setState(() => _selectedUnit = unit);
+                                      },
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 174,
+                                    child: Text(
+                                      'Available Quantity',
+                                      style: AppTextStyles.fieldLabelSoft,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 195,
+                                    child: _QtyStepper(
+                                      quantity: _quantity,
+                                      unit: _selectedUnit,
+                                      onTapValue: _editQuantityDialog,
+                                      onDecrement: () => setState(() {
+                                        if (_quantity > 0) _quantity--;
+                                      }),
+                                      onIncrement: () =>
+                                          setState(() => _quantity++),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // 4. Description card.
+                          Positioned(
+                            left: 24,
+                            top: 896,
+                            child: SizedBox(
+                              width: 364,
+                              height: 234,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(
+                                      icon: Icons.description_outlined,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'Product Description',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Help buyers know more about your product.',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 88,
+                                    child: Container(
+                                      width: 332,
+                                      height: 103,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        12,
+                                        14,
+                                        12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.fieldFillSoft,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppColors.fieldBorderSoft,
+                                        ),
+                                      ),
+                                      child: TextField(
+                                        key: const ValueKey(
+                                          'product-description',
+                                        ),
+                                        controller: _description,
+                                        focusNode: _descriptionFocus,
+                                        maxLines: null,
+                                        expands: true,
+                                        maxLength: 500,
+                                        // Ensures the field scrolls well above the soft keyboard
+                                        scrollPadding: const EdgeInsets.only(
+                                          bottom: 220,
+                                        ),
+                                        buildCounter: (
+                                          context, {
+                                          required currentLength,
+                                          required isFocused,
+                                          required maxLength,
+                                        }) =>
+                                            null,
+                                        style: AppTextStyles.inputInkSoft,
+                                        cursorColor: AppColors.inputCaret,
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                          hintText:
+                                              'Add details about freshness and origin...',
+                                          hintStyle:
+                                              AppTextStyles.inputHintSoft,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 16,
+                                    top: 198,
+                                    child: ValueListenableBuilder<
+                                        TextEditingValue>(
+                                      valueListenable: _description,
+                                      builder: (context, value, _) => Text(
+                                        '${value.text.length}/500',
+                                        style: AppTextStyles.descCounter,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // 5. Status card (Fixed vertical overlap: starts at 1144 instead of 1122).
+                          Positioned(
+                            left: 24,
+                            top: 1144,
+                            child: SizedBox(
+                              width: 364,
+                              height: 136,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(
+                                      icon: Icons.visibility_outlined,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'Product Status',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Control whether buyers can see this product.',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 88,
+                                    child: SizedBox(
+                                      width: 332,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _StatusChip(
+                                              label: 'Active',
+                                              dotColor:
+                                                  AppColors.progressFillSoft,
+                                              selected: _status == 0,
+                                              onTap: () =>
+                                                  setState(() => _status = 0),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _StatusChip(
+                                              label: 'Out of stock',
+                                              dotColor:
+                                                  AppColors.statusOutOfDot,
+                                              selected: _status == 1,
+                                              onTap: () =>
+                                                  setState(() => _status = 1),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _StatusChip(
+                                              label: 'Draft',
+                                              dotColor: AppColors.darkGreenInk,
+                                              selected: _status == 2,
+                                              onTap: () =>
+                                                  setState(() => _status = 2),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Continue Button
+                          Positioned(
+                            left: 24,
+                            top: 1296,
+                            child: SizedBox(
+                              width: 364,
+                              height: 54,
+                              child: _ContinueButton(onTap: _saveProduct),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Hide the pinned BottomNavBar when the keyboard is open so
+                  // it never blocks the active TextField or reduces typing area.
+                  if (!isKeyboardOpen)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: SizedBox(
+                          width: BottomNavBar.designWidth * scale,
+                          height: BottomNavBar.barHeight * scale,
+                          child: FittedBox(
+                            fit: BoxFit.fill,
+                            child: SizedBox(
+                              width: BottomNavBar.designWidth,
+                              height: BottomNavBar.barHeight,
+                              child: BottomNavBar(
+                                selectedIndex: null,
+                                onHomeTap: () => goToHome(context),
+                                onProductsTap: () => goToProducts(context),
+                                onAddTap: () =>
+                                    Navigator.of(context).maybePop(),
+                                onOrdersTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const MyOrdersScreen(),
+                                  ),
+                                ),
+                                onProfileTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const ProfileScreen(),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UnitSelector extends StatelessWidget {
+  const _UnitSelector({
+    required this.selectedUnit,
+    required this.units,
+    required this.onSelected,
+  });
+
+  final String selectedUnit;
+  final List<String> units;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      key: const ValueKey('product-unit-selector'),
+      initialValue: selectedUnit,
+      onSelected: onSelected,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: AppColors.cardWhite,
+      itemBuilder: (context) => [
+        for (final unit in units)
+          PopupMenuItem<String>(
+            value: unit,
+            child: Text(
+              unit,
+              style: AppTextStyles.inputInkSoft.copyWith(
+                fontWeight: unit == selectedUnit
+                    ? FontWeight.w700
+                    : FontWeight.w400,
+              ),
+            ),
+          ),
+      ],
+      child: Container(
+        width: 83,
+        height: 41,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: AppColors.darkGreenInk,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                selectedUnit,
+                style: AppTextStyles.chipActiveLabel,
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down,
+                size: 14,
+                color: AppColors.chipActiveText,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -750,10 +1002,17 @@ class _ContinueButton extends StatelessWidget {
 }
 
 class _ProgressCard extends StatelessWidget {
-  const _ProgressCard();
+  const _ProgressCard({
+    required this.step,
+    required this.label,
+  });
+
+  final int step;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
+    final double factor = (step / 5.0).clamp(0.2, 1.0);
     return Container(
       width: 364,
       height: 56,
@@ -781,8 +1040,10 @@ class _ProgressCard extends StatelessWidget {
                   const Positioned.fill(
                     child: ColoredBox(color: AppColors.progressTrackSoft),
                   ),
-                  FractionallySizedBox(
-                    widthFactor: 0.284,
+                  AnimatedFractionallySizedBox(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                    widthFactor: factor,
                     child: Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
@@ -800,10 +1061,10 @@ class _ProgressCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Row(
-            children: const [
-              Text('Step1', style: AppTextStyles.stepSoftStrong),
-              SizedBox(width: 4),
-              Text('of 5 • Product Photos', style: AppTextStyles.stepSoftLabel),
+            children: [
+              Text('Step $step', style: AppTextStyles.stepSoftStrong),
+              const SizedBox(width: 4),
+              Text('of 5 • $label', style: AppTextStyles.stepSoftLabel),
             ],
           ),
         ],
@@ -863,7 +1124,7 @@ class _PhotosCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
+          const Positioned(
             left: 16,
             top: 20,
             child: _SectionIcon(icon: Icons.image_outlined),
@@ -918,21 +1179,6 @@ class _PhotosCard extends StatelessWidget {
                 children: [
                   if (!hasPhotos) ...[
                     Positioned(
-                      left: -24,
-                      top: 0,
-                      child: Image.asset(
-                        AddProductsScreen.tomatoAsset,
-                        key: const ValueKey('photo-tomato'),
-                        width: 127,
-                        height: 127,
-                      ),
-                    ),
-                    Positioned(
-                      left: 88,
-                      top: 0,
-                      child: _AddPhotoTile(onTap: onAdd),
-                    ),
-                    Positioned(
                       left: 0,
                       top: 0,
                       width: 364,
@@ -941,6 +1187,24 @@ class _PhotosCard extends StatelessWidget {
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
+                            Positioned(
+                              left: -42,
+                              top: 12,
+                              child: Transform.rotate(
+                                angle: -0.1419,
+                                alignment: Alignment.topRight,
+                                child: Container(
+                                  width: 100,
+                                  height: 114,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.addPhotoBg,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                             Positioned(
                               left: 306,
                               top: 6,
@@ -962,6 +1226,11 @@ class _PhotosCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ),
+                    Positioned(
+                      left: 88,
+                      top: 0,
+                      child: _AddPhotoTile(onTap: onAdd),
                     ),
                   ] else ...[
                     Positioned.fill(
@@ -1018,22 +1287,22 @@ class _PhotosCard extends StatelessWidget {
                         onTap: onPrevious,
                       ),
                     ),
-                  ],
-                  Positioned(
-                    left: 332,
-                    top: 50,
-                    child: _PhotoNavButton(
-                      key: const ValueKey('photo-next'),
-                      icon: Icons.chevron_right,
-                      onTap: onNext,
+                    Positioned(
+                      left: 332,
+                      top: 50,
+                      child: _PhotoNavButton(
+                        key: const ValueKey('photo-next'),
+                        icon: Icons.chevron_right,
+                        onTap: onNext,
+                      ),
                     ),
-                  ),
+                  ],
                   if (isPicking)
-                    Positioned.fill(
+                    const Positioned.fill(
                       child: AbsorbPointer(
-                        key: const ValueKey('photo-loading'),
+                        key: ValueKey('photo-loading'),
                         child: ColoredBox(
-                          color: const Color(0xB3FEFEFE),
+                          color: Color(0xB3FEFEFE),
                           child: Center(
                             child: SizedBox(
                               width: 24,
@@ -1091,13 +1360,13 @@ class _PhotoRemoveButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        width: 20,
-        height: 20,
+        width: 22,
+        height: 22,
         decoration: const BoxDecoration(
           color: AppColors.surface,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.close, size: 12, color: AppColors.textPrimary),
+        child: const Icon(Icons.close, size: 13, color: AppColors.textPrimary),
       ),
     );
   }
@@ -1126,10 +1395,12 @@ class _PhotoPreviewDialog extends StatelessWidget {
               children: [
                 ColoredBox(
                   color: AppColors.darkGreenInk,
-                  child: Image.memory(
-                    photo.bytes,
-                    key: const ValueKey('photo-preview-image'),
-                    fit: BoxFit.contain,
+                  child: InteractiveViewer(
+                    child: Image.memory(
+                      photo.bytes,
+                      key: const ValueKey('photo-preview-image'),
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
                 Positioned(
@@ -1173,6 +1444,7 @@ class _PhotoNavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         width: 24,
         height: 24,
@@ -1213,7 +1485,8 @@ class _AddPhotoTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add, size: 28, color: AppColors.darkGreenInk),
+              const Icon(Icons.add_a_photo_outlined,
+                  size: 26, color: AppColors.darkGreenInk),
               const SizedBox(height: 8),
               Text(
                 'Add photo',
@@ -1276,6 +1549,11 @@ class _InputField extends StatelessWidget {
     required this.hint,
     this.width = 332,
     this.controller,
+    this.focusNode,
+    this.keyboardType,
+    this.inputFormatters,
+    this.textInputAction,
+    this.onSubmitted,
     this.fieldKey,
   });
 
@@ -1283,6 +1561,11 @@ class _InputField extends StatelessWidget {
   final String hint;
   final double width;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
   final Key? fieldKey;
 
   @override
@@ -1304,6 +1587,13 @@ class _InputField extends StatelessWidget {
             child: TextField(
               key: fieldKey,
               controller: controller,
+              focusNode: focusNode,
+              keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              textInputAction: textInputAction,
+              onSubmitted: onSubmitted,
+              // Keeps the input box visible above the keyboard when focused
+              scrollPadding: const EdgeInsets.only(bottom: 220),
               style: AppTextStyles.inputInkSoft,
               cursorColor: AppColors.inputCaret,
               decoration: InputDecoration(
@@ -1336,6 +1626,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         height: 30,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1358,16 +1649,46 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _QtyStepper extends StatelessWidget {
+class _QtyStepper extends StatefulWidget {
   const _QtyStepper({
     required this.quantity,
+    required this.unit,
     required this.onDecrement,
     required this.onIncrement,
+    required this.onTapValue,
   });
 
   final int quantity;
+  final String unit;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final VoidCallback onTapValue;
+
+  @override
+  State<_QtyStepper> createState() => _QtyStepperState();
+}
+
+class _QtyStepperState extends State<_QtyStepper> {
+  Timer? _repeatTimer;
+
+  void _startRepeating(VoidCallback action) {
+    _repeatTimer?.cancel();
+    _repeatTimer = Timer.periodic(
+      const Duration(milliseconds: 90),
+      (_) => action(),
+    );
+  }
+
+  void _stopRepeating() {
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopRepeating();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1383,7 +1704,11 @@ class _QtyStepper extends StatelessWidget {
         children: [
           GestureDetector(
             key: const Key('qty-minus'),
-            onTap: onDecrement,
+            onTap: widget.onDecrement,
+            onLongPressStart: (_) => _startRepeating(widget.onDecrement),
+            onLongPressEnd: (_) => _stopRepeating(),
+            onLongPressCancel: _stopRepeating,
+            behavior: HitTestBehavior.opaque,
             child: Container(
               width: 32,
               height: 32,
@@ -1400,13 +1725,24 @@ class _QtyStepper extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Center(
-              child: Text('e.g. $quantity kg', style: AppTextStyles.qtyValue),
+            child: GestureDetector(
+              onTap: widget.onTapValue,
+              behavior: HitTestBehavior.opaque,
+              child: Center(
+                child: Text(
+                  '${widget.quantity} ${widget.unit}',
+                  style: AppTextStyles.qtyValue,
+                ),
+              ),
             ),
           ),
           GestureDetector(
             key: const Key('qty-plus'),
-            onTap: onIncrement,
+            onTap: widget.onIncrement,
+            onLongPressStart: (_) => _startRepeating(widget.onIncrement),
+            onLongPressEnd: (_) => _stopRepeating(),
+            onLongPressCancel: _stopRepeating,
+            behavior: HitTestBehavior.opaque,
             child: Container(
               width: 32,
               height: 32,
@@ -1445,6 +1781,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 12),

@@ -256,38 +256,40 @@ void main() {
           .first,
     );
 
-    // Nothing filled yet: dimmed button, tapping reports it and stays put.
+    // Nothing filled yet: dimmed button, tapping reports every missing
+    // field inline (phone and location start prefilled and valid).
     expect(continueOpacity().opacity, 0.5);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Fill in all fields to continue.'), findsOneWidget);
+    expect(find.text('Enter your name'), findsOneWidget);
+    expect(find.text('Enter business name'), findsOneWidget);
+    expect(find.text('Enter your full address'), findsOneWidget);
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verification Details'), findsNothing);
-
-    // Let the message dismiss so it cannot swallow the next tap.
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
 
     // Fill name + business only (phone/location start prefilled, address empty).
     await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
     await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
     await tester.pump();
     expect(continueOpacity().opacity, 0.5);
+    // Editing a field clears its own error as soon as the value changes.
+    expect(find.text('Enter your name'), findsNothing);
+    expect(find.text('Enter business name'), findsNothing);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Fill in all fields to continue.'), findsOneWidget);
+    expect(find.text('Enter your full address'), findsOneWidget);
+    expect(find.text('Enter your name'), findsNothing);
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verification Details'), findsNothing);
 
     // The last missing field lights the button back up.
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('businessAddress')),
       '12 Main Street',
     );
     await tester.pump();
     expect(continueOpacity().opacity, 1);
+    expect(find.text('Enter your full address'), findsNothing);
   });
 
   testWidgets('the Change link shows a placeholder message', (tester) async {

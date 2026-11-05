@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../data/app_storage.dart';
+import '../data/session_store.dart';
+import 'seller_home_screen.dart';
 import 'welcome_seller_screen.dart';
 
 /// First screen shown when the app opens — static replica of Zeplin
@@ -18,6 +20,12 @@ import 'welcome_seller_screen.dart';
 /// circular arrow button in the bottom-right corner, which continues to
 /// [WelcomeSellerScreen]. The navigation uses `pushReplacement`, so the
 /// splash never stays in the back stack.
+///
+/// The splash is shown only once per install: the first launch after
+/// installing. Tapping the arrow persists [StorageKeys.splashSeenKey], and
+/// [SellerApp] skips straight to the home (signed in) or welcome (signed
+/// out) screen on every later launch. Uninstalling the app clears the
+/// preference, so the splash returns on the next fresh install.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -27,14 +35,39 @@ class SplashScreen extends StatefulWidget {
   static const double designWidth = 412;
   static const double designHeight = 873;
 
+  /// Whether the one-time splash has already been dismissed on this install.
+  static bool get hasSeenSplash =>
+      AppStorage.current?.readString(StorageKeys.splashSeenKey) == 'true';
+
+  /// Records that the splash has been shown, so the next launch skips it.
+  /// Fire-and-forget like the other stores; a failed write only means the
+  /// splash shows again on the next launch.
+  static void markSplashSeen() {
+    AppStorage.current
+        ?.writeString(StorageKeys.splashSeenKey, 'true')
+        .ignore();
+  }
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  /// The arrow continues to the last reached destination: a seller with an
+  /// active session (signed up or logged in on a previous run) resumes at the
+  /// home page, everyone else lands on the Welcome / login screen.
+  ///
+  /// This is the only place the splash is dismissed, so it also records that
+  /// the one-time splash has been shown and later launches skip it.
   void _continue() {
+    SplashScreen.markSplashSeen();
+    final bool authenticated = SessionStore.instance.isAuthenticated;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => authenticated
+            ? const SellerHomeScreen()
+            : const WelcomeSellerScreen(),
+      ),
     );
   }
 

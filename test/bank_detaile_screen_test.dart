@@ -507,13 +507,6 @@ void main() {
   ) async {
     await pumpScreen(tester);
 
-    // Snackbar messages are matched inside the SnackBar itself so the
-    // identical placeholder text in the bank input does not match.
-    Finder snackbarText(String message) => find.descendant(
-      of: find.byType(SnackBar),
-      matching: find.text(message),
-    );
-
     Future<void> tapContinue() async {
       await tester.tap(find.byKey(const Key('bank-continue')));
       await tester.pumpAndSettle();
@@ -521,10 +514,8 @@ void main() {
 
     // 1. Account holder name is missing.
     await tapContinue();
-    expect(snackbarText('Enter your account holder name'), findsOneWidget);
+    expect(find.text('Enter your account holder name'), findsOneWidget);
     expect(find.byType(SellerHomeScreen), findsNothing);
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
 
     // 2. No bank picked yet.
     await tester.enterText(
@@ -533,10 +524,8 @@ void main() {
     );
     await tester.pump();
     await tapContinue();
-    expect(snackbarText('Select your bank'), findsOneWidget);
+    expect(find.text('Please select a bank'), findsOneWidget);
     expect(find.byType(SellerHomeScreen), findsNothing);
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
 
     // 3. Account number too short.
     await tester.tap(find.byKey(const Key('bank-selector')));
@@ -550,12 +539,10 @@ void main() {
     await tester.pump();
     await tapContinue();
     expect(
-      snackbarText('Account number must be at least 9 digits'),
+      find.text('Account number must be at least 9 digits'),
       findsOneWidget,
     );
     expect(find.byType(SellerHomeScreen), findsNothing);
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
 
     // 4. IFSC not verified yet.
     await tester.enterText(
@@ -569,12 +556,10 @@ void main() {
     await tester.pump();
     await tapContinue();
     expect(
-      snackbarText('Verify your IFSC code to continue'),
+      find.text('Verify your IFSC code to continue'),
       findsOneWidget,
     );
     expect(find.byType(SellerHomeScreen), findsNothing);
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
 
     // 5. Everything filled in: the home page opens.
     await tester.tap(find.byKey(const Key('bank-verify-ifsc')));

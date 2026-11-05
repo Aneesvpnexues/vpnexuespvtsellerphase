@@ -4,6 +4,7 @@ import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
+import '../widgets/inline_error.dart';
 
 /// The six onboarding choices in pill order (index == pill order on screen),
 /// kept in sync with the [SellerType] labels persisted to the store.
@@ -39,26 +40,21 @@ class Step02SellerTypeScreen extends StatefulWidget {
 class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
   int? _selectedIndex;
 
-  void _select(int index) => setState(() => _selectedIndex = index);
+  /// True when "Continue" was tapped without picking a pill; drives the red
+  /// message shown just above the button and clears on the next selection.
+  bool _showError = false;
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-          // Keep the message clear of the bottom Continue button.
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-        ),
-      );
-  }
+  void _select(int index) => setState(() {
+    _selectedIndex = index;
+    _showError = false;
+  });
 
   /// Requires a selection (the button is dimmed while none is picked), then
-  /// persists it and continues to business details.
+  /// persists it and continues to business details. A missing pick is
+  /// reported inline, in red, above the Continue button.
   void _continue() {
     if (_selectedIndex == null) {
-      _showMessage('Select a seller type to continue');
+      setState(() => _showError = true);
       return;
     }
     SellerProfileStore.instance.saveSellerType(
@@ -152,6 +148,15 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                       onTap: () => _select(5),
                     ),
                   ),
+                  if (_showError)
+                    const Positioned(
+                      left: 24,
+                      top: 841,
+                      width: 364,
+                      child: InlineErrorText(
+                        'Select a seller type to continue',
+                      ),
+                    ),
                   Positioned(
                     left: 24,
                     top: 866,

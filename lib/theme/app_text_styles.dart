@@ -1264,4 +1264,12 @@ abstract final class AppTextStyles {
     letterSpacing: 0.12,
     color: AppColors.orderLime,
   );
+
+  /// Inline validation error message rendered inside/next to a form field.
+  static const TextStyle fieldError = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+    color: AppColors.fieldError,
+  );
 }

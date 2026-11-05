@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/otp_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_deco.dart';
 
@@ -14,6 +16,11 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // Verify opens a session on success; start every test signed out so the
+    // assertions stay independent.
+    SessionStore.instance.endSession();
+  });
   testWidgets('renders the OTP screen content', (tester) async {
     await pumpScreen(tester);
 
@@ -149,15 +156,16 @@ void main() {
     expect(find.byType(OtpCaret), findsOneWidget);
   });
 
-  testWidgets('verify requires all six digits before opening the location '
-      'page', (tester) async {
+  testWidgets('verify requires the fixed OTP before opening the home page', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     // Empty OTP: message, no navigation.
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
     expect(find.text('Enter the 6-digit OTP'), findsOneWidget);
-    expect(find.text('STEP 01'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
     expect(find.text('Enter OTP'), findsOneWidget);
 
     // Five digits are not enough either.
@@ -166,25 +174,28 @@ void main() {
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
     expect(find.text('Enter the 6-digit OTP'), findsOneWidget);
-    expect(find.text('STEP 01'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
 
-    // Six digits navigate.
+    // Six digits but the wrong code: rejected inline, no session, and the
+    // seller stays on this screen to retype it.
     await tester.enterText(find.byType(TextField), '918273');
     await tester.pump();
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
+    expect(find.text('Invalid OTP. Please try again.'), findsOneWidget);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+    expect(SessionStore.instance.isAuthenticated, isFalse);
 
-    expect(find.text('STEP 01'), findsOneWidget);
-    expect(find.text('Choose your location'), findsOneWidget);
-    expect(find.text('Use my current Location'), findsOneWidget);
-    expect(find.text('Enter OTP'), findsNothing);
-
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
-    navigator.pop();
+    // The fixed test code opens the session and lands on the home page.
+    await tester.enterText(find.byType(TextField), SessionStore.validOtp);
+    await tester.pump();
+    await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enter OTP'), findsOneWidget);
-    expect(find.text('STEP 01'), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(SessionStore.instance.isAuthenticated, isTrue);
+    expect(SessionStore.instance.method, 'login');
   });
 
   testWidgets('shows the dial code and phone number passed from the welcome '

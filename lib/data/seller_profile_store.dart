@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
+import 'app_storage.dart';
 
 /// The seller categories the app knows about.
 ///
@@ -49,13 +53,22 @@ String initialsForName(String name) {
   return parts.take(2).map((part) => part.substring(0, 1).toUpperCase()).join();
 }
 
+/// Seller profile (name, contact, type, business details).
+///
+/// The store keeps its original in-memory behaviour — every mutation is
+/// synchronous and notifies listeners — and additionally persists each change
+/// when a [KeyValueStore] is attached (done once at boot from `main()`).
+/// Without attached storage (plain unit tests) it is purely in-memory, so the
+/// existing tests are unaffected.
 class SellerProfileStore extends ChangeNotifier {
-  SellerProfileStore();
+  SellerProfileStore({this._storage});
 
   static final SellerProfileStore instance = SellerProfileStore();
 
   static const String defaultName = 'Ramesh Kumar';
   static const String defaultMobile = '+91 12345 67890';
+
+  KeyValueStore? _storage;
 
   String _name = defaultName;
   String _mobile = defaultMobile;
@@ -83,6 +96,28 @@ class SellerProfileStore extends ChangeNotifier {
 
   String get sellerSummary => '${_sellerType.label}, Salem, Tamil Nadu';
 
+  /// Attaches persistent [storage] and restores the saved profile, if any
+  /// (app relaunch). Called once at boot from `main()`.
+  Future<void> attachStorage(KeyValueStore storage) async {
+    _storage = storage;
+    final String? raw = storage.readString(StorageKeys.sellerProfileKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final Map<String, dynamic> map =
+          jsonDecode(raw) as Map<String, dynamic>;
+      _name = map['name'] as String? ?? defaultName;
+      _mobile = map['mobile'] as String? ?? defaultMobile;
+      _email = map['email'] as String? ?? '';
+      _sellerType = sellerTypeFromName(map['sellerType'] as String?);
+      _businessName = map['businessName'] as String? ?? '';
+      _businessLocation = map['businessLocation'] as String? ?? '';
+      _businessAddress = map['businessAddress'] as String? ?? '';
+      notifyListeners();
+    } catch (_) {
+      // Corrupt record — keep the in-memory defaults.
+    }
+  }
+
   void save({
     required String name,
     required String mobile,
@@ -94,6 +129,7 @@ class SellerProfileStore extends ChangeNotifier {
     _email = email.trim();
     _sellerType = sellerType;
     notifyListeners();
+    _persist();
   }
 
   /// Persists the STEP 02 onboarding choice without touching the other
@@ -101,6 +137,7 @@ class SellerProfileStore extends ChangeNotifier {
   void saveSellerType(SellerType sellerType) {
     _sellerType = sellerType;
     notifyListeners();
+    _persist();
   }
 
   /// Persists the five STEP 03 business fields (the name doubles as the
@@ -118,6 +155,7 @@ class SellerProfileStore extends ChangeNotifier {
     _businessLocation = location.trim();
     _businessAddress = address.trim();
     notifyListeners();
+    _persist();
   }
 
   void reset() {
@@ -129,5 +167,34 @@ class SellerProfileStore extends ChangeNotifier {
     _businessLocation = '';
     _businessAddress = '';
     notifyListeners();
+    _persist();
   }
+
+  void _persist() {
+    final KeyValueStore? storage = _storage;
+    if (storage == null) return;
+    storage
+        .writeString(
+          StorageKeys.sellerProfileKey,
+          jsonEncode(<String, Object?>{
+            'name': _name,
+            'mobile': _mobile,
+            'email': _email,
+            'sellerType': _sellerType.name,
+            'businessName': _businessName,
+            'businessLocation': _businessLocation,
+            'businessAddress': _businessAddress,
+          }),
+        )
+        .ignore();
+  }
+}
+
+/// Parses a persisted seller-type name, falling back to [SellerType.farmer]
+/// for unknown or missing values.
+SellerType sellerTypeFromName(String? name) {
+  for (final SellerType type in SellerType.values) {
+    if (type.name == name) return type;
+  }
+  return SellerType.farmer;
 }
