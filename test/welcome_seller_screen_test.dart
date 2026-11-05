@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
+import 'package:seller_app/services/auth_flow.dart';
 import 'package:seller_app/theme/app_colors.dart';
+
+import 'fake_auth_flow.dart';
 
 /// Pumps the Welcome Seller screen on the 412x917 artboard the design was
 /// drawn for.
@@ -14,6 +19,18 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  late FakeAuthFlow fake;
+
+  setUp(() {
+    fake = FakeAuthFlow();
+    AuthFlow.debugOverride = fake;
+    SellerProfileStore.instance.reset();
+  });
+
+  tearDown(() {
+    AuthFlow.debugOverride = null;
+    SellerProfileStore.instance.reset();
+  });
   testWidgets('renders the Welcome Seller content', (tester) async {
     await pumpScreen(tester);
 
@@ -47,14 +64,13 @@ void main() {
     await pumpScreen(tester);
 
     final assets = tester.widgetList<Image>(find.byType(Image)).toList();
-    expect(assets.length, 5);
+    expect(assets.length, 4);
     expect(
       assets.map((i) => (i.image as AssetImage).assetName).toSet(),
       {
         WelcomeSellerScreen.leafAsset,
         WelcomeSellerScreen.heroAsset,
         WelcomeSellerScreen.flagAsset,
-        WelcomeSellerScreen.waveAsset,
         WelcomeSellerScreen.sendAsset,
       },
     );
@@ -91,36 +107,36 @@ void main() {
 
     // Segmented control: track x 24..386 y 506..558, pill 191 wide.
     final track = rectOf(_findTrack(tester));
-    expect(track.left, closeTo(24, 1));
+    expect(track.left, closeTo(22, 1));
     expect(track.top, closeTo(506, 1));
     expect(track.width, closeTo(362, 1));
     expect(track.height, closeTo(52, 1));
 
     final pill = rectOf(_findPrimaryContainers(tester).first);
-    expect(pill.left, closeTo(24, 1));
+    expect(pill.left, closeTo(22, 1));
     expect(pill.top, closeTo(505, 1));
     expect(pill.width, closeTo(191, 1));
     expect(pill.height, closeTo(53, 1));
 
     expect(
       rectOf(find.text('Login')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(rectOf(find.text('Login')).top, closeTo(522.6, 1.5));
     expect(rectOf(find.text('Sign Up')).left, closeTo(215, 1));
 
     // Card copy block.
-    expect(rectOf(find.text('Welcome back')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Welcome back')).left, closeTo(22, 1));
     expect(rectOf(find.text('Welcome back')).top, closeTo(587.8, 1.5));
     expect(
       rectOf(find.text('Enter your phone number to proceed')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(
       rectOf(find.text('Enter your phone number to proceed')).top,
       closeTo(612.3, 2),
     );
-    expect(rectOf(find.text('Phone Number')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Phone Number')).left, closeTo(22, 1));
     expect(rectOf(find.text('Phone Number')).top, closeTo(656.5, 1.5));
 
     // Inputs: country box x 24..107, phone box x 112..389, y 684..738.
@@ -128,21 +144,24 @@ void main() {
     expect(boxes.length, 2);
     final country = rectOf(boxes[0]);
     final phone = rectOf(boxes[1]);
-    expect(country.left, closeTo(24, 1));
+    expect(country.left, closeTo(22, 1));
     expect(country.top, closeTo(684, 1));
     expect(country.width, closeTo(83, 1));
     expect(country.height, closeTo(54, 1));
     expect(phone.left, closeTo(112, 1));
     expect(phone.width, closeTo(277, 1));
 
-    // Redesigned box shows the placeholder instead of a static caret.
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    // The field shows a resting caret instead of a placeholder.
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
 
     // Send OTP button: x 24..388, y 749..801.
     final button = rectOf(_findPrimaryContainers(tester).last);
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(749, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(52, 1));
 
     // Footer sits at y 859.
@@ -215,7 +234,10 @@ void main() {
       (tester) async {
     await pumpScreen(tester);
 
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
 
     // Tapping the field opens the input connection (keyboard on device).
     expect(tester.testTextInput.isVisible, isFalse);
@@ -238,7 +260,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('9876543210'), findsNothing);
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      isNull,
+    );
   });
 
   testWidgets('phone input is numeric only and the length follows the '
@@ -325,12 +350,16 @@ void main() {
   testWidgets('send OTP opens the OTP screen and back returns', (tester) async {
     await pumpScreen(tester);
 
+    await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
 
     expect(find.text('Enter OTP'), findsOneWidget);
     expect(find.text('Verify'), findsOneWidget);
     expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+    // The E.164 number composed from the picked country reached Firebase.
+    expect(fake.sentE164, <String>['+919876543210']);
+    expect(fake.sentDisplay, <String>['+91 9876543210']);
 
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
     navigator.pop();
@@ -340,15 +369,15 @@ void main() {
     expect(find.text('Enter OTP'), findsNothing);
   });
 
-  testWidgets('switching to Sign Up swaps the phone form for Name, E-Mail '
-      'and Password', (tester) async {
+  testWidgets('switching to Sign Up swaps the login form for Name, Phone '
+      'Number and Password', (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
     await tester.pumpAndSettle();
 
     expect(find.text('Name', findRichText: true), findsOneWidget);
-    expect(find.text('E-Mail', findRichText: true), findsOneWidget);
+    expect(find.text('Phone Number', findRichText: true), findsOneWidget);
     expect(find.text('Password', findRichText: true), findsOneWidget);
     expect(find.text('Create account'), findsOneWidget);
 
@@ -363,10 +392,9 @@ void main() {
       findsOneWidget,
     );
 
-    // The phone form is gone in this state.
+    // The login form is gone in this state.
     expect(find.text('Welcome back'), findsNothing);
     expect(find.text('Send OTP'), findsNothing);
-    expect(find.text('Phone Number'), findsNothing);
     expect(find.text('+91'), findsNothing);
     expect(find.byType(TextField), findsNWidgets(3));
 
@@ -387,9 +415,9 @@ void main() {
 
     final button =
         tester.getRect(green.last).translate(-origin.dx, -origin.dy);
-    expect(button.left, closeTo(24, 2));
+    expect(button.left, closeTo(22, 2));
     expect(button.top, closeTo(784, 2));
-    expect(button.width, closeTo(364, 2));
+    expect(button.width, closeTo(368, 2));
     expect(button.height, closeTo(52, 2));
   });
 
@@ -437,7 +465,7 @@ void main() {
 
     // Segmented control keeps the login position.
     final track = rectOf(_findTrack(tester));
-    expect(track.left, closeTo(24, 1));
+    expect(track.left, closeTo(22, 1));
     expect(track.top, closeTo(506, 1));
     expect(track.width, closeTo(362, 1));
     expect(track.height, closeTo(52, 1));
@@ -448,12 +476,12 @@ void main() {
     expect(hero.top, closeTo(225, 1));
 
     final boxes = _findBorderedBoxes(tester);
-    expect(boxes.length, 3, reason: 'Name, E-Mail and Password fields');
+    expect(boxes.length, 3, reason: 'Name, Phone Number and Password fields');
     const tops = [574, 644, 714];
     for (var i = 0; i < 3; i++) {
       final field = rectOf(boxes[i]);
-      expect(field.left, closeTo(24, 1));
-      expect(field.width, closeTo(364, 1));
+      expect(field.left, closeTo(22, 1));
+      expect(field.width, closeTo(368, 1));
       expect(field.height, closeTo(54, 1));
       expect(field.top, closeTo(tops[i], 1));
     }
@@ -494,6 +522,53 @@ void main() {
     expect(find.text('Name', findRichText: true), findsOneWidget);
     expect(find.text('Welcome back'), findsNothing);
     expect(find.byType(Image), findsNWidgets(2));
+  });
+
+  testWidgets('Create account with empty fields goes straight to Home',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
+    await tester.pumpAndSettle();
+
+    // Name, Phone Number and Password are all empty.
+    expect(fake.sentE164, isEmpty);
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    // No validation snackbar, no OTP — goes straight to Home.
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(fake.sentE164, isEmpty, reason: 'Firebase must not be called');
+    expect(
+      find.text('Enter a valid 10-digit mobile number.'),
+      findsNothing,
+      reason: 'no validation error for empty demo',
+    );
+  });
+
+  testWidgets('Create account with demo credentials goes straight to Home',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'john');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Phone Number'),
+      '1234567890',
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'vpnesuxe');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(fake.sentE164, isEmpty, reason: 'demo login must skip Firebase');
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
@@ -554,3 +629,4 @@ List<Finder> _findBorderedBoxes(WidgetTester tester) {
       .map(find.byWidget)
       .toList();
 }
+
