@@ -89,7 +89,7 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
                   top: 73,
                   child: PageHeader(title: 'Order Details'),
                 ),
-                const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 22, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
                 Positioned(
                   left: 25,
@@ -101,7 +101,7 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
                   ),
                 ),
                 Positioned(
-                  left: 24,
+                  left: 22,
                   top: 847,
                   child: _ContinueButton(locked: !_complete, onSubmit: _submit),
                 ),
@@ -141,12 +141,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -714,7 +714,7 @@ class _CodeCard extends StatelessWidget {
             ),
           ),
           const Positioned(
-            left: 24,
+            left: 22,
             top: 117,
             child: _Label(
               'Pickup code',
@@ -997,7 +997,7 @@ class _ContinueButtonState extends State<_ContinueButton>
       child: AnimatedContainer(
         key: const Key('pickup-slide-bar'),
         duration: const Duration(milliseconds: 200),
-        width: 364,
+        width: 368,
         height: 58,
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(Radius.circular(29)),

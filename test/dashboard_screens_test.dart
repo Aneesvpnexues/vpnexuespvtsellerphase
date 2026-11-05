@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/product_store.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
-import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
@@ -14,15 +13,16 @@ import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
+import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
+import 'package:seller_app/screens/report_problem_screen.dart';
 import 'package:seller_app/screens/review_ratings_page.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
 import 'package:seller_app/screens/wallet_page.dart';
-import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
 import 'package:seller_app/widgets/page_header.dart';
@@ -42,12 +42,31 @@ Future<void> pumpProfile(WidgetTester tester, Widget widget) async {
 Future<void> pumpAddProducts(
   WidgetTester tester, {
   ProductPhotoPicker? photoPicker,
+  ProductSaver? productSaver,
 }) async {
   tester.view.physicalSize = const Size(412, 917);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(home: AddProductsScreen(photoPicker: photoPicker)),
+    MaterialApp(
+      home: AddProductsScreen(
+        photoPicker: photoPicker,
+        productSaver:
+            productSaver ??
+            (ProductDraft draft, List<ProductPhoto> photos) async {
+              return ProductStore.instance.addProduct(
+                name: draft.name,
+                category: draft.category,
+                price: draft.price,
+                unit: draft.unit,
+                quantity: draft.quantity,
+                description: draft.description,
+                status: draft.status,
+                photos: photos,
+              );
+            },
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -61,15 +80,6 @@ final _photoBytes = base64Decode(
 void main() {
   setUp(() {
     SellerProfileStore.instance.reset();
-    // The route guard only opens authenticated screens while a session is
-    // active; these tests exercise the in-app navigation directly.
-    SessionStore.instance.startSession(
-      phone: '9876543210',
-      userName: 'Test Seller',
-      method: 'login',
-    );
-    // jacinth's Personal Details screen saves through Supabase; the seam
-    // keeps the save local so the Profile card assertions stay hermetic.
     PersonalDetailsScreen.debugProfileSaver = ({
       required String name,
       required String mobile,
@@ -133,10 +143,9 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Balance card: x 24..388, y 65..315 (design 121..371, top trim -56);
-      // the label sits at x41 with the merged theme's text metrics.
+      // Balance card: x 22..390, y 65..315 (design 121..371, top trim -56).
       final balance = rectOf(find.text('Withdrawal balance').hitTestable());
-      expect(balance.left, closeTo(41, 1));
+      expect(balance.left, closeTo(46, 1));
 
       final withdraw = rectOf(find.text('Withdraw'));
       // Label is vertically centered inside the y 255..292 button.
@@ -157,6 +166,16 @@ void main() {
       // Bottom nav present.
       expect(find.byType(BottomNavBar), findsOneWidget);
       expect(find.byType(ProfileShell), findsOneWidget);
+    });
+
+    testWidgets('header back opens the home page', (tester) async {
+      await pumpProfile(tester, const ProfileScreen());
+
+      await tester.tap(find.byKey(PageHeader.backKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProfileScreen), findsNothing);
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
     });
 
     testWidgets('Business tab pushes the Business screen', (tester) async {
@@ -356,13 +375,13 @@ void main() {
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Language, notifications'), findsOneWidget);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
-      // Design keeps the typo in "Supppport" (three p's) — string above
-      // uses it; also assert no Account/Business rows leak in.
+      expect(find.text('Help & Support'), findsOneWidget);
+      // Log out lives in Settings, not on the App tab.
+      expect(find.text('Log out'), findsNothing);
+      // Assert no Account/Business rows leak in.
       expect(find.text('Personal Details'), findsNothing);
       expect(find.text('Wallet & Transactions'), findsNothing);
-      // Chevrons on Settings/Help only — Log out has none.
+      // Chevrons on Settings/Help.
       expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
       // Shared chrome + App tab selected.
       expect(find.text('Withdrawal balance'), findsOneWidget);
@@ -381,24 +400,19 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header: back circle (24,24) d26, title Text top 28 (left 66 with
-      // the merged artboard's header placement).
+      // Header: back circle (24,24) d26, title Text top 28.
       final header = rectOf(find.text('Profile').first);
-      expect(header.left, closeTo(66, 1));
+      expect(header.left, closeTo(68, 1));
       expect(header.top, closeTo(28, 1));
 
-      // List card top at y560 at card x17 (merged shell); Settings title
-      // Text at card-rel (68,23).
+      // List card top at y560; Settings title Text at card-rel (68,23).
       final settings = rectOf(find.text('Settings'));
-      expect(settings.left, closeTo(17 + 68, 1));
+      expect(settings.left, closeTo(22 + 68, 1));
       expect(settings.top, closeTo(560 + 23, 3));
 
-      // Help title at card-rel (68,89); Log out at (68,143).
-      final help = rectOf(find.text('Help & Suppport'));
+      // Help title at card-rel (68,89).
+      final help = rectOf(find.text('Help & Support'));
       expect(help.top, closeTo(560 + 89, 3));
-      final logout = rectOf(find.text('Log out'));
-      expect(logout.top, closeTo(560 + 143, 3));
-      expect(logout.left, closeTo(17 + 68, 1));
 
       // Subtitle below Settings.
       final sub = rectOf(find.text('Language, notifications'));
@@ -435,16 +449,6 @@ void main() {
       expect(find.text('Personal Details'), findsNothing);
     });
 
-    testWidgets('Log out returns to the login screen', (tester) async {
-      await pumpProfile(tester, const ProfileAppScreen());
-
-      await tester.tap(find.text('Log out'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(WelcomeSellerScreen), findsOneWidget);
-      expect(find.text('Withdrawal balance'), findsNothing);
-    });
-
     testWidgets('Settings row opens the settings page', (tester) async {
       await pumpProfile(tester, const ProfileAppScreen());
 
@@ -460,8 +464,39 @@ void main() {
       await tester.tap(find.byKey(PageHeader.backKey));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsNothing);
-      expect(find.text('Help & Suppport'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('Log out'), findsNothing);
+    });
+
+    testWidgets('Help row opens the Help & Support screen', (tester) async {
+      await pumpProfile(tester, const ProfileAppScreen());
+
+      await tester.tap(find.text('Help & Support'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('How can we help?'), findsOneWidget);
+
+      await tester.tap(find.text('Report a problem'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportProblemScreen), findsOneWidget);
+      expect(find.text('Submit'), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+
+      await tester.tap(
+        find.image(const AssetImage('assets/order/ic_back.png')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HelpSupportScreen), findsNothing);
+      expect(find.text('Help & Support'), findsOneWidget);
     });
 
     testWidgets('Help & Suppport row opens the help screen', (tester) async {
@@ -532,10 +567,10 @@ void main() {
 
       // Balance card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Available balance'));
-      expect(label.left, closeTo(24 + 21, 1));
+      expect(label.left, closeTo(22 + 21, 1));
       expect(label.top, closeTo(65 + 20, 2));
       final amount = rectOf(find.text('\u20B912,480'));
-      expect(amount.left, closeTo(24 + 22, 1));
+      expect(amount.left, closeTo(22 + 22, 1));
       expect(amount.top, closeTo(65 + 44, 2));
       final sub = rectOf(
         find.text('\u20B93,480 more coming from orders in prog.'),
@@ -550,18 +585,18 @@ void main() {
 
       // Transactions card at (24, 320); title rel (22, 17).
       final cardTitle = rectOf(find.text('Transactions').last);
-      expect(cardTitle.left, closeTo(24 + 22, 1));
+      expect(cardTitle.left, closeTo(22 + 22, 1));
       expect(cardTitle.top, closeTo(320 + 17, 2));
 
       // Row 1: tile top rel 55, title rel 58.5, date rel 74.5, amount rel 70
       // - all card-rel, card origin (24, 320).
       final rowTitle = rectOf(find.text('Order #NX4852  Akash Stores'));
-      expect(rowTitle.left, closeTo(24 + 67, 1));
+      expect(rowTitle.left, closeTo(22 + 67, 1));
       expect(rowTitle.top, closeTo(320 + 58.5, 2));
       final date = rectOf(find.text('12 Mar 2024'));
       expect(date.top, closeTo(320 + 74.5, 2));
       final credit = rectOf(find.text('+\u20B912,480'));
-      expect(credit.right, closeTo(24 + 364 - 21, 1.5));
+      expect(credit.right, closeTo(22 + 364 - 21, 1.5));
       expect(credit.top, closeTo(320 + 70, 2));
 
       // Row 4 sits 174 lower (3 pitches).
@@ -699,22 +734,22 @@ void main() {
 
       // Summary card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Average rating'));
-      expect(label.left, closeTo(24 + 21, 1));
+      expect(label.left, closeTo(22 + 21, 1));
       expect(label.top, closeTo(65 + 20, 2));
       final amount = rectOf(find.text('4.8'));
-      expect(amount.left, closeTo(24 + 22, 1));
+      expect(amount.left, closeTo(22 + 22, 1));
       expect(amount.top, closeTo(65 + 44, 2));
       final sub = rectOf(find.text('125 reviews'));
       expect(sub.top, closeTo(65 + 100, 2));
 
       // Reviews card title rel (22, 17); card origin (24, 265).
       final cardTitle = rectOf(find.text('Reviews'));
-      expect(cardTitle.left, closeTo(24 + 22, 1));
+      expect(cardTitle.left, closeTo(22 + 22, 1));
       expect(cardTitle.top, closeTo(265 + 17, 2));
 
       // Row 1 name rel (70, 10), row 4 sits 336 lower (3 pitches of 112).
       final row1 = rectOf(find.text('Anees'));
-      expect(row1.left, closeTo(24 + 70, 1));
+      expect(row1.left, closeTo(22 + 70, 1));
       expect(row1.top, closeTo(265 + 55 + 10, 2));
       final row4 = rectOf(find.text('Senthil'));
       expect(row4.top, closeTo(265 + 55 + 10 + 336, 2));
@@ -811,7 +846,9 @@ void main() {
     testWidgets('Continue adds the product with the entered details', (
       tester,
     ) async {
-      await pumpAddProducts(tester);
+      Future<ProductPhoto?> picker() async => ProductPhoto(bytes: _photoBytes);
+
+      await pumpAddProducts(tester, photoPicker: picker);
 
       await tester.enterText(
         find.byKey(const ValueKey('product-name')),
@@ -823,6 +860,15 @@ void main() {
       );
       await tester.tap(find.text('Fruits'));
       await tester.pump();
+
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('add-photo')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-photo')));
+      await tester.pumpAndSettle();
 
       await tester.dragUntilVisible(
         find.text('Draft'),
@@ -849,7 +895,7 @@ void main() {
       expect(product.unit, 'kg');
       expect(product.quantity, 50);
       expect(product.status, ProductStatus.draft);
-      expect(product.photos, isEmpty);
+      expect(product.photos, hasLength(1));
     });
 
     testWidgets('Continue includes the selected photos', (tester) async {
@@ -1366,10 +1412,40 @@ void main() {
       expect(find.text('e.g. 50 kg'), findsOneWidget);
       await tester.tap(find.byKey(const Key('qty-plus')));
       await tester.pump();
-      expect(find.text('e.g. 51 kg'), findsOneWidget);
+      expect(find.text('51 kg'), findsOneWidget);
       await tester.tap(find.byKey(const Key('qty-minus')));
       await tester.pump();
-      expect(find.text('e.g. 50 kg'), findsOneWidget);
+      expect(find.text('50 kg'), findsOneWidget);
+    });
+
+    testWidgets('tapping the quantity display opens the kg input dialog', (
+      tester,
+    ) async {
+      await pumpAddProducts(tester);
+      await tester.dragUntilVisible(
+        find.byKey(const Key('qty-display')),
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('qty-display')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('qty-dialog')), findsOneWidget);
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('qty-dialog-input')),
+      );
+      expect(field.controller?.text, '50');
+
+      await tester.enterText(find.byKey(const Key('qty-dialog-input')), '137');
+      await tester.tap(find.byKey(const Key('qty-dialog-set')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('qty-dialog')), findsNothing);
+      expect(find.text('137 kg'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('qty-plus')));
+      await tester.pump();
+      expect(find.text('138 kg'), findsOneWidget);
     });
 
     testWidgets('category and status chips select', (tester) async {
@@ -1407,8 +1483,8 @@ void main() {
       expect(find.text('22/500'), findsOneWidget);
     });
 
-    testWidgets('back arrow pops', (tester) async {
-      // Push from a stub home so maybePop has somewhere to go.
+    testWidgets('back arrow opens the home page', (tester) async {
+      // Push from a stub route to prove the header back is not a plain pop.
       tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -1431,6 +1507,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back).first);
       await tester.pumpAndSettle();
       expect(find.byType(AddProductsScreen), findsNothing);
+      expect(find.byType(SellerHomeScreen), findsOneWidget);
     });
 
     testWidgets('bottom nav FAB pops and Profile tab opens ProfileScreen', (
@@ -1578,6 +1655,29 @@ void main() {
       expect(find.text('Add Products'), findsOneWidget);
     });
 
+    testWidgets('Preview product opens the product details page', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 1515);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Preview product'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProductDetailsScreen), findsOneWidget);
+      expect(find.text('Go back to order'), findsOneWidget);
+      expect(find.text('Fresh Tomatoes'), findsOneWidget);
+
+      await tester.tap(find.text('Go back to order'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderPrivewScreen), findsOneWidget);
+      expect(find.byType(ProductDetailsScreen), findsNothing);
+    });
+
     testWidgets('renders at the measured 412x917 geometry', (tester) async {
       tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;
@@ -1589,6 +1689,12 @@ void main() {
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, const Color(0xFFFAFBF3));
+
+      // Floating back circle sits in the empty band above the hero.
+      final back = tester.getRect(find.byKey(const Key('order-preview-back')));
+      expect(back.left, closeTo(22, 0.6));
+      expect(back.top, closeTo(56, 0.6));
+      expect(back.size, const Size(26, 26));
 
       // Baked hero (card + shadow, baked title erased in the asset).
       final hero = tester.getRect(
@@ -1645,3 +1751,5 @@ void main() {
     });
   });
 }
+
+

@@ -36,8 +36,8 @@ class VerificationKycScreen extends StatelessWidget {
                 top: 73,
                 child: PageHeader(title: 'Verification (KYC)'),
               ),
-              Positioned(left: 24, top: 132, child: _KycBanner()),
-              Positioned(left: 24, top: 235, child: _DocumentsCard()),
+              Positioned(left: 22, top: 132, child: _KycBanner()),
+              Positioned(left: 22, top: 235, child: _DocumentsCard()),
               Positioned(
                 left: 59,
                 top: 528,

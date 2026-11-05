@@ -44,7 +44,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Verification (KYC)')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Verification (KYC)')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Verification (KYC)')).top, closeTo(22, 4));
     expect(rectOf(find.text('Verified Seller')).left, closeTo(116, 3));
     expect(rectOf(find.text('Verified Seller')).top, closeTo(105, 6));
     expect(
@@ -103,3 +103,4 @@ void main() {
     expect(find.text('Verified Seller'), findsOneWidget);
   });
 }
+

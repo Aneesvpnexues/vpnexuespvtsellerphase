@@ -36,10 +36,10 @@ class OrderPickupSuccessScreen extends StatelessWidget {
                   top: 73,
                   child: PageHeader(title: 'Order Details'),
                 ),
-                const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 22, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
                 const Positioned(left: 25, top: 359, child: _SuccessCard()),
-                const Positioned(left: 24, top: 847, child: _BackButton()),
+                const Positioned(left: 22, top: 847, child: _BackButton()),
               ],
             ),
           ),
@@ -76,12 +76,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -801,7 +801,7 @@ class _BackButtonState extends State<_BackButton>
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
-          width: 364,
+          width: 368,
           height: 58,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(29)),

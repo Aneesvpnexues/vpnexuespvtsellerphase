@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
-import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
+import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/services/auth_flow.dart';
 
@@ -86,8 +86,9 @@ void main() {
     expect(fake.sendCalls, 1);
   });
 
-  testWidgets('auto-verification skips the OTP screen and lands on STEP 01', (
-    tester,
+  testWidgets(
+    'auto-verification skips the OTP screen and lands on Verify Your Details',
+    (tester,
   ) async {
     fake.autoVerify = true;
     await pumpWelcome(tester);
@@ -97,7 +98,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(OtpScreen), findsNothing);
-    expect(find.byType(Step01LocationScreen), findsOneWidget);
+    expect(find.byType(VerifyDetaileScreen), findsOneWidget);
     expect(SellerProfileStore.instance.mobile, '+91 9876543210');
     expect(fake.verifiedCodes, isEmpty);
   });
@@ -113,7 +114,7 @@ void main() {
 
     // Not tapped yet -> no navigation at all.
     expect(find.byType(OtpScreen), findsNothing);
-    expect(find.byType(Step01LocationScreen), findsNothing);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
 
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();

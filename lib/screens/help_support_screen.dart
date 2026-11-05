@@ -149,7 +149,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           trimTop: HelpSupportScreen.trimTop,
           child: Stack(
             children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(left: 22, top: 73, child: _BackCircle()),
               const Positioned(
                 left: 68,
                 top: 73,
@@ -161,9 +161,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               ),
               const Positioned(left: 25, top: 121, child: _HelpHero()),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 433,
-                width: 364,
+                width: 368,
                 height: 45,
                 child: Container(
                   decoration: BoxDecoration(
@@ -703,7 +703,7 @@ class _HelpHero extends StatelessWidget {
               ),
             ),
             const Positioned(
-              left: 246,
+              left: 244,
               top: 250,
               child: LabelText(
                 'WhatsApp',
@@ -979,3 +979,4 @@ class _TopicRow extends StatelessWidget {
     );
   }
 }
+

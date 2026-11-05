@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
-import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
+import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/services/auth_flow.dart';
 import 'package:seller_app/theme/app_colors.dart';
 import 'package:seller_app/widgets/bottom_deco.dart';
@@ -146,10 +146,10 @@ void main() {
     Rect rectOf(Finder finder) => tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     // Horizontal margin is 24 on the 412 artboard.
-    expect(topLeftOf(find.text('Enter OTP')).dx, closeTo(24, 1));
+    expect(topLeftOf(find.text('Enter OTP')).dx, closeTo(22, 1));
     expect(topLeftOf(find.text('We\u2019ve sent a 6-digit code to')).dx,
-        closeTo(24, 1));
-    expect(topLeftOf(find.text('+91 1234567890')).dx, closeTo(24, 1));
+        closeTo(22, 1));
+    expect(topLeftOf(find.text('+91 1234567890')).dx, closeTo(22, 1));
 
     // Vertical anchors, measured from the design PNG.
     expect(topLeftOf(find.text('Enter OTP')).dy, closeTo(373, 2));
@@ -161,14 +161,14 @@ void main() {
 
     // OTP row: x 24..388, y 521..583, height 62.
     final otpRow = rectOf(find.byType(Row).first);
-    expect(otpRow.left, closeTo(24, 1));
+    expect(otpRow.left, closeTo(22, 1));
     expect(otpRow.right, closeTo(388, 1));
     expect(otpRow.top, closeTo(521, 2));
     expect(otpRow.height, closeTo(62, 2));
 
     // Verify button: y 731..785, full width inside the 24px margins.
     final button = rectOf(_findVerifyButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.right, closeTo(388, 1));
     expect(button.top, closeTo(731, 2));
     expect(button.height, closeTo(54, 2));
@@ -217,7 +217,7 @@ void main() {
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(Step01LocationScreen), findsNothing);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
     expect(find.text('Enter OTP'), findsOneWidget);
     expect(fake.verifiedCodes, isEmpty);
   });
@@ -240,14 +240,14 @@ void main() {
       find.text('Incorrect OTP. Check the code and try again.'),
       findsOneWidget,
     );
-    expect(find.byType(Step01LocationScreen), findsNothing);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
     expect(find.text('Enter OTP'), findsOneWidget);
     // Boxes are empty again: caret back in the first box, no digits left.
     expect(find.byType(OtpCaret), findsOneWidget);
     expect(find.text('1'), findsNothing);
   });
 
-  testWidgets('verify navigates to the location page and back', (
+  testWidgets('verify navigates to the verify-details page and back', (
     tester,
   ) async {
     await pumpScreen(tester);
@@ -257,11 +257,11 @@ void main() {
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
-    expect(find.text('STEP 01'), findsOneWidget);
-    expect(find.text('Choose your location'), findsOneWidget);
-    expect(find.text('Use my current Location'), findsOneWidget);
+    // A new seller starts the three-step onboarding at Verify Your Details.
+    expect(find.byType(VerifyDetaileScreen), findsOneWidget);
+    expect(find.text('Verify your'), findsOneWidget);
     expect(find.text('Enter OTP'), findsNothing);
-    // The verified number is handed to the profile store for STEP 03-05.
+    // The verified number is handed to the profile store for STEP 03.
     expect(SellerProfileStore.instance.mobile, '+91 1234567890');
 
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
@@ -269,7 +269,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Enter OTP'), findsOneWidget);
-    expect(find.text('STEP 01'), findsNothing);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
   });
 }
 
@@ -281,3 +281,4 @@ Finder _findVerifyButton() {
         (w.decoration as BoxDecoration).color == AppColors.primary,
   );
 }
+

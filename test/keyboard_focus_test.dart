@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:seller_app/screens/bank_detaile.dart';
+import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 
 /// The soft keyboard must open when a field is tapped *and stay open*: the
@@ -60,5 +62,41 @@ void main() {
       lessThanOrEqualTo(917 - _keyboard + 1),
       reason: 'the focused field must be revealed above the keypad',
     );
+  });
+
+  testWidgets('Business address keeps focus and scrolls above the keyboard', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const Step03BusinessDetailsScreen(),
+      const Size(412, 917),
+    );
+
+    await _tapAndOpenKeyboard(tester, find.byKey(const Key('businessAddress')));
+
+    expect(
+      _focusInsideTextInput(FocusManager.instance.primaryFocus),
+      isTrue,
+      reason: 'the keyboard opening must not drop focus on the address field',
+    );
+    final field = tester.getRect(find.byKey(const Key('businessAddress')));
+    expect(field.bottom, lessThanOrEqualTo(917 - _keyboard + 1));
+  });
+
+  testWidgets('Bank IFSC field keeps focus and stays above the keyboard', (
+    tester,
+  ) async {
+    await _pump(tester, const BankDetaileScreen(), const Size(412, 936));
+
+    await _tapAndOpenKeyboard(tester, find.byKey(const Key('bank-ifsc-field')));
+
+    expect(
+      _focusInsideTextInput(FocusManager.instance.primaryFocus),
+      isTrue,
+      reason: 'the keyboard opening must not drop focus on the IFSC field',
+    );
+    final field = tester.getRect(find.byKey(const Key('bank-ifsc-field')));
+    expect(field.bottom, lessThanOrEqualTo(936 - _keyboard + 1));
   });
 }

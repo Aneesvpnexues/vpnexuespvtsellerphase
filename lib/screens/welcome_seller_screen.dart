@@ -1,6 +1,5 @@
-import 'dart:math' as math;
+import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,15 +7,13 @@ import '../data/country_codes.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
-import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
-import '../data/user_store.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/inline_error.dart';
+import '../widgets/keyboard_aware_canvas.dart';
 import 'bank_detaile.dart';
-import 'location_screen.dart';
+import 'business_details_screen.dart';
 import 'otp_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
@@ -30,27 +27,17 @@ import 'verify_detaile.dart';
 /// other sizes it scales down uniformly instead of overflowing.
 ///
 /// The segmented Login / Sign Up control switches between the two states:
-/// - Login (default): hero + phone number form; "Send OTP" validates the
-///   typed digits for the selected country, composes the E.164 number and
-///   asks Firebase ([AuthFlow.sendOtp]) to send a real SMS. The OTP screen
-///   opens only from Firebase's codeSent callback, and verification is
-///   confirmed by Firebase — there are no fixed test numbers or hardcoded
-///   codes anywhere in this flow. Android instant verification can finish
-///   before codeSent, in which case [_routeAfterLogin] continues directly.
-/// - Sign Up: identical layout with the phone form swapped for Name / Phone /
-///   E-Mail / Password fields; "Create account" validates them (name, phone
-///   length for the selected country, e-mail format, password of at least 6
-///   characters, and a phone that is not already registered), stores the
-///   account + seller profile in local storage, opens a session and starts
-///   the onboarding steps at STEP 01 — no OTP step after signup. Both states
-///   share the tappable terms footer.
+/// - Login (default): hero + phone number form; "Send OTP" opens the OTP
+///   screen; the phone field accepts up to 10 digits.
+/// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
+///   Password fields; "Create account" opens the STEP 01 location screen. Both
+///   states share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
   static const String leafAsset = 'assets/welcome/leaf.png';
   static const String heroAsset = 'assets/welcome/hero.png';
   static const String flagAsset = 'assets/welcome/flag.png';
-  static const String waveAsset = 'assets/welcome/wave.png';
   static const String sendAsset = 'assets/welcome/send.png';
   static const double designWidth = 412;
   static const double designHeight = 917;
@@ -60,94 +47,70 @@ class WelcomeSellerScreen extends StatefulWidget {
 }
 
 class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
-  /// Same shape the design uses: something@tld.tld with no spaces.
-  static final RegExp _emailRegExp = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
-
   bool _signUp = false;
   bool _sending = false;
   CountryCode _country = CountryCode.india;
 
-  // Owned by the state so the parent form can validate and forward the input.
-  // Each error is rendered inline (in red) inside its own field box; a field
-  // shows its error after the CTA is tapped and clears it as soon as the user
-  // types again.
-  String _phoneError = '';
-  String _nameError = '';
-  String _signUpPhoneError = '';
-  String _emailError = '';
-  String _passwordError = '';
+  /// Owned here so [AuthFlow] can read the digits on "Send OTP"; [TextField]
+  /// in [_PhoneBox] only borrows it.
   final TextEditingController _phone = TextEditingController();
-  final TextEditingController _signUpName = TextEditingController();
-  final TextEditingController _signUpPhone = TextEditingController();
-  final TextEditingController _signUpEmail = TextEditingController();
-  final TextEditingController _signUpPassword = TextEditingController();
 
-  @override
-  void dispose() {
-    AuthFlow.instance.autoVerified = null;
-    _phone.dispose();
-    _signUpName.dispose();
-    _signUpPhone.dispose();
-    _signUpEmail.dispose();
-    _signUpPassword.dispose();
-    super.dispose();
-  }
+  /// Sign Up only: read by the demo login check in [_createAccount].
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _password = TextEditingController();
 
   void _showLogin() => setState(() => _signUp = false);
 
   void _showSignUp() => setState(() => _signUp = true);
 
-  void _showMessage(String message) {
+  Future<void> _showCountryPicker() async {
+    final CountryCode? selected = await showModalBottomSheet<CountryCode>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _CountryPickerSheet(selected: _country),
+    );
+    if (selected != null && mounted) {
+      setState(() => _country = selected);
+    }
+  }
+
+  @override
+  void dispose() {
+    AuthFlow.instance.autoVerified = null;
+    _phone.dispose();
+    _name.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _clearPhoneError() {
-    if (_phoneError.isNotEmpty) setState(() => _phoneError = '');
-  }
-
-  void _clearNameError() {
-    if (_nameError.isNotEmpty) setState(() => _nameError = '');
-  }
-
-  void _clearSignUpPhoneError() {
-    if (_signUpPhoneError.isNotEmpty) setState(() => _signUpPhoneError = '');
-  }
-
-  void _clearEmailError() {
-    if (_emailError.isNotEmpty) setState(() => _emailError = '');
-  }
-
-  void _clearPasswordError() {
-    if (_passwordError.isNotEmpty) setState(() => _passwordError = '');
-  }
-
-  /// Validates the typed digits against the selected country, composes the
-  /// E.164 number and asks Firebase ([AuthFlow.sendOtp]) to send a real SMS.
-  /// A wrong-length number is reported inline, in red, inside the phone box;
-  /// Firebase's own failures surface as a snackbar. The OTP screen opens
-  /// only from the codeSent callback, so the flow never advances before
-  /// Firebase accepted the number.
+  /// Validates the digits, composes the E.164 number and asks Firebase for
+  /// an SMS. The OTP screen opens only from the codeSent callback, so the
+  /// flow never advances before Firebase accepted the number.
   Future<void> _sendOtp() async {
-    if (_sending) return;
-    final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != _country.maxDigits) {
-      setState(
-        () => _phoneError =
-            'Enter a valid ${_country.maxDigits}-digit mobile number.',
-      );
+    if (_sending) {
+      print('SEND OTP BLOCKED: already sending');
       return;
     }
-    FocusScope.of(context).unfocus();
+    final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != _country.maxDigits) {
+      print('VALIDATION FAILED: digits="$digits" '
+          '(need ${_country.maxDigits}) - staying on welcome');
+      _showError('Enter a valid ${_country.maxDigits}-digit mobile number.');
+      return;
+    }
     final String display = '${_country.dial} $digits';
-    AuthFlow.instance.autoVerified = _openStep01;
-    setState(() {
-      _sending = true;
-      _phoneError = '';
-    });
+    AuthFlow.instance.autoVerified = _openOnboarding;
+    setState(() => _sending = true);
     await AuthFlow.instance.sendOtp(
       e164: '${_country.dial}$digits',
       display: display,
@@ -163,34 +126,26 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       onError: (String message) {
         if (!mounted) return;
         setState(() => _sending = false);
-        _showMessage(message);
+        _showError(message);
       },
     );
   }
 
   /// Android instant verification / SMS auto-retrieval: the phone is
-  /// confirmed without a typed code. Open the local session cache and fetch
-  /// existing seller data from Supabase, skip completed onboarding pages,
-  /// and navigate to the first incomplete step or directly to Home.
-  void _openStep01() {
+  /// confirmed without a typed code. Fetch existing seller data from Supabase,
+  /// skip completed onboarding pages, and navigate to the first incomplete
+  /// step or directly to Home.
+  void _openOnboarding() {
     AuthFlow.instance.autoVerified = null;
     SellerProfileStore.instance.mobile = AuthFlow.instance.displayPhone;
     _routeAfterLogin();
   }
 
-  /// After instant verification, fetch all existing seller data from Supabase
-  /// using the authenticated mobile number, determine which onboarding
-  /// sections are already complete, skip those pages, and navigate to the
-  /// first incomplete step or directly to Home.
+  /// After instant verification (or the Sign Up tab), fetch all existing
+  /// seller data from Supabase using the authenticated mobile number,
+  /// determine which onboarding sections are already complete, skip those
+  /// pages, and navigate to the first incomplete step or directly to Home.
   void _routeAfterLogin() async {
-    // Firebase verified the phone for real — open the local session cache
-    // that requireSession() and the profile screens read after login.
-    SessionStore.instance.startSession(
-      phone: AuthFlow.instance.currentUserPhone ?? AuthFlow.instance.displayPhone,
-      userName: SellerProfileStore.instance.name,
-      method: 'login',
-    );
-
     // Clear any stale data from a previous login session.
     SellerProfileStore.instance.resetCompletionFlags();
     ProductStore.instance.clear();
@@ -210,8 +165,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       // Home still opens with whatever products are cached locally.
     }
 
-    SellerProfileStore.instance.mobile =
-        firebasePhone ?? AuthFlow.instance.displayPhone;
+    SellerProfileStore.instance.mobile = firebasePhone ?? AuthFlow.instance.displayPhone;
 
     // Look up the seller's Supabase rows for the verified phone number. The
     // match is number-agnostic: exact E.164 -> last 10 digits -> Firebase
@@ -237,12 +191,6 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
 
         if (profile != null) {
           _populateProfileStore(profile);
-          // Refresh the cached session display name with the Supabase row.
-          SessionStore.instance.startSession(
-            phone: firebasePhone ?? AuthFlow.instance.displayPhone,
-            userName: SellerProfileStore.instance.name,
-            method: 'login',
-          );
         }
 
         // Bank and KYC are fetched even when the profile row is missing so a
@@ -280,11 +228,12 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       }
     }
 
-    // No Supabase data found for this number — new user, onboarding STEP 01.
+    // No Supabase data found for this number — new user starts onboarding
+    // at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     setState(() => _sending = false);
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
     );
   }
 
@@ -329,8 +278,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step, or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
+  /// Registration -> Bank Details), or to Home if all sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -339,18 +288,13 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
 
-    if (!profileComplete) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step01LocationScreen(),
-        ),
-      );
-      return;
-    }
+    print('ONBOARDING ROUTE: profile=$profileComplete '
+        'bank=$bankComplete kyc=$verificationComplete');
 
-    // Flow order is STEP 01-03 (profile) -> Verify -> Bank -> Home, so the
-    // first incomplete section after the profile is verification.
+    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
+    // so verification is always the first section to check.
     if (!verificationComplete) {
+      print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const VerifyDetaileScreen(),
@@ -359,7 +303,18 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       return;
     }
 
+    if (!profileComplete) {
+      print('DESTINATION: Registration (Business Details)');
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Step03BusinessDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
     if (!bankComplete) {
+      print('DESTINATION: Bank Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const BankDetaileScreen(),
@@ -369,6 +324,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
 
     // All sections complete — go straight to Home.
+    print('DESTINATION: Home (all sections already complete)');
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
     );
@@ -401,330 +357,202 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
   }
 
-  /// Validates Name / Phone / E-Mail / Password, stores the new account and
-  /// seller profile in local storage, opens a session for the new seller and
-  /// sends the new seller into the onboarding steps, starting at STEP 01 —
-  /// no OTP entry, no login detour (Bug 2.3 / 2.4). Every invalid field
-  /// reports its problem inline, in red, so all of them are visible at once.
-  void _createAccount() {
-    final String name = _signUpName.text.trim();
-    final String phone = _signUpPhone.text.trim();
-    final String email = _signUpEmail.text.trim();
-    setState(() {
-      _nameError = name.isEmpty ? 'Enter your name' : '';
-      _signUpPhoneError = phone.length != _country.maxDigits
-          ? 'Enter a valid phone number'
-          : '';
-      _emailError = _emailRegExp.hasMatch(email)
-          ? ''
-          : 'Enter a valid email address';
-      _passwordError = _signUpPassword.text.length >= 6
-          ? ''
-          : 'Password must be at least 6 characters';
-    });
-    // A phone number can only belong to one account: registering it twice is
-    // rejected so no duplicate seller records pile up in local storage. The
-    // lookup uses the same dial-prefixed form that gets stored.
-    if (_signUpPhoneError.isEmpty &&
-        UserStore.instance.findByPhone('${_country.dial} $phone') != null) {
-      setState(() => _signUpPhoneError = 'Phone number already registered');
-    }
-    if (_nameError.isNotEmpty ||
-        _signUpPhoneError.isNotEmpty ||
-        _emailError.isNotEmpty ||
-        _passwordError.isNotEmpty) {
+  /// "Create account" on the Sign Up tab.
+  ///
+  /// - Empty form: jump straight to Home (demo shortcut, no OTP).
+  /// - Demo credentials (john / 1234567890 / vpnesuxe): also open Home
+  ///   directly.
+  /// - Anything else: Firebase OTP first, then the same Supabase completion
+  ///   check as Login routes the seller into onboarding — or straight to Home
+  ///   when every registration detail is already saved.
+  Future<void> _createAccount() async {
+    final String name = _name.text.trim();
+    final String phone = _phone.text.replaceAll(RegExp(r'\D'), '');
+    final String password = _password.text.trim();
+
+    if (name.isEmpty && phone.isEmpty && password.isEmpty) {
+      print('DEMO LOGIN: empty sign-up form - going straight to Home');
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
       return;
     }
-    FocusScope.of(context).unfocus();
 
-    final String dialPhone = '${_country.dial} $phone';
-
-    // Persist the signup details (name, phone, e-mail, password) and the
-    // seller profile, then open the authenticated session for this new user.
-    UserStore.instance.register(
-      SellerAccount(
-        name: name,
-        phone: dialPhone,
-        email: email,
-        password: _signUpPassword.text,
-      ),
-    );
-    SellerProfileStore.instance.save(
-      name: name,
-      mobile: dialPhone,
-      email: email,
-      sellerType: SellerProfileStore.instance.sellerType,
-    );
-    SessionStore.instance.startSession(
-      phone: dialPhone,
-      userName: name,
-      method: 'signup',
-    );
-
-    // A new seller has no business data yet, so signup starts the onboarding
-    // flow at STEP 01 and walks through STEP 01–05 before reaching the home
-    // page. The stack is cleared behind it so the seller can't back into the
-    // sign-up form.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
-      (route) => false,
-    );
-  }
-
-  /// Placeholder until the legal pages exist (Bug 2.5).
-  void _showTermsPlaceholder() {
-    _showMessage('Terms & Privacy Policy will be available soon.');
-  }
-
-  Future<void> _showCountryPicker() async {
-    final CountryCode? selected = await showModalBottomSheet<CountryCode>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _CountryPickerSheet(selected: _country),
-    );
-    if (selected != null && mounted) {
-      setState(() => _country = selected);
+    if (name.toLowerCase() == 'john' &&
+        phone == '1234567890' &&
+        password.toLowerCase() == 'vpnesuxe') {
+      print('DEMO LOGIN: john / 1234567890 - going straight to Home');
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
+      return;
     }
+    await _sendOtp();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Calculate the uniform scale factor from the full screen size (ignoring
-    // keyboard insets) so the artboard does not shrink when the keyboard opens.
-    final Size screenSize = MediaQuery.sizeOf(context);
-    final double currentHeight = _signUp ? 980 : WelcomeSellerScreen.designHeight;
-    final double scale = math.min(
-      1.0,
-      math.min(
-        screenSize.width / WelcomeSellerScreen.designWidth,
-        screenSize.height / WelcomeSellerScreen.designHeight,
-      ),
-    );
-
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.welcomeBg,
-      body: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            width: WelcomeSellerScreen.designWidth * scale,
-            height: currentHeight * scale, // <-- Changed here
-            child: FittedBox(
-              fit: BoxFit.fill,
-              child: SizedBox(
-                width: WelcomeSellerScreen.designWidth,
-                height: currentHeight, // <-- Changed here
-                child: Stack(
-                  children: [
-                    const Positioned(left: 0, top: 64, child: _Leaf()),
-                    const Positioned(left: 0, top: 225, child: _Hero()),
+      body: KeyboardAwareCanvas(
+        designWidth: WelcomeSellerScreen.designWidth,
+        designHeight: WelcomeSellerScreen.designHeight,
+        child: Stack(
+          children: [
+                  const Positioned(left: 0, top: 64, child: _Leaf()),
+                  const Positioned(left: 0, top: 225, child: _Hero()),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 504,
+                    bottom: 0,
+                    child: _Card(),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 127.4,
+                    child: _Title(),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 6,
+                    top: 168.7,
+                    child: _Subtitle(),
+                  ),
+                  const Positioned(left: 22, top: 506, child: _SegmentTrack()),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    left: _signUp ? 195 : 24,
+                    top: 505,
+                    width: 191,
+                    height: 53,
+                    child: _SegmentPill(),
+                  ),
+                  Positioned(
+                    left: 22,
+                    width: 191,
+                    top: 522.6,
+                    child: _SegmentLabel('Login', active: !_signUp),
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 522.6,
+                    child: _SegmentLabel('Sign Up', active: _signUp),
+                  ),
+                  Positioned(
+                    left: 22,
+                    width: 191,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabLogin'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? _showLogin : null,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabSignUp'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? null : _showSignUp,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  if (_signUp) ...[
+                    Positioned(
+                      left: 22,
+                      top: 574,
+                      child: _SignUpField(hint: 'Name', controller: _name),
+                    ),
+                    Positioned(
+                      left: 22,
+                      top: 644,
+                      child: _SignUpField(
+                        hint: 'Phone Number',
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      left: 22,
+                      top: 714,
+                      child: _SignUpField(
+                        hint: 'Password',
+                        obscure: true,
+                        controller: _password,
+                      ),
+                    ),
+                  Positioned(
+                    left: 22,
+                    top: 784,
+                    child: _CreateAccountButton(
+                      onTap: _createAccount,
+                    ),
+                  ),
+                  ] else ...[
                     const Positioned(
-                      left: 0,
+                      left: 22,
+                      top: 587.8,
+                      child: _WelcomeBack(),
+                    ),
+                    const Positioned(
+                      left: 22,
                       right: 0,
-                      top: 504,
-                      bottom: 0,
-                      child: _Card(),
+                      top: 612.3,
+                      child: _PhoneHint(),
                     ),
                     const Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 127.4,
-                      child: _Title(),
-                    ),
-                    const Positioned(
-                      left: 0,
-                      right: 6,
-                      top: 168.7,
-                      child: _Subtitle(),
-                    ),
-                    const Positioned(left: 24, top: 506, child: _SegmentTrack()),
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      left: _signUp ? 195 : 24,
-                      top: 505,
-                      width: 191,
-                      height: 53,
-                      child: _SegmentPill(),
+                      left: 22,
+                      top: 656.5,
+                      child: _PhoneLabel(),
                     ),
                     Positioned(
-                      left: 24,
-                      width: 191,
-                      top: 522.6,
-                      child: _SegmentLabel('Login', active: !_signUp),
-                    ),
-                    Positioned(
-                      left: 215,
-                      width: 171,
-                      top: 522.6,
-                      child: _SegmentLabel('Sign Up', active: _signUp),
-                    ),
-                    Positioned(
-                      left: 24,
-                      width: 191,
-                      top: 506,
-                      height: 53,
-                      child: GestureDetector(
-                        key: const Key('welcomeTabLogin'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _signUp ? _showLogin : null,
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                    Positioned(
-                      left: 215,
-                      width: 171,
-                      top: 506,
-                      height: 53,
-                      child: GestureDetector(
-                        key: const Key('welcomeTabSignUp'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _signUp ? null : _showSignUp,
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                    if (_signUp) ...[
-                      Positioned(
-                        left: 24,
-                        top: 570,
-                        child: _SignUpField(
-                          hint: 'Name',
-                          controller: _signUpName,
-                          errorText: _nameError,
-                          onInputChanged: _clearNameError,
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ),
-                      Positioned(
-                        left: 24,
-                        top: 635,
-                        child: _SignUpField(
-                          hint: 'Phone Number',
-                          controller: _signUpPhone,
-                          keyboardType: TextInputType.phone,
-                          maxLength: _country.maxDigits,
-                          errorText: _signUpPhoneError,
-                          onInputChanged: _clearSignUpPhoneError,
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ),
-                      Positioned(
-                        left: 24,
-                        top: 700,
-                        child: _SignUpField(
-                          hint: 'E-Mail',
-                          controller: _signUpEmail,
-                          keyboardType: TextInputType.emailAddress,
-                          errorText: _emailError,
-                          onInputChanged: _clearEmailError,
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ),
-                      Positioned(
-                        left: 24,
-                        top: 765,
-                        child: _SignUpField(
-                          hint: 'Password',
-                          controller: _signUpPassword,
-                          obscure: true,
-                          errorText: _passwordError,
-                          onInputChanged: _clearPasswordError,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _createAccount(),
-                        ),
-                      ),
-                      Positioned(
-                        left: 24,
-                        top: 835,
-                        child: _CreateAccountButton(onTap: _createAccount),
-                      ),
-                    ] 
-                    else ...[
-                      const Positioned(
-                        left: 24,
-                        top: 587.8,
-                        child: _WelcomeBack(),
-                      ),
-                      const Positioned(left: 166, top: 579, child: _Wave()),
-                      const Positioned(
-                        left: 24,
-                        right: 0,
-                        top: 612.3,
-                        child: _PhoneHint(),
-                      ),
-                      const Positioned(
-                        left: 24,
-                        top: 656.5,
-                        child: _PhoneLabel(),
-                      ),
-                      const Positioned(left: 24, top: 684, child: _FieldBox()),
-                      Positioned(
-                        left: 24,
-                        top: 684,
-                        width: 83,
-                        height: 54,
-                        child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _country.isIndia
-                                  ? const _Flag()
-                                  : Text(
-                                      _country.flag,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                              const SizedBox(width: 5),
-                              _DialCode(_country.dial),
-                            ],
+                      left: 22,
+                      top: 684,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _CountrySelector(
+                            country: _country,
+                            onTap: _showCountryPicker,
                           ),
-                        ),
+                          const SizedBox(width: 5),
+                          _PhoneBox(
+                            controller: _phone,
+                            maxLength: _country.maxDigits,
+                          ),
+                        ],
                       ),
-                      Positioned(
-                        left: 24,
-                        top: 684,
-                        width: 83,
-                        height: 54,
-                        child: GestureDetector(
-                          key: const Key('countryPicker'),
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _showCountryPicker,
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
-                      Positioned(
-                        left: 112,
-                        top: 684,
-                        child: _PhoneBox(
-                          controller: _phone,
-                          maxLength: _country.maxDigits,
-                          errorText: _phoneError,
-                          onInputChanged: _clearPhoneError,
-                          onFieldSubmitted: (_) => _sendOtp(),
-                        ),
-                      ),
-                      Positioned(
-                        left: 24,
-                        top: 749,
-                        child: _SendOtpButton(onTap: _sendOtp, sending: _sending),
-                      ),
-                    ],
+                    ),
                     Positioned(
-                      left: 0,
-                      right: 0,
-                      top: _signUp ? 900 : 859,
-                      child: _Footer(onLinkTap: _showTermsPlaceholder),
+                      left: 22,
+                      top: 749,
+                      child: _SendOtpButton(
+                        loading: _sending,
+                        onTap: _sendOtp,
+                      ),
                     ),
                   ],
-                ),
-              ),
-            ),
-          ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 859,
+                    child: _Footer(),
+                  ),
+          ],
         ),
       ),
     );
@@ -862,20 +690,14 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Welcome back', style: AppTextStyles.welcomeBack);
-  }
-}
-
-class _Wave extends StatelessWidget {
-  const _Wave();
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      WelcomeSellerScreen.waveAsset,
-      width: 28,
-      height: 28,
-      fit: BoxFit.fill,
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('Welcome back', style: AppTextStyles.welcomeBack),
+        SizedBox(width: 6),
+        Text('👋', style: TextStyle(fontSize: 18, height: 1.0)),
+      ],
     );
   }
 }
@@ -901,20 +723,41 @@ class _PhoneLabel extends StatelessWidget {
   }
 }
 
-class _FieldBox extends StatelessWidget {
-  const _FieldBox();
+class _CountrySelector extends StatelessWidget {
+  const _CountrySelector({required this.country, required this.onTap});
+
+  final CountryCode country;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 83,
-      height: 54,
-      decoration: const BoxDecoration(
-        color: AppColors.fieldFill,
-        border: Border.fromBorderSide(
-          BorderSide(color: AppColors.fieldBorder, width: 1),
+    return GestureDetector(
+      key: const Key('countryPicker'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 83,
+        height: 54,
+        decoration: const BoxDecoration(
+          color: AppColors.fieldFill,
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.fieldBorder, width: 1),
+          ),
+          borderRadius: BorderRadius.all(Radius.circular(27)),
         ),
-        borderRadius: BorderRadius.all(Radius.circular(27)),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              country.isIndia
+                  ? const _Flag()
+                  : Text(country.flag, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 5),
+              _DialCode(country.dial),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -927,9 +770,10 @@ class _Flag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       WelcomeSellerScreen.flagAsset,
-      width: 23,
+      width: 24,
       height: 16,
       fit: BoxFit.fill,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -945,30 +789,18 @@ class _DialCode extends StatelessWidget {
   }
 }
 
-/// Redesigned phone input: pill-shaped box with a "Mobile number"
-/// placeholder, numeric-only entry and a [maxLength] that follows the
-/// selected country's dial code (truncating any longer number when the
-/// country changes). The [controller] is owned by the parent form so the
-/// "Send OTP" action can read the typed number.
+/// Redesigned phone input: pill-shaped box that shows a blinking caret while
+/// empty (mirroring the design), numeric-only entry and a [maxLength] that
+/// follows the selected country's dial code (truncating any longer number
+/// when the country changes).
 ///
-/// When [errorText] is set (after "Send OTP" found the number invalid) the
-/// red message is drawn inside the pill, under the typed digits, so the
-/// layout does not shift. [onInputChanged] fires on every edit so the parent
-/// can clear the error as soon as the user types again.
+/// The [controller] is owned by the widget state above (it is what "Send OTP"
+/// reads); this box only attaches listeners to it.
 class _PhoneBox extends StatefulWidget {
-  const _PhoneBox({
-    required this.controller,
-    required this.maxLength,
-    this.errorText = '',
-    this.onInputChanged,
-    this.onFieldSubmitted,
-  });
+  const _PhoneBox({required this.controller, required this.maxLength});
 
   final TextEditingController controller;
   final int maxLength;
-  final String errorText;
-  final VoidCallback? onInputChanged;
-  final ValueChanged<String>? onFieldSubmitted;
 
   @override
   State<_PhoneBox> createState() => _PhoneBoxState();
@@ -977,20 +809,14 @@ class _PhoneBox extends StatefulWidget {
 class _PhoneBoxState extends State<_PhoneBox> {
   final FocusNode _focusNode = FocusNode();
 
-  /// True while the widget itself truncates the text (country change), so the
-  /// parent is not asked to clear the error during layout.
-  bool _internalUpdate = false;
-
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onChanged);
+    _focusNode.addListener(_onChanged);
   }
 
-  void _onChanged() {
-    setState(() {});
-    if (!_internalUpdate) widget.onInputChanged?.call();
-  }
+  void _onChanged() => setState(() {});
 
   @override
   void didUpdateWidget(covariant _PhoneBox oldWidget) {
@@ -1001,25 +827,25 @@ class _PhoneBoxState extends State<_PhoneBox> {
     }
     if (widget.maxLength != oldWidget.maxLength &&
         widget.controller.text.length > widget.maxLength) {
-      _internalUpdate = true;
       widget.controller.text = widget.controller.text.substring(
         0,
         widget.maxLength,
       );
-      _internalUpdate = false;
     }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onChanged);
+    _focusNode.removeListener(_onChanged);
     _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool hasError = widget.errorText.isNotEmpty;
+    final bool showCaret =
+        widget.controller.text.isEmpty && !_focusNode.hasFocus;
     return Container(
       width: 277,
       height: 54,
@@ -1030,21 +856,15 @@ class _PhoneBoxState extends State<_PhoneBox> {
         ),
         borderRadius: BorderRadius.all(Radius.circular(27)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Expanded(
-            child: TextFormField(
+          Positioned.fill(
+            child: TextField(
               key: const Key('loginPhone'),
               controller: widget.controller,
               focusNode: _focusNode,
               maxLength: widget.maxLength,
               keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: widget.onFieldSubmitted,
-              // Ensures scrolling reveals both the phone box and the "Send OTP"
-              // button below it when the keyboard opens.
-              scrollPadding: const EdgeInsets.only(bottom: 140),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
@@ -1053,24 +873,29 @@ class _PhoneBoxState extends State<_PhoneBox> {
               ),
               cursorColor: AppColors.inputCaret,
               cursorWidth: 2,
-              decoration: InputDecoration(
-                hintText: 'Mobile number',
-                hintStyle: AppTextStyles.signUpField,
+              decoration: const InputDecoration(
                 counterText: '',
                 border: InputBorder.none,
                 filled: false,
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: hasError ? 4 : 17,
+                  vertical: 17,
                 ),
               ),
             ),
           ),
-          if (hasError)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 7),
-              child: InlineErrorText(widget.errorText, maxLines: 1),
+          if (showCaret)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 16),
+                    child: _PhoneCaret(),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -1078,22 +903,63 @@ class _PhoneBoxState extends State<_PhoneBox> {
   }
 }
 
+/// Decorative blinking caret shown while the phone field is empty and
+/// unfocused, matching the design's resting state. The real text cursor takes
+/// over as soon as the field is focused.
+class _PhoneCaret extends StatefulWidget {
+  const _PhoneCaret();
+
+  @override
+  State<_PhoneCaret> createState() => _PhoneCaretState();
+}
+
+class _PhoneCaretState extends State<_PhoneCaret> {
+  Timer? _timer;
+  bool _visible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) setState(() => _visible = !_visible);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: _visible ? 1 : 0,
+      child: Container(
+        width: 2,
+        height: 19,
+        color: AppColors.inputCaret,
+      ),
+    );
+  }
+}
+
 class _SendOtpButton extends StatelessWidget {
-  const _SendOtpButton({required this.onTap, this.sending = false});
+  const _SendOtpButton({required this.onTap, this.loading = false});
 
   final VoidCallback onTap;
 
-  /// True while Firebase is sending the SMS — the tap is ignored and a
-  /// spinner replaces the label so the seller sees the request is in flight.
-  final bool sending;
+  /// While Firebase is sending the SMS the label swaps for a spinner and
+  /// taps are ignored.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: sending ? null : onTap,
+      onTap: loading ? null : onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 52,
         padding: const EdgeInsets.only(right: 6),
         decoration: const BoxDecoration(
@@ -1108,7 +974,7 @@ class _SendOtpButton extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: sending
+          child: loading
               ? const SizedBox(
                   width: 20,
                   height: 20,
@@ -1145,45 +1011,20 @@ class _SendIcon extends StatelessWidget {
   }
 }
 
-/// Terms footer. The "Terms & Privacy Policy." span is tappable through a
-/// [TapGestureRecognizer] (the recognizer is owned by the State so it is
-/// disposed with the widget) and reports taps through [onLinkTap].
-class _Footer extends StatefulWidget {
-  const _Footer({required this.onLinkTap});
-
-  final VoidCallback onLinkTap;
-
-  @override
-  State<_Footer> createState() => _FooterState();
-}
-
-class _FooterState extends State<_Footer> {
-  late final TapGestureRecognizer _linkRecognizer;
-
-  @override
-  void initState() {
-    super.initState();
-    _linkRecognizer = TapGestureRecognizer()..onTap = () => widget.onLinkTap();
-  }
-
-  @override
-  void dispose() {
-    _linkRecognizer.dispose();
-    super.dispose();
-  }
+class _Footer extends StatelessWidget {
+  const _Footer();
 
   @override
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
-      text: TextSpan(
+      text: const TextSpan(
         style: AppTextStyles.footer,
         children: [
-          const TextSpan(text: 'By continuing, you agree to '),
+          TextSpan(text: 'By continuing, you agree to '),
           TextSpan(
             text: 'Terms & Privacy Policy.',
             style: AppTextStyles.footerLink,
-            recognizer: _linkRecognizer,
           ),
         ],
       ),
@@ -1197,38 +1038,23 @@ class _FooterState extends State<_Footer> {
 /// When [obscure] is set (Password), an eye icon is added to the right:
 /// hidden state shows a gray eye-off icon, tapping it reveals the password
 /// and turns the icon into a blue eye.
-///
-/// When [errorText] is set (after "Create account" found the form invalid)
-/// the red message is drawn inside the box, under the input line, so the
-/// layout does not shift; [onInputChanged] lets the parent clear it as soon
-/// as the user types again.
 class _SignUpField extends StatefulWidget {
   const _SignUpField({
     required this.hint,
-    required this.controller,
     this.keyboardType,
-    this.maxLength,
     this.obscure = false,
-    this.errorText = '',
-    this.onInputChanged,
-    this.textInputAction,
-    this.onFieldSubmitted,
+    this.inputFormatters,
+    this.controller,
   });
 
   final String hint;
-
-  /// Owned by the parent form so "Create account" can read the value.
-  final TextEditingController controller;
   final TextInputType? keyboardType;
-
-  /// Caps the typed digits (Phone Number follows the selected country's
-  /// [CountryCode.maxDigits]); null means unlimited.
-  final int? maxLength;
   final bool obscure;
-  final String errorText;
-  final VoidCallback? onInputChanged;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onFieldSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
+
+  /// Shared controller so the Sign Up phone field feeds the same OTP flow
+  /// as the Login tab.
+  final TextEditingController? controller;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
@@ -1239,37 +1065,10 @@ class _SignUpFieldState extends State<_SignUpField> {
 
   void _toggleVisible() => setState(() => _visible = !_visible);
 
-  void _onChanged() {
-    setState(() {});
-    widget.onInputChanged?.call();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant _SignUpField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_onChanged);
-      widget.controller.addListener(_onChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onChanged);
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final bool hasError = widget.errorText.isNotEmpty;
     return Container(
-      width: 364,
+      width: 368,
       height: 54,
       decoration: const BoxDecoration(
         color: AppColors.fieldFill,
@@ -1278,75 +1077,51 @@ class _SignUpFieldState extends State<_SignUpField> {
         ),
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: widget.controller,
-              keyboardType: widget.keyboardType,
-              maxLength: widget.maxLength,
-              textInputAction: widget.textInputAction,
-              onFieldSubmitted: widget.onFieldSubmitted,
-              // Ensures scrolling reveals the active field as well as the
-              // "Create account" button at the bottom of the Sign Up stack.
-              scrollPadding: const EdgeInsets.only(bottom: 310),
-              // A capped field (Phone Number) accepts digits only, matching
-              // the login box; uncapped fields keep free text.
-              inputFormatters: widget.maxLength != null
-                  ? [FilteringTextInputFormatter.digitsOnly]
-                  : null,
-              obscureText: widget.obscure && !_visible,
-              textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: widget.hint,
-                hintStyle: AppTextStyles.signUpField,
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: hasError ? 4 : 17,
-                ),
-                counterText: '',
-                suffixIcon: widget.obscure
-                    ? IconButton(
-                        key: const Key('passwordToggle'),
-                        onPressed: _toggleVisible,
-                        tooltip: _visible ? 'Hide password' : 'Show password',
-                        icon: Icon(
-                          _visible ? Icons.visibility : Icons.visibility_off,
-                          size: 22,
-                          color: _visible
-                              ? AppColors.passwordShown
-                              : AppColors.hintGray,
-                        ),
-                      )
-                    : null,
-                suffixIconConstraints: const BoxConstraints(
-                  minHeight: 44,
-                  minWidth: 44,
-                ),
-              ),
-            ),
+      child: TextField(
+        controller: widget.controller,
+        keyboardType: widget.keyboardType,
+        inputFormatters: widget.inputFormatters,
+        obscureText: widget.obscure && !_visible,
+        textAlignVertical: TextAlignVertical.center,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimary,
+        ),
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          hintStyle: AppTextStyles.signUpField,
+          isDense: true,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 17,
           ),
-          if (hasError)
-            Padding(
-              padding: const EdgeInsets.only(left: 20, bottom: 7),
-              child: InlineErrorText(widget.errorText, maxLines: 1),
-            ),
-        ],
+          counterText: '',
+          suffixIcon: widget.obscure
+              ? IconButton(
+                  key: const Key('passwordToggle'),
+                  onPressed: _toggleVisible,
+                  tooltip: _visible ? 'Hide password' : 'Show password',
+                  icon: Icon(
+                    _visible ? Icons.visibility : Icons.visibility_off,
+                    size: 22,
+                    color: _visible
+                        ? AppColors.passwordShown
+                        : AppColors.hintGray,
+                  ),
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(
+            minHeight: 44,
+            minWidth: 44,
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Sign Up CTA. Taps are forwarded to the parent form, which validates the
-/// Name / E-Mail / Password values before opening the location step.
 class _CreateAccountButton extends StatelessWidget {
   const _CreateAccountButton({required this.onTap});
 
@@ -1358,7 +1133,7 @@ class _CreateAccountButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 52,
         alignment: Alignment.center,
         decoration: const BoxDecoration(
@@ -1377,6 +1152,7 @@ class _CreateAccountButton extends StatelessWidget {
     );
   }
 }
+
 
 /// Redesigned "Select country" popup: a tall bottom sheet with a search
 /// field that filters the full [kCountryCodes] list (name, ISO code or dial
@@ -1464,7 +1240,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   horizontal: 16,
                   vertical: 12,
                 ),
-                border: const OutlineInputBorder(
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                   borderSide: BorderSide.none,
                 ),

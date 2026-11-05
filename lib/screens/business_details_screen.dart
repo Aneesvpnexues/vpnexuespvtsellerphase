@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
-import '../widgets/inline_error.dart';
+import '../widgets/continue_button.dart';
+import 'bank_detaile.dart';
+import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
 /// "STEP 03 — Tell us about your business" — static replica of Zeplin
@@ -13,13 +17,20 @@ import 'verify_detaile.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes the [Artboard] viewport scales it down on small screens and up (capped
-/// at 1.5x) on large ones instead of overflowing. All five rows are
-/// editable; the Continue button stays dimmed until every field has a value,
-/// saves the five fields to [SellerProfileStore] and then opens
-/// [VerifyDetaileScreen].
+/// sizes the [Artboard] scales by width (capped at 1.5x) and scrolls vertically
+/// instead of overflowing, so the keyboard never covers the focused field. All
+/// five rows are editable; the Continue button stays inert until every field
+/// has a value and then opens [VerifyDetaileScreen].
 class Step03BusinessDetailsScreen extends StatefulWidget {
-  const Step03BusinessDetailsScreen({super.key});
+  const Step03BusinessDetailsScreen({super.key, this.profileSaver});
+
+  /// Persists the profile. Defaults to [SupabaseProductApi.saveSellerProfile].
+  final SellerProfileSaver? profileSaver;
+
+  /// Fallback for tests that reach this screen through a navigation chain
+  /// (Step01 -> Step02 -> Step03) and cannot inject the saver themselves.
+  @visibleForTesting
+  static SellerProfileSaver? debugProfileSaver;
 
   static const String leavesAsset = 'assets/step03/leaves.png';
   static const double designWidth = 412;
@@ -35,43 +46,26 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _name = TextEditingController();
   final TextEditingController _business = TextEditingController();
   final TextEditingController _phone = TextEditingController(
-    text: '+91 12345 67890',
+    text: SellerProfileStore.instance.mobile,
   );
   final TextEditingController _location = TextEditingController(
     text: 'Salem, Tamil Nadu',
   );
   final TextEditingController _address = TextEditingController();
 
-  // Per-field validation errors, rendered inline in red right under the
-  // offending field. Each one clears as soon as its own field is edited.
-  String _nameError = '';
-  String _businessError = '';
-  String _phoneError = '';
-  String _locationError = '';
-  String _addressError = '';
-
-  bool get _hasErrors =>
-      _nameError.isNotEmpty ||
-      _businessError.isNotEmpty ||
-      _phoneError.isNotEmpty ||
-      _locationError.isNotEmpty ||
-      _addressError.isNotEmpty;
-
   bool get _allFilled =>
-      _name.text.isNotEmpty &&
-      _business.text.isNotEmpty &&
-      _phone.text.isNotEmpty &&
-      _location.text.isNotEmpty &&
-      _address.text.isNotEmpty;
+      _name.text.trim().isNotEmpty &&
+      _business.text.trim().isNotEmpty &&
+      _phone.text.trim().isNotEmpty &&
+      _location.text.trim().isNotEmpty &&
+      _address.text.trim().isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    _name.addListener(_onNameChanged);
-    _business.addListener(_onBusinessChanged);
-    _phone.addListener(_onPhoneChanged);
-    _location.addListener(_onLocationChanged);
-    _address.addListener(_onAddressChanged);
+    for (final controller in _controllers) {
+      controller.addListener(_onChanged);
+    }
   }
 
   Iterable<TextEditingController> get _controllers => [
@@ -82,172 +76,218 @@ class _Step03BusinessDetailsScreenState
     _address,
   ];
 
-  void _onNameChanged() => setState(() {
-    if (_nameError.isNotEmpty) _nameError = '';
-  });
-
-  void _onBusinessChanged() => setState(() {
-    if (_businessError.isNotEmpty) _businessError = '';
-  });
-
-  void _onPhoneChanged() => setState(() {
-    if (_phoneError.isNotEmpty) _phoneError = '';
-  });
-
-  void _onLocationChanged() => setState(() {
-    if (_locationError.isNotEmpty) _locationError = '';
-  });
-
-  void _onAddressChanged() => setState(() {
-    if (_addressError.isNotEmpty) _addressError = '';
-  });
+  void _onChanged() => setState(() {});
 
   @override
   void dispose() {
     for (final controller in _controllers) {
+      controller.removeListener(_onChanged);
       controller.dispose();
     }
     super.dispose();
   }
 
-  /// Validates every field and reports each problem inline, in red, under its
-  /// own field so all of them are visible at once; then saves the five values
-  /// and opens the KYC step.
-  void _openVerifyDetails() {
-    final String phoneDigits = _phone.text.replaceAll(RegExp(r'\D'), '');
-    setState(() {
-      _nameError = _name.text.trim().isEmpty ? 'Enter your name' : '';
-      _businessError = _business.text.trim().isEmpty
-          ? 'Enter business name'
-          : '';
-      _phoneError = (phoneDigits.length < 10 || phoneDigits.length > 13)
-          ? 'Enter a valid phone number'
-          : '';
-      _locationError = _location.text.trim().isEmpty
-          ? 'Enter your business location'
-          : '';
-      _addressError = _address.text.trim().isEmpty
-          ? 'Enter your full address'
-          : '';
-    });
-    if (_hasErrors) return;
-    SellerProfileStore.instance.saveBusinessDetails(
-      name: _name.text,
-      business: _business.text,
-      phone: _phone.text,
-      location: _location.text,
-      address: _address.text,
-    );
+  Future<void> _openVerifyDetails() async {
+    if (!_allFilled) return;
     FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final SellerProfileSaver save = widget.profileSaver ??
+        Step03BusinessDetailsScreen.debugProfileSaver ??
+        _saveToSupabase;
+    try {
+      await save(
+        name: _name.text.trim(),
+        mobile: _phone.text.trim(),
+        sellerType: SellerProfileStore.instance.sellerType.dbValue,
+        businessName: _business.text.trim(),
+        businessLocation: _location.text.trim(),
+        businessAddress: _address.text.trim(),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save business profile. Please try again.')),
+      );
+      return;
+    }
+
+    final SellerProfileStore profile = SellerProfileStore.instance;
+    profile.save(
+      name: _name.text.trim(),
+      mobile: _phone.text.trim(),
+      email: profile.email,
+      sellerType: profile.sellerType,
+    );
+
+    // The profile section just completed successfully. Keep the existing
+    // bank/KYC flags so a seller who already finished them is not sent
+    // through those pages again.
+    profile.setCompletion(
+      profileComplete: true,
+      bankComplete: profile.bankComplete,
+      verificationComplete: profile.verificationComplete,
+    );
+
+    if (!mounted) return;
+
+    // Forward flow is Verify -> Bank -> Home; skip whatever is already done.
+    if (profile.verificationComplete && profile.bankComplete) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    if (profile.verificationComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+    );
+  }
+
+  static Future<String> _saveToSupabase({
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) {
+    return SupabaseProductApi().saveSellerProfile(
+      name: name,
+      mobile: mobile,
+      sellerType: sellerType,
+      businessName: businessName,
+      businessLocation: businessLocation,
+      businessAddress: businessAddress,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.stepPageBg,
-      body: Artboard(
-        designWidth: Step03BusinessDetailsScreen.designWidth,
-        designHeight: Step03BusinessDetailsScreen.designHeight,
-        child: Stack(
-          children: [
-            const Positioned(left: 200, top: 0, child: _Leaves()),
-            const Positioned(left: 24, top: 105.63, child: _StepLabel()),
-            const Positioned(left: 25, top: 139, child: _ProgressTrack()),
-            const Positioned(left: 24, top: 162.33, child: _TitleLead()),
-            const Positioned(left: 24, top: 196.83, child: _TitleYour()),
-            const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
-            const Positioned(left: 24, top: 248.2, child: _Subtitle()),
-            const Positioned(left: 24, top: 330.89, child: _SectionTitle()),
-            const Positioned(right: 24.5, top: 326, child: _PillNote()),
-            // Field rows.
-            const Positioned(left: 24, top: 380.5, child: _TileName()),
-            const Positioned(left: 43, top: 419.5, child: _Connector1()),
-            const Positioned(left: 89, top: 438, child: _Divider1()),
-            const Positioned(left: 89, top: 383.8, child: _LabelName()),
-            Positioned(
-              left: 89,
-              top: 405.04,
-              child: _FieldInput(
-                fieldKey: const Key('businessName'),
-                width: 299,
-                controller: _name,
-                hint: 'Enter your name..',
-                errorText: _nameError,
-              ),
+      body: Stack(
+        children: [
+          Artboard(
+            designWidth: Step03BusinessDetailsScreen.designWidth,
+            designHeight: Step03BusinessDetailsScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
+            child: Stack(
+              children: [
+                const Positioned(left: 200, top: 0, child: _Leaves()),
+                const Positioned(left: 22, top: 105.63, child: _StepLabel()),
+                const Positioned(left: 25, top: 139, child: _ProgressTrack()),
+                const Positioned(left: 22, top: 162.33, child: _TitleLead()),
+                const Positioned(left: 22, top: 196.83, child: _TitleYour()),
+                const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
+                const Positioned(left: 22, top: 248.2, child: _Subtitle()),
+                const Positioned(left: 22, top: 330.89, child: _SectionTitle()),
+                const Positioned(right: 24.5, top: 326, child: _PillNote()),
+                // Field rows.
+                const Positioned(left: 22, top: 380.5, child: _TileName()),
+                const Positioned(left: 43, top: 419.5, child: _Connector1()),
+                const Positioned(left: 89, top: 438, child: _Divider1()),
+                const Positioned(left: 89, top: 383.8, child: _LabelName()),
+                Positioned(
+                  left: 89,
+                  top: 405.04,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessName'),
+                    width: 299,
+                    controller: _name,
+                    hint: 'Enter your name..',
+                  ),
+                ),
+                const Positioned(left: 22, top: 457.5, child: _TileBusiness()),
+                const Positioned(left: 43, top: 496.5, child: _Connector2()),
+                const Positioned(left: 89, top: 515, child: _Divider2()),
+                const Positioned(
+                  left: 89,
+                  top: 460.64,
+                  child: _LabelBusiness(),
+                ),
+                Positioned(
+                  left: 89,
+                  top: 481.68,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessFarm'),
+                    width: 299,
+                    controller: _business,
+                    hint: 'Enter Business name',
+                  ),
+                ),
+                const Positioned(left: 22, top: 533.5, child: _TilePhone()),
+                const Positioned(left: 43, top: 572.5, child: _Connector3()),
+                const Positioned(left: 89, top: 593, child: _Divider3()),
+                const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
+                Positioned(
+                  left: 89,
+                  top: 557.69,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessPhone'),
+                    width: 200,
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
+                const Positioned(
+                  right: 24.5,
+                  top: 541,
+                  child: _VerifiedBadge(),
+                ),
+                const Positioned(left: 22, top: 611.5, child: _TileLocation()),
+                const Positioned(left: 43, top: 650.5, child: _Connector4()),
+                const Positioned(left: 89, top: 670, child: _Divider4()),
+                const Positioned(
+                  left: 89,
+                  top: 613.54,
+                  child: _LabelLocation(),
+                ),
+                Positioned(
+                  left: 89,
+                  top: 635.12,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessLocation'),
+                    width: 240,
+                    controller: _location,
+                  ),
+                ),
+                const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
+                const Positioned(left: 22, top: 688.5, child: _TileAddress()),
+                const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
+                Positioned(
+                  left: 89,
+                  top: 713.28,
+                  child: _FieldInput(
+                    fieldKey: const Key('businessAddress'),
+                    width: 299,
+                    controller: _address,
+                    hint: 'Enter your full address....',
+                  ),
+                ),
+              ],
             ),
-            const Positioned(left: 24, top: 457.5, child: _TileBusiness()),
-            const Positioned(left: 43, top: 496.5, child: _Connector2()),
-            const Positioned(left: 89, top: 515, child: _Divider2()),
-            const Positioned(left: 89, top: 460.64, child: _LabelBusiness()),
-            Positioned(
-              left: 89,
-              top: 481.68,
-              child: _FieldInput(
-                fieldKey: const Key('businessFarm'),
-                width: 299,
-                controller: _business,
-                hint: 'Enter Business name',
-                errorText: _businessError,
-              ),
-            ),
-            const Positioned(left: 24, top: 533.5, child: _TilePhone()),
-            const Positioned(left: 43, top: 572.5, child: _Connector3()),
-            const Positioned(left: 89, top: 593, child: _Divider3()),
-            const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
-            Positioned(
-              left: 89,
-              top: 557.69,
-              child: _FieldInput(
-                fieldKey: const Key('businessPhone'),
-                width: 200,
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                errorText: _phoneError,
-              ),
-            ),
-            const Positioned(right: 24.5, top: 541, child: _VerifiedBadge()),
-            const Positioned(left: 24, top: 611.5, child: _TileLocation()),
-            const Positioned(left: 43, top: 650.5, child: _Connector4()),
-            const Positioned(left: 89, top: 670, child: _Divider4()),
-            const Positioned(left: 89, top: 613.54, child: _LabelLocation()),
-            Positioned(
-              left: 89,
-              top: 635.12,
-              child: _FieldInput(
-                fieldKey: const Key('businessLocation'),
-                width: 240,
-                controller: _location,
-                errorText: _locationError,
-              ),
-            ),
-            const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
-            const Positioned(left: 24, top: 688.5, child: _TileAddress()),
-            const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
-            Positioned(
-              left: 89,
-              top: 713.28,
-              child: _FieldInput(
-                fieldKey: const Key('businessAddress'),
-                width: 299,
-                controller: _address,
-                hint: 'Enter your full address....',
-                errorText: _addressError,
-              ),
-            ),
-            Positioned(
-              left: 24,
-              top: 818,
-              child: _ContinueButton(
-                enabled: _allFilled,
-                onTap: _openVerifyDetails,
-              ),
-            ),
-          ],
-        ),
+          ),
+          ContinueButton(
+            buttonKey: const Key('business-continue'),
+            enabled: _allFilled,
+            onTap: _openVerifyDetails,
+          ),
+        ],
       ),
     );
   }
@@ -589,10 +629,6 @@ class _LabelName extends StatelessWidget {
 
 /// One editable row: a borderless [TextField] laid out where the design puts
 /// the placeholder/value text (box top == design glyph top, zero padding).
-///
-/// When [errorText] is set, the red validation message is drawn directly
-/// under the value line, inside the gap the design leaves before the row's
-/// divider, so the rest of the layout does not move.
 class _FieldInput extends StatelessWidget {
   const _FieldInput({
     required this.fieldKey,
@@ -600,7 +636,6 @@ class _FieldInput extends StatelessWidget {
     required this.controller,
     this.hint,
     this.keyboardType,
-    this.errorText = '',
   });
 
   final Key fieldKey;
@@ -608,37 +643,26 @@ class _FieldInput extends StatelessWidget {
   final TextEditingController controller;
   final String? hint;
   final TextInputType? keyboardType;
-  final String errorText;
 
   @override
   Widget build(BuildContext context) {
-    final bool hasError = errorText.isNotEmpty;
     return SizedBox(
       width: width,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            key: fieldKey,
-            controller: controller,
-            keyboardType: keyboardType,
-            style: AppTextStyles.fieldValue,
-            cursorColor: AppColors.inputCaret,
-            cursorWidth: 2,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTextStyles.fieldPlaceholder,
-              isDense: true,
-              border: InputBorder.none,
-              filled: false,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-          if (hasError) ...[
-            const SizedBox(height: 4),
-            InlineErrorText(errorText, maxLines: 1),
-          ],
-        ],
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        keyboardType: keyboardType,
+        style: AppTextStyles.fieldValue,
+        cursorColor: AppColors.inputCaret,
+        cursorWidth: 2,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.fieldPlaceholder,
+          isDense: true,
+          border: InputBorder.none,
+          filled: false,
+          contentPadding: EdgeInsets.zero,
+        ),
       ),
     );
   }
@@ -708,73 +732,11 @@ class _VerifiedBadge extends StatelessWidget {
   }
 }
 
-/// "Change" link next to the Business Location value. Tapping it reports that
-/// the location picker ships with the backend phase (the value stays editable
-/// in the field itself).
 class _ChangeLink extends StatelessWidget {
   const _ChangeLink();
 
-  void _showMessage(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('The location picker is not available yet.'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.fromLTRB(16, 0, 16, 80),
-        ),
-      );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('businessLocationChange'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _showMessage(context),
-      child: const Text('Change', style: AppTextStyles.changeLink),
-    );
-  }
-}
-
-/// Continue CTA. Stays dimmed until [enabled] (the form is complete);
-/// tapping it while disabled reports the missing fields instead of
-/// navigating silently.
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.enabled, required this.onTap});
-
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.5,
-        child: Container(
-          width: 364,
-          height: 54,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                AppColors.continueGradientStart,
-                AppColors.continueGradientEnd,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.continueGlow,
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Text('Continue', style: AppTextStyles.button),
-        ),
-      ),
-    );
+    return const Text('Change', style: AppTextStyles.changeLink);
   }
 }

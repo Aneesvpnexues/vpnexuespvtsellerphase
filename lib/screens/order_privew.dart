@@ -80,14 +80,14 @@ class OrderPrivewScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(left: 24, top: 479, child: _ProductCard()),
+            const Positioned(left: 22, top: 479, child: _ProductCard()),
             Positioned(
-              left: 24,
+              left: 22,
               top: 782,
               child: _PreviewButton(onTap: () => goToProductDetails(context)),
             ),
             Positioned(
-              left: 24,
+              left: 22,
               top: 846,
               child: _AddProductButton(onTap: () => goToAddProduct(context)),
             ),
@@ -108,7 +108,7 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 97,
       child: Stack(
         clipBehavior: Clip.none,
@@ -117,7 +117,7 @@ class _ProductCard extends StatelessWidget {
             left: 0,
             top: 0,
             child: Container(
-              width: 364,
+              width: 368,
               height: 97,
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -284,7 +284,7 @@ class _PreviewButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 53,
         alignment: Alignment.center,
         decoration: const BoxDecoration(
@@ -331,7 +331,7 @@ class _AddProductButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 53,
         alignment: Alignment.center,
         decoration: const BoxDecoration(

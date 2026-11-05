@@ -35,7 +35,7 @@ class Step01LocationScreen extends StatelessWidget {
             Positioned(right: 28, top: 76.4, child: _StepLabel()),
             Positioned(left: 0, right: 8, top: 488.4, child: _Title()),
             Positioned(left: 0, right: 8, top: 541.5, child: _Description()),
-            Positioned(left: 24, top: 731, child: _LocationButton()),
+            Positioned(left: 22, top: 731, child: _LocationButton()),
             Positioned(left: 0, right: 10, top: 818.5, child: _ManualLink()),
           ],
         ),
@@ -128,7 +128,7 @@ class _LocationButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: HoverPress.button(
         child: Container(
-          width: 364,
+          width: 368,
           height: 54,
           alignment: Alignment.center,
           decoration: const BoxDecoration(

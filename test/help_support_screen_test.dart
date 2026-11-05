@@ -93,7 +93,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Help & Support')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Help & Support')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Help & Support')).top, closeTo(22, 4));
     expect(rectOf(find.text('How can we help?')).left, closeTo(45, 3));
     expect(rectOf(find.text('How can we help?')).top, closeTo(124, 5));
     expect(
@@ -392,3 +392,4 @@ void main() {
     );
   });
 }
+

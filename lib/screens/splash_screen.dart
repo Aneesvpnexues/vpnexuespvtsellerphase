@@ -1,18 +1,18 @@
+import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../data/app_storage.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
-import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
-import 'bank_detaile.dart';
-import 'location_screen.dart';
-import 'seller_home_screen.dart';
-import 'verify_detaile.dart';
-import 'welcome_seller_screen.dart';
+import '../theme/app_colors.dart';
+import '../screens/bank_detaile.dart';
+import '../screens/business_details_screen.dart';
+import '../screens/seller_home_screen.dart';
+import '../screens/verify_detaile.dart';
+import '../screens/welcome_seller_screen.dart';
 
 /// First screen shown when the app opens — static replica of Zeplin
 /// "Android Compact - 192" (project 6a8d49709e27bd8b35213d35,
@@ -25,25 +25,13 @@ import 'welcome_seller_screen.dart';
 /// cover the area below the status bar, so the bottom of the photo still
 /// bleeds off the screen like the design.
 ///
-/// There is no auto-advance: the splash stays up until the user taps the
-/// circular arrow button in the bottom-right corner, which continues to
-/// [WelcomeSellerScreen]. The navigation uses `pushReplacement`, so the
-/// splash never stays in the back stack.
-///
-/// On cold start, [_SplashScreenState._checkSession] also checks whether a
-/// Firebase Auth session already exists. A signed-in seller resumes at the
-/// first incomplete onboarding section — or straight on the home page when
-/// every section is already saved — while a seller with no saved rows
-/// restarts onboarding at Step 01, exactly like the OTP and welcome login
-/// paths, so a pending page is never skipped in favour of Home. Without a
-/// session the splash remains and tapping the arrow opens the login flow.
-///
-/// The splash is shown only once per install: the first launch after
-/// installing. Tapping the arrow (or an automatic session resume) persists
-/// [StorageKeys.splashSeenKey], and [SellerApp] skips straight to the home
-/// (signed in) or welcome (signed out) screen on every later launch.
-/// Uninstalling the app clears the preference, so the splash returns on the
-/// next fresh install.
+/// On cold start, [_SplashScreenState] checks whether a Firebase Auth session
+/// already exists. A signed-in seller resumes at the first incomplete
+/// onboarding section — or straight on the home page when every section is
+/// already saved — while a seller with no saved rows restarts onboarding at
+/// Step 01, exactly like the OTP and welcome login paths, so a pending page
+/// is never skipped in favour of Home. Without a session the splash remains
+/// and tapping the arrow opens the login flow.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -63,26 +51,11 @@ class SplashScreen extends StatefulWidget {
   @visibleForTesting
   static ({String uid, String phone})? debugSignedInSeller;
 
-  /// Whether the one-time splash has already been dismissed on this install.
-  static bool get hasSeenSplash =>
-      AppStorage.current?.readString(StorageKeys.splashSeenKey) == 'true';
-
-  /// Records that the splash has been shown, so the next launch skips it.
-  /// Fire-and-forget like the other stores; a failed write only means the
-  /// splash shows again on the next launch.
-  static void markSplashSeen() {
-    AppStorage.current
-        ?.writeString(StorageKeys.splashSeenKey, 'true')
-        .ignore();
-  }
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  /// True while the cold-start Firebase session check runs; the arrow stays
-  /// hidden until the check decides whether to resume automatically.
   bool _checking = true;
 
   @override
@@ -97,9 +70,9 @@ class _SplashScreenState extends State<SplashScreen> {
   /// matching the verified phone number, determine which onboarding sections
   /// are complete, and route accordingly: the first incomplete section, or
   /// Home when everything is already saved. A signed-in seller with no saved
-  /// rows restarts onboarding at Step 01 — never Home — so a pending page
-  /// cannot be skipped. Otherwise stay on the splash so the user can tap to
-  /// log in.
+  /// rows restarts onboarding at Verify Your Details — never Home — so a
+  /// pending page cannot be skipped. Otherwise stay on the splash so the
+  /// user can tap to log in.
   Future<void> _checkSession() async {
     if (!mounted) return;
 
@@ -125,16 +98,6 @@ class _SplashScreenState extends State<SplashScreen> {
     if (uid != null && uid.isNotEmpty) {
       AuthFlow.instance.firebaseUid = uid;
       AuthFlow.instance.verified = true;
-
-      // Firebase still knows this seller — open the local session cache so
-      // main() and requireSession() see a signed-in state after this check,
-      // and record that the one-time splash has been served.
-      SessionStore.instance.startSession(
-        phone: phone ?? '',
-        userName: SellerProfileStore.instance.name,
-        method: 'login',
-      );
-      SplashScreen.markSplashSeen();
 
       // Clear any stale data from a previous login session.
       SellerProfileStore.instance.resetCompletionFlags();
@@ -189,13 +152,6 @@ class _SplashScreenState extends State<SplashScreen> {
           if (foundAnyRow && mounted) {
             if (profile != null) {
               _populateProfileStore(profile);
-              // Refresh the cached session display name with the Supabase
-              // row.
-              SessionStore.instance.startSession(
-                phone: phone ?? SellerProfileStore.instance.mobile,
-                userName: SellerProfileStore.instance.name,
-                method: 'login',
-              );
             }
 
             final bool profileComplete =
@@ -224,12 +180,12 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
 
-      // No Supabase data found for this seller — resume at Step 01 exactly
-      // like the OTP and welcome login paths, so a pending onboarding page
-      // is never skipped in favour of Home.
+      // No Supabase data found for this seller — resume at Verify Your
+      // Details exactly like the OTP and welcome login paths, so a pending
+      // onboarding page is never skipped in favour of Home.
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
       );
     } else {
       setState(() => _checking = false);
@@ -277,8 +233,8 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step, or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
+  /// Registration -> Bank Details), or to Home if all sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -286,21 +242,21 @@ class _SplashScreenState extends State<SplashScreen> {
   }) {
     if (!mounted) return;
 
-    if (!profileComplete) {
+    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
+    // so verification is always the first section to check.
+    if (!verificationComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => const Step01LocationScreen(),
+          builder: (_) => const VerifyDetaileScreen(),
         ),
       );
       return;
     }
 
-    // Flow order is STEP 01-03 (profile) -> Verify -> Bank -> Home, so the
-    // first incomplete section after the profile is verification.
-    if (!verificationComplete) {
+    if (!profileComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
+          builder: (_) => const Step03BusinessDetailsScreen(),
         ),
       );
       return;
@@ -348,68 +304,55 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  /// The arrow continues to the last reached destination: a seller with an
-  /// active session (signed up or logged in on a previous run) resumes at the
-  /// home page, everyone else lands on the Welcome / login screen.
-  ///
-  /// This is the only place the splash is dismissed, so it also records that
-  /// the one-time splash has been shown and later launches skip it.
-  void _continue() {
-    SplashScreen.markSplashSeen();
-    final bool authenticated = SessionStore.instance.isAuthenticated;
+  /// Used when the user taps the splash arrow while not signed in.
+  Future<void> _continueToLogin() async {
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => authenticated
-            ? const SellerHomeScreen()
-            : const WelcomeSellerScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF3F8EF),
+      backgroundColor: AppColors.splashBg,
       body: SafeArea(
         bottom: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                SplashScreen.splashAsset,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                filterQuality: FilterQuality.high,
-                semanticLabel: 'A small step for your big growth',
-              ),
-            ),
-            Positioned(
-              right: 24,
-              bottom: 24,
-              child: _checking
-                  ? const SizedBox.shrink()
-                  : Material(
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                      shape: const CircleBorder(),
-                      elevation: 0,
-                      child: InkWell(
-                        key: const Key('splashTap'),
-                        customBorder: const CircleBorder(),
-                        onTap: _continue,
-                        child: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: const Icon(
-                            Icons.arrow_forward,
-                            color: Color.fromARGB(255, 255, 255, 255),
-                            size: 24,
-                          ),
-                        ),
-                      ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double scale = math.max(
+              constraints.maxWidth / SplashScreen.designWidth,
+              constraints.maxHeight / SplashScreen.designHeight,
+            );
+            final double imageLeft =
+                (constraints.maxWidth - SplashScreen.designWidth * scale) / 2;
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    SplashScreen.splashAsset,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    filterQuality: FilterQuality.high,
+                    semanticLabel: 'A small step for your big growth',
+                  ),
+                ),
+                if (!_checking)
+                  Positioned(
+                    left: imageLeft + SplashScreen.arrowHitArea.left * scale,
+                    top: SplashScreen.arrowHitArea.top * scale,
+                    width: SplashScreen.arrowHitArea.width * scale,
+                    height: SplashScreen.arrowHitArea.height * scale,
+                    child: GestureDetector(
+                      key: const Key('splashTap'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _continueToLogin(),
+                      child: const SizedBox.expand(),
                     ),
-            ),
-          ],
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

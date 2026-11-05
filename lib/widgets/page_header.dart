@@ -32,7 +32,7 @@ class PageHeader extends StatelessWidget {
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned(
-            left: 24,
+            left: 22,
             top: 0,
             child: Semantics(
               button: true,

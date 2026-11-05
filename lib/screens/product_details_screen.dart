@@ -289,7 +289,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           child: Stack(
             children: [
               Positioned(
-                left: 24,
+                left: 22,
                 top: 137,
                 width: 363.5,
                 height: 251.5,
@@ -375,7 +375,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ] else if (photoIndicatorCount > 0)
                 Positioned(
-                  left: 24,
+                  left: 22,
                   top: 405,
                   width: 363.5,
                   height: 10,
@@ -404,9 +404,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 484,
-                width: 364,
+                width: 368,
                 height: 289,
                 child: _Card(
                   radius: 18.5,
@@ -416,9 +416,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 787,
-                width: 364,
+                width: 368,
                 height: 256,
                 child: _Card(
                   radius: 18,
@@ -670,7 +670,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 _Styles.headline,
                 left: 25.5,
                 top: 925.8,
-                width: 364,
+                width: 368,
               ),
               const _Text(
                 'No views or orders yet. Share the listing to speed\n'
@@ -678,7 +678,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 _Styles.perfBody,
                 left: 25.5,
                 top: 945.4,
-                width: 364,
+                width: 368,
               ),
               Positioned(
                 left: 143,

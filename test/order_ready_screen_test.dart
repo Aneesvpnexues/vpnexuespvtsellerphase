@@ -96,7 +96,7 @@ void main() {
 
     // The canvas trims the 49px status bar, so screen y = design y - 49.
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Order Details')).top, closeTo(22, 4));
     expect(rectOf(find.text('ORDER #NX4582')).left, closeTo(41, 3));
     expect(rectOf(find.text('ORDER #NX4582')).top, closeTo(135, 4));
     expect(rectOf(find.text('Order Accepted')).left, closeTo(41, 3));
@@ -291,3 +291,4 @@ void main() {
     expect(find.text('Packing checklist'), findsOneWidget);
   });
 }
+

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
-import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
@@ -15,7 +14,7 @@ import '../widgets/hover_press.dart';
 import '../widgets/keyboard_aware_canvas.dart';
 import '../widgets/otp_field_row.dart';
 import 'bank_detaile.dart';
-import 'location_screen.dart';
+import 'business_details_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
@@ -140,15 +139,6 @@ class _OtpScreenState extends State<OtpScreen> {
     _entered = true;
     AuthFlow.instance.autoVerified = null;
 
-    // Firebase has verified this phone for real — open the local session
-    // cache that requireSession() and the profile screens read after login.
-    // It is only ever populated from here, never on its own.
-    SessionStore.instance.startSession(
-      phone: AuthFlow.instance.currentUserPhone ?? widget.phone,
-      userName: SellerProfileStore.instance.name,
-      method: 'login',
-    );
-
     // Clear any stale data from a previous login session.
     SellerProfileStore.instance.resetCompletionFlags();
     ProductStore.instance.clear();
@@ -198,12 +188,6 @@ class _OtpScreenState extends State<OtpScreen> {
 
         if (profile != null) {
           _populateProfileStore(profile);
-          // Refresh the cached session display name with the Supabase row.
-          SessionStore.instance.startSession(
-            phone: AuthFlow.instance.currentUserPhone ?? widget.phone,
-            userName: SellerProfileStore.instance.name,
-            method: 'login',
-          );
         }
 
         // Bank and KYC are fetched even when the profile row is missing: a
@@ -242,10 +226,11 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     }
 
-    // No Supabase data found for this number — new user, onboarding STEP 01.
+    // No Supabase data found for this number — new user starts onboarding
+    // at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
     );
   }
 
@@ -290,9 +275,10 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step, or to Home if all
-  /// sections are complete. Pushes (not replacement) so the user can navigate
-  /// back through the flow if needed.
+  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
+  /// Registration -> Bank Details), or to Home if all sections are complete.
+  /// Pushes (not replacement) so the user can navigate back through the flow
+  /// if needed.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -300,18 +286,13 @@ class _OtpScreenState extends State<OtpScreen> {
   }) {
     if (!mounted) return;
 
-    if (!profileComplete) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step01LocationScreen(),
-        ),
-      );
-      return;
-    }
+    print('ONBOARDING ROUTE: profile=$profileComplete '
+        'bank=$bankComplete kyc=$verificationComplete');
 
-    // The onboarding flow is STEP 01-03 (profile) -> Verify -> Bank -> Home,
-    // so the first incomplete section after the profile is verification.
+    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
+    // so verification is always the first section to check.
     if (!verificationComplete) {
+      print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const VerifyDetaileScreen(),
@@ -320,7 +301,18 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
 
+    if (!profileComplete) {
+      print('DESTINATION: Registration (Business Details)');
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Step03BusinessDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
     if (!bankComplete) {
+      print('DESTINATION: Bank Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const BankDetaileScreen(),
@@ -330,6 +322,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     // All sections complete — go straight to Home.
+    print('DESTINATION: Home (all sections already complete)');
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
     );

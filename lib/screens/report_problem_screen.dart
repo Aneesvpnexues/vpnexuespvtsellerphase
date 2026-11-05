@@ -222,7 +222,7 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
           trimTop: ReportProblemScreen.trimTop,
           child: Stack(
             children: [
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(left: 22, top: 73, child: _BackCircle()),
               const Positioned(
                 left: 68,
                 top: 73,
@@ -233,7 +233,7 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
                 ),
               ),
               const Positioned(left: 25, top: 121, child: _SupportHero()),
-              const Positioned(left: 24, top: 255, child: _FormCard()),
+              const Positioned(left: 22, top: 255, child: _FormCard()),
               const Positioned(
                 left: 45,
                 top: 272,
@@ -465,13 +465,13 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
                 ),
               ),
               Positioned(
-                left: 246,
+                left: 242,
                 top: 722,
                 child: _ContactChip(
                   key: const Key('report-contact-email'),
                   width: 80,
                   label: 'Email',
-                  textLeft: 24,
+                  textLeft: 22,
                   textWidth: 32,
                   selected: _contact == 'Email',
                   onTap: () => setState(() => _contact = 'Email'),
@@ -682,7 +682,7 @@ class _FormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 521,
       decoration: BoxDecoration(
         color: const Color(0xFFFEFEFE),
@@ -1096,3 +1096,4 @@ class _SubmitButton extends StatelessWidget {
     );
   }
 }
+

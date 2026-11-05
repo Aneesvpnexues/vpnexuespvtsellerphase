@@ -42,12 +42,12 @@ class OrderDeliveryScreen extends StatelessWidget {
                 top: 73,
                 child: PageHeader(title: 'Order Details'),
               ),
-              Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              Positioned(left: 22, top: 117, child: _SegmentTabs()),
               Positioned(left: 25, top: 172, child: _OrderHero()),
               Positioned(left: 41, top: 247, child: _ProgressCard()),
-              Positioned(left: 24, top: 358, child: _BuyerCard()),
-              Positioned(left: 24, top: 552, child: _DeliveryCard()),
-              Positioned(left: 24, top: 847, child: _SlideDelivery()),
+              Positioned(left: 22, top: 358, child: _BuyerCard()),
+              Positioned(left: 22, top: 552, child: _DeliveryCard()),
+              Positioned(left: 22, top: 847, child: _SlideDelivery()),
             ],
           ),
         ),
@@ -78,12 +78,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -217,7 +217,7 @@ class _OrderHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 246,
+            left: 244,
             top: 11,
             child: Container(
               width: 101,
@@ -501,7 +501,7 @@ class _BuyerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 181,
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
@@ -708,7 +708,7 @@ class _DeliveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 217,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1010,7 +1010,7 @@ class _SlideDeliveryState extends State<_SlideDelivery>
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
-          width: 364,
+          width: 368,
           height: 58,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(28)),
@@ -1069,3 +1069,4 @@ class _SlideDeliveryState extends State<_SlideDelivery>
     );
   }
 }
+

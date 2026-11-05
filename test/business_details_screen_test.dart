@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
+import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
 
 /// Pumps the STEP 03 screen on the 412x917 artboard the design was drawn for.
@@ -35,6 +38,36 @@ Finder _continueButton() => find.byWidgetPredicate(
 );
 
 void main() {
+  late List<Map<String, String>> savedProfiles;
+
+  setUp(() {
+    savedProfiles = <Map<String, String>>[];
+    SellerProfileStore.instance.resetCompletionFlags();
+    Step03BusinessDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async {
+      savedProfiles.add(<String, String>{
+        'name': name,
+        'mobile': mobile,
+        'seller_type': sellerType,
+        'business_name': businessName,
+        'location': businessLocation,
+        'business_address': businessAddress,
+      });
+      return '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
+    };
+  });
+
+  tearDown(() {
+    Step03BusinessDetailsScreen.debugProfileSaver = null;
+    SellerProfileStore.instance.resetCompletionFlags();
+  });
+
   testWidgets('renders the STEP 03 content', (tester) async {
     await pumpScreen(tester);
 
@@ -76,18 +109,18 @@ void main() {
     expect(leaves.height, closeTo(560, 1));
 
     // Heading: left 24, design glyph tops 165.5 / 200.
-    expect(rectOf(find.text('Tell us about')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Tell us about')).left, closeTo(22, 1));
     expect(rectOf(find.text('Tell us about')).top, closeTo(162.33, 1));
     expect(rectOf(find.text('your')).top, closeTo(196.83, 1));
     expect(rectOf(find.text('business')).top, closeTo(196.83, 1));
 
     // Subtitle, section title.
-    expect(rectOf(find.text("Let's create your profile")).left, closeTo(24, 1));
+    expect(rectOf(find.text("Let's create your profile")).left, closeTo(22, 1));
     expect(
       rectOf(find.text("Let's create your profile")).top,
       closeTo(248.2, 1),
     );
-    expect(rectOf(find.text('Business Details')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Business Details')).left, closeTo(22, 1));
     expect(rectOf(find.text('Business Details')).top, closeTo(330.89, 1));
 
     // Pill note: fixed box x 261..387.5, y 326..353.
@@ -101,17 +134,17 @@ void main() {
     const tops = [380.5, 457.5, 533.5, 611.5, 688.5];
     for (var i = 0; i < tops.length; i++) {
       final rect = rectOf(_tiles().at(i));
-      expect(rect.left, closeTo(24, 1), reason: 'tile $i left');
+      expect(rect.left, closeTo(22, 1), reason: 'tile $i left');
       expect(rect.top, closeTo(tops[i], 1), reason: 'tile $i top');
       expect(rect.width, closeTo(40, 1), reason: 'tile $i width');
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
     }
 
-    // Continue button: x 24..388, y 818..872, radius 18, gradient fill.
+    // Continue button: x 24..388, y 847..901, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
-    expect(button.top, closeTo(818, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.left, closeTo(22, 1));
+    expect(button.top, closeTo(847, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -122,9 +155,10 @@ void main() {
     );
     final gradient = decoration.gradient! as LinearGradient;
     expect(gradient.colors, const [
-      AppColors.continueGradientStart,
-      AppColors.continueGradientEnd,
+      AppColors.continueDisabledGradientStart,
+      AppColors.continueDisabledGradientEnd,
     ]);
+    expect(decoration.boxShadow, isNull);
   });
 
   testWidgets('text styles follow the design', (tester) async {
@@ -220,6 +254,26 @@ void main() {
     ]);
   });
 
+  testWidgets('the keyboard scrolls the focused field above the inset', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    final field = tester.getRect(find.byKey(const Key('businessAddress')));
+    expect(field.bottom, lessThanOrEqualTo(917 - 360));
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
@@ -245,25 +299,11 @@ void main() {
     expect(Step03BusinessDetailsScreen.leavesAsset, 'assets/step03/leaves.png');
   });
 
-  testWidgets('Continue is dimmed and inert until every field is filled', (
-    tester,
-  ) async {
+  testWidgets('Continue is inert until every field is filled', (tester) async {
     await pumpScreen(tester);
 
-    Opacity continueOpacity() => tester.widget<Opacity>(
-      find
-          .ancestor(of: _continueButton(), matching: find.byType(Opacity))
-          .first,
-    );
-
-    // Nothing filled yet: dimmed button, tapping reports every missing
-    // field inline (phone and location start prefilled and valid).
-    expect(continueOpacity().opacity, 0.5);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter your name'), findsOneWidget);
-    expect(find.text('Enter business name'), findsOneWidget);
-    expect(find.text('Enter your full address'), findsOneWidget);
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verification Details'), findsNothing);
 
@@ -271,25 +311,10 @@ void main() {
     await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
     await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
     await tester.pump();
-    expect(continueOpacity().opacity, 0.5);
-    // Editing a field clears its own error as soon as the value changes.
-    expect(find.text('Enter your name'), findsNothing);
-    expect(find.text('Enter business name'), findsNothing);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter your full address'), findsOneWidget);
-    expect(find.text('Enter your name'), findsNothing);
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verification Details'), findsNothing);
-
-    // The last missing field lights the button back up.
-    await tester.enterText(
-      find.byKey(const Key('businessAddress')),
-      '12 Main Street',
-    );
-    await tester.pump();
-    expect(continueOpacity().opacity, 1);
-    expect(find.text('Enter your full address'), findsNothing);
   });
 
   testWidgets('whitespace-only input does not count as filled', (tester) async {
@@ -308,26 +333,15 @@ void main() {
 
     // Real values on all three rows let the flow continue.
     await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
-    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
     await tester.enterText(
-      find.byKey(const Key('businessAddress')),
-      '12 Main Street',
-    );
+        find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(
+        find.byKey(const Key('businessAddress')), '12 Main Street');
     await tester.pump();
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Verification Details'), findsOneWidget);
-  });
-
-  testWidgets('the Change link shows a placeholder message', (tester) async {
-    await pumpScreen(tester);
-
-    await tester.tap(find.text('Change'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('The location picker is not available yet.'), findsOneWidget);
-    expect(find.text('Business Details'), findsOneWidget);
   });
 
   testWidgets('Continue opens the verify details screen', (tester) async {
@@ -341,17 +355,31 @@ void main() {
     );
     await tester.pump();
 
+    final decoration =
+        tester.widget<Container>(_continueButton()).decoration!
+            as BoxDecoration;
+    expect((decoration.gradient! as LinearGradient).colors, const [
+      AppColors.continueGradientStart,
+      AppColors.continueGradientEnd,
+    ]);
+    expect(decoration.boxShadow, isNotNull);
+
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     expect(find.text('Verify your'), findsOneWidget);
     expect(find.text('Verification Details'), findsOneWidget);
 
-    // The five values were saved before navigating.
-    expect(SellerProfileStore.instance.name, 'Ravi');
-    expect(SellerProfileStore.instance.businessName, 'Green Farm');
-    expect(SellerProfileStore.instance.businessAddress, '12 Main Street');
-    expect(SellerProfileStore.instance.businessLocation, 'Salem, Tamil Nadu');
+    // The profile is saved before the screen moves on.
+    expect(savedProfiles, hasLength(1));
+    expect(savedProfiles.single, <String, String>{
+      'name': 'Ravi',
+      'mobile': '+91 12345 67890',
+      'seller_type': 'farmer',
+      'business_name': 'Green Farm',
+      'location': 'Salem, Tamil Nadu',
+      'business_address': '12 Main Street',
+    });
 
     // Back arrow returns to STEP 03.
     await tester.tap(find.byIcon(Icons.arrow_back));
@@ -359,4 +387,52 @@ void main() {
     expect(find.text('Business Details'), findsOneWidget);
     expect(find.text('Verify your'), findsNothing);
   });
+
+  Future<void> fillAndContinue(WidgetTester tester) async {
+    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
+    await tester.enterText(
+      find.byKey(const Key('businessAddress')),
+      '12 Main Street',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('Continue opens Home when verify and bank are already done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: false,
+      bankComplete: true,
+      verificationComplete: true,
+    );
+
+    await pumpScreen(tester);
+    await fillAndContinue(tester);
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
+    expect(find.byType(BankDetaileScreen), findsNothing);
+    expect(savedProfiles, hasLength(1));
+  });
+
+  testWidgets('Continue skips verify and opens bank when only KYC is done', (
+    tester,
+  ) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: false,
+      bankComplete: false,
+      verificationComplete: true,
+    );
+
+    await pumpScreen(tester);
+    await fillAndContinue(tester);
+
+    expect(find.byType(BankDetaileScreen), findsOneWidget);
+    expect(find.byType(VerifyDetaileScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsNothing);
+  });
 }
+

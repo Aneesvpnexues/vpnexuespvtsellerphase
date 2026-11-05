@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/product_store.dart';
-import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
@@ -50,13 +49,6 @@ Product _product({
 void main() {
   setUp(() {
     ProductStore.instance.clear();
-    // The route guard only opens authenticated screens while a session is
-    // active; these tests exercise the in-app navigation directly.
-    SessionStore.instance.startSession(
-      phone: '9876543210',
-      userName: 'Test Seller',
-      method: 'login',
-    );
     AddProductsScreen.debugPhotoPicker =
         () async => ProductPhoto(bytes: _photoBytes);
     AddProductsScreen.debugProductSaver = (
@@ -114,7 +106,7 @@ void main() {
     expect(rectOf(find.text('My Products')).top, closeTo(28, 3));
     expect(
       rectOf(find.byKey(const ValueKey('products-empty'))).left,
-      closeTo(24, 2),
+      closeTo(22, 2),
     );
     expect(
       rectOf(find.byKey(const ValueKey('products-empty'))).top,
@@ -429,3 +421,4 @@ void main() {
     expect(find.text('My Products'), findsOneWidget);
   });
 }
+

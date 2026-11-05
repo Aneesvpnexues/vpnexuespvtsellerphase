@@ -82,7 +82,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                           ),
                         ),
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 120,
                           child: _SearchBar(
                             productCount: products.length,
@@ -91,7 +91,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                           ),
                         ),
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 184,
                           child: _FilterTabs(
                             selected: _filter,
@@ -101,7 +101,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                         ),
                         if (products.isEmpty)
                           Positioned(
-                            left: 24,
+                            left: 22,
                             top: 247,
                             child: _EmptyProductsState(
                               filtered: allProducts.isNotEmpty,
@@ -110,12 +110,12 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                         else
                           for (var i = 0; i < products.length; i++)
                             Positioned(
-                              left: 24,
+                              left: 22,
                               top: 247 + i * 129,
                               child: _ProductRow(product: products[i]),
                             ),
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: promoTop,
                           child: _PromoCard(
                             onAdd: () => goToAddProduct(context),
@@ -177,7 +177,7 @@ class _SearchBar extends StatelessWidget {
         ? '1 Product'
         : '$productCount Products';
     return Container(
-      width: 364,
+      width: 368,
       height: 45,
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -268,7 +268,7 @@ class _FilterTabs extends StatelessWidget {
     );
 
     return Container(
-      width: 364,
+      width: 368,
       height: 45,
       decoration: const BoxDecoration(
         color: Color(0xB8E3F1CC),
@@ -381,7 +381,7 @@ class _EmptyProductsState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey('products-empty'),
-      width: 364,
+      width: 368,
       height: 126,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
@@ -486,7 +486,7 @@ class _ProductRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => goToProductDetails(context, product: product),
       child: SizedBox(
-        width: 364,
+        width: 368,
         height: 116,
         child: Stack(
           children: [
@@ -781,7 +781,7 @@ class _PromoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey('products-promo'),
-      width: 364,
+      width: 368,
       height: 126,
       decoration: const BoxDecoration(
         color: AppColors.promoBg,

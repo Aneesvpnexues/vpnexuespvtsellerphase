@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/order_pickup_success_screen.dart';
 
@@ -31,16 +30,6 @@ Future<void> pumpPickupSuccess(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(() {
-    // The route guard only opens authenticated screens while a session is
-    // active; these tests exercise the in-app navigation directly.
-    SessionStore.instance.startSession(
-      phone: '9876543210',
-      userName: 'Test Seller',
-      method: 'login',
-    );
-  });
-
   testWidgets('renders the 165 pickup success content', (tester) async {
     await pumpPickupSuccess(tester);
 

@@ -1,20 +1,31 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../data/cloudinary_upload_api.dart';
+import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
-import '../widgets/inline_error.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
+import 'business_details_screen.dart';
+import 'seller_home_screen.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
 
 /// A document selected from the device's file browser.
 class PickedDocument {
-  const PickedDocument({required this.name, this.path});
+  const PickedDocument({required this.name, this.path, this.bytes, this.mimeType});
 
   final String name;
   final String? path;
+  final List<int>? bytes;
+  final String? mimeType;
 
   bool get isPdf => name.toLowerCase().endsWith('.pdf');
 }
@@ -30,9 +41,8 @@ enum _DocumentSlot { aadhaar, pan, business }
 /// sizes the [Artboard] viewport scales it down on small screens and up (capped
 /// at 1.5x) on large ones instead of overflowing. The back arrow pops
 /// the route; each document card opens the system file browser for an image or
-/// PDF (picks are held in memory only — no backend exists yet); the "Profile
-/// Completion" card is computed from the filled slots; Continue requires the
-/// Aadhaar document and opens [BankDetaileScreen].
+/// PDF; Continue uploads images to Cloudinary, saves URLs to Supabase, then
+/// opens [BankDetaileScreen].
 class VerifyDetaileScreen extends StatefulWidget {
   const VerifyDetaileScreen({super.key, this.documentPicker});
 
@@ -49,30 +59,7 @@ class VerifyDetaileScreen extends StatefulWidget {
 class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
   final Map<_DocumentSlot, PickedDocument> _documents = {};
   _DocumentSlot? _pickingSlot;
-
-  /// True while the mandatory Aadhaar document is missing; draws the red
-  /// border + message on its card and clears once a document is picked.
-  bool _aadhaarError = false;
-
-  /// How many of the three document slots are filled, as a percentage shown
-  /// on the "Profile Completion" card (0 -> 0%, 1 -> 33%, 2 -> 67%, 3 -> 100%).
-  int get _completionPercent {
-    const int slots = 3;
-    return (_documents.length * 100 / slots).round();
-  }
-
-  /// KYC cannot be skipped: the Aadhaar document is mandatory, the other two
-  /// slots are optional. A missing Aadhaar upload is reported inline, in red,
-  /// on the card itself.
-  void _openBankDetails() {
-    if (!_documents.containsKey(_DocumentSlot.aadhaar)) {
-      setState(() => _aadhaarError = true);
-      return;
-    }
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()));
-  }
+  bool _saving = false;
 
   Future<void> _pickDocument(_DocumentSlot slot) async {
     if (_pickingSlot != null) return;
@@ -93,25 +80,150 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     setState(() {
       _pickingSlot = null;
       if (document != null) _documents[slot] = document;
-      if (slot == _DocumentSlot.aadhaar && document != null) {
-        _aadhaarError = false;
-      }
     });
   }
 
   Future<PickedDocument?> _pickDocumentFromDevice() async {
-    final file = await FilePicker.pickFile(
+    // file_picker 13 exposes static methods (there is no `.platform`).
+    final List<PlatformFile> files = await FilePicker.pickFiles(
       dialogTitle: 'Select document',
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
     );
-    if (file == null) return null;
-    return PickedDocument(name: file.name, path: file.path);
+    if (files.isEmpty) return null;
+    final PlatformFile file = files.first;
+
+    // The platform returns a handle, so read it once here; Continue needs the
+    // bytes to upload the document to Cloudinary.
+    Uint8List? bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      bytes = null;
+    }
+    return PickedDocument(
+      name: file.name,
+      path: file.path,
+      bytes: bytes == null || bytes.isEmpty ? null : bytes,
+      mimeType: _mimeFromName(file.name),
+    );
+  }
+
+  String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  /// Uploads a picked document to Cloudinary and returns the secure URL.
+  /// Returns null if the document has no bytes (e.g. only path was available).
+  Future<String?> _uploadDocument(PickedDocument doc) async {
+    final List<int>? bytes = doc.bytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    final uploader = CloudinaryUploadApi(folder: 'seller_kyc');
+    return uploader.upload(
+      ProductPhoto(
+        bytes: Uint8List.fromList(bytes),
+        mimeType: doc.mimeType ?? 'image/jpeg',
+        filename: doc.name,
+      ),
+    );
+  }
+
+  Future<void> _onContinue() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      // Upload each picked document to Cloudinary.
+      String? aadhaarUrl;
+      String? panUrl;
+      String? businessUrl;
+
+      if (_documents.containsKey(_DocumentSlot.aadhaar)) {
+        aadhaarUrl = await _uploadDocument(_documents[_DocumentSlot.aadhaar]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.pan)) {
+        panUrl = await _uploadDocument(_documents[_DocumentSlot.pan]!);
+      }
+      if (_documents.containsKey(_DocumentSlot.business)) {
+        businessUrl = await _uploadDocument(_documents[_DocumentSlot.business]!);
+      }
+
+      // Save URLs to Supabase.
+      final bool savedThisSession = aadhaarUrl != null ||
+          panUrl != null ||
+          businessUrl != null;
+      if (savedThisSession) {
+        final api = SupabaseProductApi();
+        await api.saveVerifyDetails(
+          aadhaarUrl: aadhaarUrl,
+          panUrl: panUrl,
+          businessUrl: businessUrl,
+        );
+      }
+
+      if (!mounted) return;
+
+      // KYC counts as done if anything was just uploaded, or if an earlier
+      // session already stored a document.
+      final SellerProfileStore profile = SellerProfileStore.instance;
+      final bool verificationComplete =
+          savedThisSession || profile.verificationComplete;
+      profile.setCompletion(
+        profileComplete: profile.profileComplete,
+        bankComplete: profile.bankComplete,
+        verificationComplete: verificationComplete,
+      );
+
+      // Verify -> Registration -> Bank -> Home: skip whatever is already
+      // done so a returning seller never re-enters completed pages.
+      if (profile.profileComplete && profile.bankComplete) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      }
+
+      // Registration is the second step — open it while the profile section
+      // is still missing, then Bank Details, then Home.
+      if (!profile.profileComplete) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Step03BusinessDetailsScreen(),
+          ),
+        );
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final int completion = _completionPercent;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -119,15 +231,16 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
           Artboard(
             designWidth: VerifyDetaileScreen.designWidth,
             designHeight: VerifyDetaileScreen.designHeight,
+            keyboardBottomInset: ContinueButton.keyboardInset,
             child: Stack(
               children: [
                 const Positioned(left: 0, top: 0, child: _HeaderBackground()),
                 const Positioned(left: 200, top: 0, child: _Illustration()),
                 const Positioned(left: 21, top: 30, child: _BackButton()),
                 const Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
-                const Positioned(left: 24, top: 99.15, child: _TitleLead()),
-                const Positioned(left: 24, top: 134.79, child: _TitleAccent()),
-                const Positioned(left: 24, top: 180.74, child: _Subtitle()),
+                const Positioned(left: 22, top: 99.15, child: _TitleLead()),
+                const Positioned(left: 22, top: 134.79, child: _TitleAccent()),
+                const Positioned(left: 22, top: 180.74, child: _Subtitle()),
                 const Positioned(
                   left: 23,
                   top: 209.75,
@@ -135,18 +248,10 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 ),
                 const Positioned(left: 0, top: 342, child: _Sheet()),
                 // Profile completion card.
-                const Positioned(left: 24, top: 367, child: _PcCard()),
+                const Positioned(left: 22, top: 367, child: _PcCard()),
                 const Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
-                Positioned(
-                  right: 40,
-                  top: 384.37,
-                  child: _PcPercent(percent: completion),
-                ),
-                Positioned(
-                  left: 34,
-                  top: 406,
-                  child: _PcBar(percent: completion),
-                ),
+                const Positioned(right: 40, top: 384.37, child: _PcPercent()),
+                const Positioned(left: 34, top: 406, child: _PcBar()),
                 // Verification details section.
                 const Positioned(left: 26, top: 452, child: _SectionTick()),
                 const Positioned(
@@ -157,21 +262,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 const Positioned(left: 260, top: 447, child: _PillNote()),
                 const Positioned(left: 25, top: 483, child: _Divider()),
                 // Document cards.
-                Positioned(
-                  left: 23,
-                  top: 497,
-                  child: _CardAadhaar(highlight: _aadhaarError),
-                ),
-                if (_aadhaarError)
-                  const Positioned(
-                    left: 89,
-                    top: 561,
-                    width: 246,
-                    child: InlineErrorText(
-                      'Upload your Aadhaar card to continue',
-                      maxLines: 1,
-                    ),
-                  ),
+                const Positioned(left: 23, top: 497, child: _CardAadhaar()),
                 const Positioned(left: 34, top: 508, child: _TileAadhaar()),
                 const Positioned(left: 89, top: 510.62, child: _TitleAadhaar()),
                 Positioned(
@@ -237,7 +328,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 497,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-aadhaar'),
@@ -248,7 +339,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 573,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-pan'),
@@ -259,7 +350,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 650,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-business'),
@@ -267,21 +358,20 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                     onTap: () => _pickDocument(_DocumentSlot.business),
                   ),
                 ),
+                // Loading overlay while uploading / saving.
+                if (_saving)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Color(0x66FFFFFF),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
               ],
             ),
           ),
-          // Anchored to the physical screen bottom so it stays there on
-          // taller devices; on the 873-tall artboard this matches the
-          // design offset (873 - 54 - 16 = 803).
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16, left: 10, right: 10),
-              child: SizedBox(
-                height: 54,
-                child: _ContinueButton(onTap: _openBankDetails),
-              ),
-            ),
+          ContinueButton(
+            buttonKey: const Key('verify-continue'),
+            onTap: _onContinue,
           ),
         ],
       ),
@@ -323,10 +413,12 @@ class _BackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
-      child: const Icon(
-        Icons.arrow_back,
-        size: 22,
-        color: AppColors.textPrimary,
+      child: HoverPress.icon(
+        child: const Icon(
+          Icons.arrow_back,
+          size: 22,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -337,7 +429,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 04', style: AppTextStyles.stepLabel);
+    return const Text('STEP 03', style: AppTextStyles.stepLabel);
   }
 }
 
@@ -457,30 +549,22 @@ class _PcLabel extends StatelessWidget {
   }
 }
 
-/// Profile completion percentage, computed from the filled document slots.
 class _PcPercent extends StatelessWidget {
-  const _PcPercent({required this.percent});
-
-  final int percent;
+  const _PcPercent();
 
   @override
   Widget build(BuildContext context) {
-    return Text('$percent%', style: AppTextStyles.pcPercent);
+    return const Text('75%', style: AppTextStyles.pcPercent);
   }
 }
 
 class _PcBar extends StatelessWidget {
-  const _PcBar({required this.percent});
-
-  /// Completion percentage (0..100) that drives the filled portion.
-  final int percent;
-
-  static const double trackWidth = 338;
+  const _PcBar();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: trackWidth,
+      width: 338,
       height: 8,
       decoration: BoxDecoration(
         color: AppColors.pcTrack,
@@ -489,7 +573,7 @@ class _PcBar extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          width: trackWidth * percent / 100,
+          width: 253.5,
           height: 8,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -573,20 +657,15 @@ class _Divider extends StatelessWidget {
 }
 
 class _DocCard extends StatelessWidget {
-  const _DocCard({this.highlight = false});
-
-  /// When true the card is outlined in red (its document is missing).
-  final bool highlight;
+  const _DocCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 62,
       decoration: BoxDecoration(
-        border: Border.all(
-          color: highlight ? AppColors.fieldError : AppColors.docCardBorder,
-        ),
+        border: Border.all(color: AppColors.docCardBorder),
         borderRadius: BorderRadius.circular(14),
       ),
     );
@@ -594,12 +673,10 @@ class _DocCard extends StatelessWidget {
 }
 
 class _CardAadhaar extends StatelessWidget {
-  const _CardAadhaar({this.highlight = false});
-
-  final bool highlight;
+  const _CardAadhaar();
 
   @override
-  Widget build(BuildContext context) => _DocCard(highlight: highlight);
+  Widget build(BuildContext context) => const _DocCard();
 }
 
 class _CardPan extends StatelessWidget {
@@ -834,42 +911,6 @@ class _Chevron extends StatelessWidget {
       selected ? Icons.check_circle : Icons.keyboard_arrow_down,
       size: 18,
       color: AppColors.verifiedText,
-    );
-  }
-}
-
-/// Continue CTA. The parent validates that the mandatory Aadhaar document was
-/// uploaded before navigating to the bank step.
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 54,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.continueGradientStart,
-              AppColors.continueGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.continueGlow,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: const Text('Continue', style: AppTextStyles.button),
-      ),
     );
   }
 }

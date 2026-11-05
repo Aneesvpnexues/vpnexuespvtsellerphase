@@ -60,8 +60,8 @@ void main() {
 
     // Primary button: x 24..388, y 731..785, radius 16.
     final button = rectOf(_findPrimaryButton());
-    expect(button.left, closeTo(24, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.left, closeTo(22, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.top, closeTo(731, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
@@ -161,3 +161,4 @@ Finder _findPrimaryButton() {
         (w.decoration as BoxDecoration).color == AppColors.primary,
   );
 }
+
