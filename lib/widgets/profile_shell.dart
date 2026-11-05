@@ -68,8 +68,8 @@ class ProfileShell extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: 0,
-                top: 24,
+                left: -2,
+                top: 25,
                 child: PageHeader(
                   title: 'Profile',
                   onBack: () => goToHome(context),
