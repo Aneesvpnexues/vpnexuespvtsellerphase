@@ -38,12 +38,12 @@ class OrderDetailsScreen extends StatelessWidget {
                 top: 73,
                 child: PageHeader(title: 'Order Details'),
               ),
-              Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              Positioned(left: 22, top: 117, child: _SegmentTabs()),
               Positioned(left: 25, top: 172, child: _OrderHero()),
-              Positioned(left: 24, top: 394, child: _BuyerCard()),
-              Positioned(left: 24, top: 588, child: _ItemsCard()),
-              Positioned(left: 24, top: 862, child: _SummaryCard()),
-              Positioned(left: 24, top: 1082, child: _DeliveryCard()),
+              Positioned(left: 22, top: 394, child: _BuyerCard()),
+              Positioned(left: 22, top: 588, child: _ItemsCard()),
+              Positioned(left: 22, top: 862, child: _SummaryCard()),
+              Positioned(left: 22, top: 1082, child: _DeliveryCard()),
               Positioned(left: 21, top: 1420, child: _SlideAccept()),
             ],
           ),
@@ -100,12 +100,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -463,7 +463,7 @@ class _BuyerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 181,
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
@@ -682,7 +682,7 @@ class _ItemsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 260,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -847,7 +847,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 206,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -988,7 +988,7 @@ class _DeliveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 324,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1278,7 +1278,7 @@ class _SlideAcceptState extends State<_SlideAccept>
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
-          width: 364,
+          width: 368,
           height: 58,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(28)),

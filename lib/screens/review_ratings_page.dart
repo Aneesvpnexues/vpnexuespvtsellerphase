@@ -36,8 +36,8 @@ class ReviewRatingsPage extends StatelessWidget {
                 top: 24,
                 child: PageHeader(title: 'Review & Ratings'),
               ),
-              const Positioned(left: 24, top: 65, child: _RatingSummaryCard()),
-              const Positioned(left: 24, top: 265, child: _ReviewsCard()),
+              const Positioned(left: 22, top: 65, child: _RatingSummaryCard()),
+              const Positioned(left: 22, top: 265, child: _ReviewsCard()),
             ],
           ),
         ),
@@ -80,7 +80,7 @@ class _RatingSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 176,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -239,7 +239,7 @@ class _ReviewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 620,
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,

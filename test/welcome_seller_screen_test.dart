@@ -106,36 +106,36 @@ void main() {
 
     // Segmented control: track x 24..386 y 506..558, pill 191 wide.
     final track = rectOf(_findTrack(tester));
-    expect(track.left, closeTo(24, 1));
+    expect(track.left, closeTo(22, 1));
     expect(track.top, closeTo(506, 1));
     expect(track.width, closeTo(362, 1));
     expect(track.height, closeTo(52, 1));
 
     final pill = rectOf(_findPrimaryContainers(tester).first);
-    expect(pill.left, closeTo(24, 1));
+    expect(pill.left, closeTo(22, 1));
     expect(pill.top, closeTo(505, 1));
     expect(pill.width, closeTo(191, 1));
     expect(pill.height, closeTo(53, 1));
 
     expect(
       rectOf(find.text('Login')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(rectOf(find.text('Login')).top, closeTo(522.6, 1.5));
     expect(rectOf(find.text('Sign Up')).left, closeTo(215, 1));
 
     // Card copy block.
-    expect(rectOf(find.text('Welcome back')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Welcome back')).left, closeTo(22, 1));
     expect(rectOf(find.text('Welcome back')).top, closeTo(587.8, 1.5));
     expect(
       rectOf(find.text('Enter your phone number to proceed')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(
       rectOf(find.text('Enter your phone number to proceed')).top,
       closeTo(612.3, 2),
     );
-    expect(rectOf(find.text('Phone Number')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Phone Number')).left, closeTo(22, 1));
     expect(rectOf(find.text('Phone Number')).top, closeTo(656.5, 1.5));
 
     // Inputs: country box x 24..107, phone box x 112..389, y 684..738.
@@ -143,7 +143,7 @@ void main() {
     expect(boxes.length, 2);
     final country = rectOf(boxes[0]);
     final phone = rectOf(boxes[1]);
-    expect(country.left, closeTo(24, 1));
+    expect(country.left, closeTo(22, 1));
     expect(country.top, closeTo(684, 1));
     expect(country.width, closeTo(83, 1));
     expect(country.height, closeTo(54, 1));
@@ -158,9 +158,9 @@ void main() {
 
     // Send OTP button: x 24..388, y 749..801.
     final button = rectOf(_findPrimaryContainers(tester).last);
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(749, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(52, 1));
 
     // Footer sits at y 859.
@@ -414,9 +414,9 @@ void main() {
 
     final button =
         tester.getRect(green.last).translate(-origin.dx, -origin.dy);
-    expect(button.left, closeTo(24, 2));
+    expect(button.left, closeTo(22, 2));
     expect(button.top, closeTo(784, 2));
-    expect(button.width, closeTo(364, 2));
+    expect(button.width, closeTo(368, 2));
     expect(button.height, closeTo(52, 2));
   });
 
@@ -464,7 +464,7 @@ void main() {
 
     // Segmented control keeps the login position.
     final track = rectOf(_findTrack(tester));
-    expect(track.left, closeTo(24, 1));
+    expect(track.left, closeTo(22, 1));
     expect(track.top, closeTo(506, 1));
     expect(track.width, closeTo(362, 1));
     expect(track.height, closeTo(52, 1));
@@ -479,8 +479,8 @@ void main() {
     const tops = [574, 644, 714];
     for (var i = 0; i < 3; i++) {
       final field = rectOf(boxes[i]);
-      expect(field.left, closeTo(24, 1));
-      expect(field.width, closeTo(364, 1));
+      expect(field.left, closeTo(22, 1));
+      expect(field.width, closeTo(368, 1));
       expect(field.height, closeTo(54, 1));
       expect(field.top, closeTo(tops[i], 1));
     }
@@ -581,3 +581,4 @@ List<Finder> _findBorderedBoxes(WidgetTester tester) {
       .map(find.byWidget)
       .toList();
 }
+

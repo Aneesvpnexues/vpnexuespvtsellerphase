@@ -567,10 +567,10 @@ void main() {
 
       // Balance card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Available balance'));
-      expect(label.left, closeTo(24 + 21, 1));
+      expect(label.left, closeTo(22 + 21, 1));
       expect(label.top, closeTo(65 + 20, 2));
       final amount = rectOf(find.text('\u20B912,480'));
-      expect(amount.left, closeTo(24 + 22, 1));
+      expect(amount.left, closeTo(22 + 22, 1));
       expect(amount.top, closeTo(65 + 44, 2));
       final sub = rectOf(
         find.text('\u20B93,480 more coming from orders in prog.'),
@@ -585,18 +585,18 @@ void main() {
 
       // Transactions card at (24, 320); title rel (22, 17).
       final cardTitle = rectOf(find.text('Transactions').last);
-      expect(cardTitle.left, closeTo(24 + 22, 1));
+      expect(cardTitle.left, closeTo(22 + 22, 1));
       expect(cardTitle.top, closeTo(320 + 17, 2));
 
       // Row 1: tile top rel 55, title rel 58.5, date rel 74.5, amount rel 70
       // - all card-rel, card origin (24, 320).
       final rowTitle = rectOf(find.text('Order #NX4852  Akash Stores'));
-      expect(rowTitle.left, closeTo(24 + 67, 1));
+      expect(rowTitle.left, closeTo(22 + 67, 1));
       expect(rowTitle.top, closeTo(320 + 58.5, 2));
       final date = rectOf(find.text('12 Mar 2024'));
       expect(date.top, closeTo(320 + 74.5, 2));
       final credit = rectOf(find.text('+\u20B912,480'));
-      expect(credit.right, closeTo(24 + 364 - 21, 1.5));
+      expect(credit.right, closeTo(22 + 364 - 21, 1.5));
       expect(credit.top, closeTo(320 + 70, 2));
 
       // Row 4 sits 174 lower (3 pitches).
@@ -734,22 +734,22 @@ void main() {
 
       // Summary card at (24, 65); label rel (21, 20), amount rel (22, 44).
       final label = rectOf(find.text('Average rating'));
-      expect(label.left, closeTo(24 + 21, 1));
+      expect(label.left, closeTo(22 + 21, 1));
       expect(label.top, closeTo(65 + 20, 2));
       final amount = rectOf(find.text('4.8'));
-      expect(amount.left, closeTo(24 + 22, 1));
+      expect(amount.left, closeTo(22 + 22, 1));
       expect(amount.top, closeTo(65 + 44, 2));
       final sub = rectOf(find.text('125 reviews'));
       expect(sub.top, closeTo(65 + 100, 2));
 
       // Reviews card title rel (22, 17); card origin (24, 265).
       final cardTitle = rectOf(find.text('Reviews'));
-      expect(cardTitle.left, closeTo(24 + 22, 1));
+      expect(cardTitle.left, closeTo(22 + 22, 1));
       expect(cardTitle.top, closeTo(265 + 17, 2));
 
       // Row 1 name rel (70, 10), row 4 sits 336 lower (3 pitches of 112).
       final row1 = rectOf(find.text('Anees'));
-      expect(row1.left, closeTo(24 + 70, 1));
+      expect(row1.left, closeTo(22 + 70, 1));
       expect(row1.top, closeTo(265 + 55 + 10, 2));
       final row4 = rectOf(find.text('Senthil'));
       expect(row4.top, closeTo(265 + 55 + 10 + 336, 2));
@@ -1692,7 +1692,7 @@ void main() {
 
       // Floating back circle sits in the empty band above the hero.
       final back = tester.getRect(find.byKey(const Key('order-preview-back')));
-      expect(back.left, closeTo(24, 0.6));
+      expect(back.left, closeTo(22, 0.6));
       expect(back.top, closeTo(56, 0.6));
       expect(back.size, const Size(26, 26));
 
@@ -1751,3 +1751,5 @@ void main() {
     });
   });
 }
+
+

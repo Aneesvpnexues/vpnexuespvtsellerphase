@@ -408,7 +408,7 @@ void main() {
     expect(rectOf(find.text('Delete product')).top, closeTo(1373.8, 5));
 
     final Rect photo = rectOf(assetImage('assets/product_details/photo.png'));
-    expect(photo.left, closeTo(24, 1));
+    expect(photo.left, closeTo(22, 1));
     expect(photo.top, closeTo(88, 1));
     expect(photo.width, closeTo(363.5, 1));
     expect(photo.height, closeTo(251.5, 1));
@@ -460,7 +460,7 @@ void main() {
     final Rect photo = tester.getRect(
       assetImage('assets/product_details/photo.png'),
     );
-    expect(photo.left, closeTo(24 * scale, 1));
+    expect(photo.left, closeTo(22 * scale, 1));
     expect(photo.width, closeTo(363.5 * scale, 1));
   });
 
@@ -489,3 +489,5 @@ void main() {
     );
   });
 }
+
+

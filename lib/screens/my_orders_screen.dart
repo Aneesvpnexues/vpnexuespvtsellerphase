@@ -103,12 +103,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       ),
                     ),
                     Positioned(
-                      left: 24,
+                      left: 22,
                       top: 122,
                       child: _SearchSort(onSortTap: _showSortOptions),
                     ),
                     Positioned(
-                      left: 24,
+                      left: 22,
                       top: 181,
                       child: _OrderTabs(
                         selected: _filter,
@@ -117,7 +117,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
                     for (var i = 0; i < orders.length; i++)
                       Positioned(
-                        left: 24,
+                        left: 22,
                         top: 241 + i * 166.0,
                         child: _OrderBlock(
                           store: orders[i].store,
@@ -315,7 +315,7 @@ class _SearchSort extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
@@ -435,7 +435,7 @@ class _OrderTabs extends StatelessWidget {
     );
 
     return Container(
-      width: 364,
+      width: 368,
       height: 45,
       decoration: const BoxDecoration(
         color: Color(0xB8E3F1CC),

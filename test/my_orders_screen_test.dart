@@ -62,8 +62,8 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     final back = rectOf(find.byKey(const ValueKey('my-orders-back')));
-    expect(back.left, closeTo(24, 1));
-    expect(back.top, closeTo(24, 1));
+    expect(back.left, closeTo(22, 1));
+    expect(back.top, closeTo(22, 1));
     expect(back.size, const Size(26, 26));
     final title = rectOf(find.text('My Orders'));
     expect(title.left, closeTo(68, 2));
@@ -227,3 +227,4 @@ void main() {
     expect(find.text('My Orders'), findsOneWidget);
   });
 }
+

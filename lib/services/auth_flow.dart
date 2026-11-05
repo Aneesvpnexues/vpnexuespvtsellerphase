@@ -93,12 +93,16 @@ class AuthFlow {
           }
         },
         verificationFailed: (FirebaseAuthException error) {
+          print("OTP ERROR CODE: ${error.code}");
+          print("OTP ERROR MESSAGE: ${error.message}");
           debugPrint(
               '[AuthFlow] verifyPhoneNumber failed: ${error.code} '
               '${error.message ?? ''}');
           onError(messageFor(error));
         },
         codeSent: (String verificationId, int? resendToken) {
+          print("OTP SENT SUCCESSFULLY");
+          print("VERIFICATION ID: $verificationId");
           this.verificationId = verificationId;
           this.resendToken = resendToken;
           // Instant verification can finish before codeSent fires; the
@@ -107,6 +111,7 @@ class AuthFlow {
           onCodeSent();
         },
         codeAutoRetrievalTimeout: (String verificationId) {
+          print("OTP AUTO RETRIEVAL TIMEOUT");
           this.verificationId ??= verificationId;
         },
       );

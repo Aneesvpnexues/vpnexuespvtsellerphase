@@ -41,7 +41,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(
       _rectOf(tester, find.text('Welcome back')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(find.byType(SingleChildScrollView), findsOneWidget);
   });
@@ -53,7 +53,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     final title = _rectOf(tester, find.text('Enter OTP'));
-    expect(title.left, closeTo(24, 1));
+    expect(title.left, closeTo(22, 1));
     expect(title.top, closeTo(373, 2));
     expect(find.byType(SingleChildScrollView), findsOneWidget);
   });
@@ -70,7 +70,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(
       _rectOf(tester, find.text('Use my current Location')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(find.byType(SingleChildScrollView), findsOneWidget);
   });
@@ -102,7 +102,7 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(_rectOf(tester, find.text('Tell us about')).left, closeTo(24, 1));
+    expect(_rectOf(tester, find.text('Tell us about')).left, closeTo(22, 1));
     expect(
       _rectOf(tester, find.byKey(const Key('business-continue'))).bottom,
       closeTo(917 - _keyboardHeight - 16, 1),
@@ -119,7 +119,7 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(_rectOf(tester, find.text('Verify your')).left, closeTo(24, 1));
+    expect(_rectOf(tester, find.text('Verify your')).left, closeTo(22, 1));
     expect(
       _rectOf(tester, find.byKey(const Key('verify-continue'))).bottom,
       closeTo(917 - _keyboardHeight - 16, 1),
@@ -136,7 +136,7 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(_rectOf(tester, find.text('Add your')).left, closeTo(24, 1));
+    expect(_rectOf(tester, find.text('Add your')).left, closeTo(22, 1));
     expect(
       _rectOf(tester, find.byKey(const Key('bank-continue'))).bottom,
       closeTo(936 - _keyboardHeight - 16, 1),
@@ -159,7 +159,7 @@ void main() {
     tester.view.viewInsets = const FakeViewPadding(bottom: _keyboardHeight);
     await tester.pumpAndSettle();
 
-    expect(_rectOf(tester, find.text('Tell us about')).left, closeTo(24, 1));
+    expect(_rectOf(tester, find.text('Tell us about')).left, closeTo(22, 1));
     expect(
       _rectOf(tester, find.byKey(const Key('business-continue'))).bottom,
       closeTo(800 - _keyboardHeight - 16, 1),
@@ -206,3 +206,4 @@ void main() {
     expect(field.bottom, lessThan(button.top));
   });
 }
+

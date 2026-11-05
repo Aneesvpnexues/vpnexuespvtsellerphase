@@ -58,8 +58,8 @@ void main() {
       }
 
       final Rect rect = tester.getRect(find.byKey(key));
-      expect(rect.left, closeTo(24, 1));
-      expect(rect.width, closeTo(364, 1));
+      expect(rect.left, closeTo(22, 1));
+      expect(rect.width, closeTo(368, 1));
       expect(rect.height, closeTo(54, 1));
       expect(rect.bottom, closeTo(designHeight - 16, 1));
 
@@ -77,3 +77,4 @@ void main() {
     });
   }
 }
+

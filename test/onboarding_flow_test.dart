@@ -3,10 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
-import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
-import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/services/auth_flow.dart';
@@ -41,49 +39,60 @@ void main() {
     Step03BusinessDetailsScreen.debugProfileSaver = null;
   });
 
-  testWidgets('login and onboarding flow ends at the home page', (
-    tester,
-  ) async {
-    await pumpFlow(tester);
+  testWidgets(
+    'login and onboarding flow walks Verify -> Registration -> Bank',
+    (tester) async {
+      await pumpFlow(tester);
 
-    await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
-    await tester.tap(find.text('Send OTP'));
-    await tester.pumpAndSettle();
-    expect(find.byType(OtpScreen), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
+      await tester.tap(find.text('Send OTP'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OtpScreen), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), '123456');
-    await tester.pump();
-    await tester.tap(find.text('Verify'));
-    await tester.pumpAndSettle();
-    expect(find.byType(Step01LocationScreen), findsOneWidget);
-    expect(SellerProfileStore.instance.mobile, '+91 9876543210');
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pump();
+      await tester.tap(find.text('Verify'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Use my current Location'));
-    await tester.pumpAndSettle();
-    expect(find.byType(Step02SellerTypeScreen), findsOneWidget);
+      // A brand-new seller starts at step 1: Verify Your Details.
+      expect(find.byType(VerifyDetaileScreen), findsOneWidget);
+      expect(SellerProfileStore.instance.mobile, '+91 9876543210');
 
-    await tester.tap(find.byKey(const Key('seller-type-continue')));
-    await tester.pumpAndSettle();
-    expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
+      // No documents were picked (uploads need the network), so KYC stays
+      // incomplete and the flow moves on to Registration.
+      await tester.tap(find.byKey(const Key('verify-continue')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
-    await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
-    await tester.enterText(
-      find.byKey(const Key('businessAddress')),
-      '12 Main Street',
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('business-continue')));
-    await tester.pumpAndSettle();
-    expect(find.byType(VerifyDetaileScreen), findsOneWidget);
+      // The seller would have uploaded documents on the previous screen;
+      // mark KYC done here because the upload path cannot run in tests.
+      SellerProfileStore.instance.setCompletion(
+        profileComplete: SellerProfileStore.instance.profileComplete,
+        bankComplete: SellerProfileStore.instance.bankComplete,
+        verificationComplete: true,
+      );
 
-    await tester.tap(find.byKey(const Key('verify-continue')));
-    await tester.pumpAndSettle();
-    expect(find.byType(BankDetaileScreen), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');
+      await tester.enterText(find.byKey(const Key('businessFarm')), 'Green Farm');
+      await tester.enterText(
+        find.byKey(const Key('businessAddress')),
+        '12 Main Street',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('business-continue')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('bank-continue')));
-    await tester.pumpAndSettle();
-    expect(find.byType(BankDetaileScreen), findsOneWidget);
-    expect(find.byType(SellerHomeScreen), findsNothing);
-  });
+      // Step 3: Bank Details — KYC and registration are both done.
+      expect(find.byType(BankDetaileScreen), findsOneWidget);
+      expect(find.byType(VerifyDetaileScreen), findsNothing);
+
+      await tester.tap(find.byKey(const Key('bank-continue')));
+      await tester.pumpAndSettle();
+
+      // The empty bank form fails local validation, so the seller stays on
+      // Bank Details and Home is not reached yet.
+      expect(find.byType(BankDetaileScreen), findsOneWidget);
+      expect(find.byType(SellerHomeScreen), findsNothing);
+    },
+  );
 }

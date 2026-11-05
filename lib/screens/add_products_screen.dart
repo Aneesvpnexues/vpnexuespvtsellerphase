@@ -351,13 +351,13 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                           ),
                         ),
                         const Positioned(
-                          left: 24,
+                          left: 22,
                           top: 76,
                           child: _ProgressCard(),
                         ),
                         // Product photos card.
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 148,
                           child: _PhotosCard(
                             photos: _photos,
@@ -378,10 +378,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         ),
                         // Basic information card.
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 407,
                           child: SizedBox(
-                            width: 364,
+                            width: 368,
                             height: 216,
                             child: Stack(
                               children: [
@@ -460,10 +460,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         ),
                         // Pricing & quantity card.
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 638,
                           child: SizedBox(
-                            width: 364,
+                            width: 368,
                             height: 244,
                             child: Stack(
                               children: [
@@ -578,10 +578,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         ),
                         // Description card.
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 896,
                           child: SizedBox(
-                            width: 364,
+                            width: 368,
                             height: 234,
                             child: Stack(
                               children: [
@@ -670,10 +670,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         ),
                         // Status card.
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 1122,
                           child: SizedBox(
-                            width: 364,
+                            width: 368,
                             height: 136,
                             child: Stack(
                               children: [
@@ -746,10 +746,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                           ),
                         ),
                         Positioned(
-                          left: 24,
+                          left: 22,
                           top: 1274,
                           child: SizedBox(
-                            width: 364,
+                            width: 368,
                             height: 54,
                             child: _ContinueButton(onTap: _saveProduct),
                           ),
@@ -852,7 +852,7 @@ class _ProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -947,7 +947,7 @@ class _PhotosCard extends StatelessWidget {
         ? currentPage
         : AddProductsScreen.maxPhotos - 1;
     return Container(
-      width: 364,
+      width: 368,
       height: 232,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
@@ -1011,7 +1011,7 @@ class _PhotosCard extends StatelessWidget {
             left: 0,
             top: 71,
             child: SizedBox(
-              width: 364,
+              width: 368,
               height: 127,
               child: Stack(
                 clipBehavior: Clip.none,
@@ -1035,7 +1035,7 @@ class _PhotosCard extends StatelessWidget {
                     Positioned(
                       left: 0,
                       top: 0,
-                      width: 364,
+                      width: 368,
                       height: 132,
                       child: ClipRect(
                         child: Stack(

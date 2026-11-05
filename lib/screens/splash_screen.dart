@@ -9,7 +9,7 @@ import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
-import '../screens/location_screen.dart';
+import '../screens/business_details_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
@@ -70,9 +70,9 @@ class _SplashScreenState extends State<SplashScreen> {
   /// matching the verified phone number, determine which onboarding sections
   /// are complete, and route accordingly: the first incomplete section, or
   /// Home when everything is already saved. A signed-in seller with no saved
-  /// rows restarts onboarding at Step 01 — never Home — so a pending page
-  /// cannot be skipped. Otherwise stay on the splash so the user can tap to
-  /// log in.
+  /// rows restarts onboarding at Verify Your Details — never Home — so a
+  /// pending page cannot be skipped. Otherwise stay on the splash so the
+  /// user can tap to log in.
   Future<void> _checkSession() async {
     if (!mounted) return;
 
@@ -180,12 +180,12 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
 
-      // No Supabase data found for this seller — resume at Step 01 exactly
-      // like the OTP and welcome login paths, so a pending onboarding page
-      // is never skipped in favour of Home.
+      // No Supabase data found for this seller — resume at Verify Your
+      // Details exactly like the OTP and welcome login paths, so a pending
+      // onboarding page is never skipped in favour of Home.
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
       );
     } else {
       setState(() => _checking = false);
@@ -233,8 +233,8 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step, or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
+  /// Registration -> Bank Details), or to Home if all sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -242,21 +242,21 @@ class _SplashScreenState extends State<SplashScreen> {
   }) {
     if (!mounted) return;
 
-    if (!profileComplete) {
+    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
+    // so verification is always the first section to check.
+    if (!verificationComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => const Step01LocationScreen(),
+          builder: (_) => const VerifyDetaileScreen(),
         ),
       );
       return;
     }
 
-    // Flow order is STEP 01-03 (profile) -> Verify -> Bank -> Home, so the
-    // first incomplete section after the profile is verification.
-    if (!verificationComplete) {
+    if (!profileComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
+          builder: (_) => const Step03BusinessDetailsScreen(),
         ),
       );
       return;

@@ -109,18 +109,18 @@ void main() {
     expect(leaves.height, closeTo(560, 1));
 
     // Heading: left 24, design glyph tops 165.5 / 200.
-    expect(rectOf(find.text('Tell us about')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Tell us about')).left, closeTo(22, 1));
     expect(rectOf(find.text('Tell us about')).top, closeTo(162.33, 1));
     expect(rectOf(find.text('your')).top, closeTo(196.83, 1));
     expect(rectOf(find.text('business')).top, closeTo(196.83, 1));
 
     // Subtitle, section title.
-    expect(rectOf(find.text("Let's create your profile")).left, closeTo(24, 1));
+    expect(rectOf(find.text("Let's create your profile")).left, closeTo(22, 1));
     expect(
       rectOf(find.text("Let's create your profile")).top,
       closeTo(248.2, 1),
     );
-    expect(rectOf(find.text('Business Details')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Business Details')).left, closeTo(22, 1));
     expect(rectOf(find.text('Business Details')).top, closeTo(330.89, 1));
 
     // Pill note: fixed box x 261..387.5, y 326..353.
@@ -134,7 +134,7 @@ void main() {
     const tops = [380.5, 457.5, 533.5, 611.5, 688.5];
     for (var i = 0; i < tops.length; i++) {
       final rect = rectOf(_tiles().at(i));
-      expect(rect.left, closeTo(24, 1), reason: 'tile $i left');
+      expect(rect.left, closeTo(22, 1), reason: 'tile $i left');
       expect(rect.top, closeTo(tops[i], 1), reason: 'tile $i top');
       expect(rect.width, closeTo(40, 1), reason: 'tile $i width');
       expect(rect.height, closeTo(40, 1), reason: 'tile $i height');
@@ -142,9 +142,9 @@ void main() {
 
     // Continue button: x 24..388, y 847..901, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(847, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -435,3 +435,4 @@ void main() {
     expect(find.byType(SellerHomeScreen), findsNothing);
   });
 }
+

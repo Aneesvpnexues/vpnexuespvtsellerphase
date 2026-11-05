@@ -59,15 +59,15 @@ void main() {
     expect(illustration.height, closeTo(347.5, 1));
 
     // Heading: two 32px lines starting at x 24, design glyph tops 444.5/476.5.
-    expect(rectOf(find.text('What best')).left, closeTo(24, 1));
+    expect(rectOf(find.text('What best')).left, closeTo(22, 1));
     expect(rectOf(find.text('What best')).top, closeTo(441.5, 1));
-    expect(rectOf(find.text('describes you?')).left, closeTo(24, 1));
+    expect(rectOf(find.text('describes you?')).left, closeTo(22, 1));
     expect(rectOf(find.text('describes you?')).top, closeTo(473.5, 1));
 
     // Subtitle: x 24, design glyph top 517.5 (line box sits 5.4px higher).
     expect(
       rectOf(find.text('Choose your seller type\nto get started.')).left,
-      closeTo(24, 1),
+      closeTo(22, 1),
     );
     expect(
       rectOf(find.text('Choose your seller type\nto get started.')).top,
@@ -100,9 +100,9 @@ void main() {
 
     // Continue button: x 24..388, y 873..927, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(873, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -278,3 +278,4 @@ void main() {
     );
   });
 }
+

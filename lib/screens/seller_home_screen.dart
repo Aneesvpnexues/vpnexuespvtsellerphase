@@ -55,7 +55,7 @@ class SellerHomeScreen extends StatelessWidget {
                     trimTop: trimTop,
                     child: Stack(
                       children: [
-                        const Positioned(left: 24, top: 74, child: _Greeting()),
+                        const Positioned(left: 22, top: 74, child: _Greeting()),
                         Positioned(
                           left: 330.5,
                           top: 73.5,
@@ -862,7 +862,7 @@ class _SalesCard extends StatelessWidget {
             ),
           ),
           const Positioned(
-            left: 248,
+            left: 246,
             top: 101,
             child: _SalesStat(
               number: '4',
@@ -1034,3 +1034,4 @@ class _AttentionRow extends StatelessWidget {
     );
   }
 }
+

@@ -69,7 +69,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Order Details')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Order Details')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Order Details')).top, closeTo(22, 4));
     expect(rectOf(find.text('New Order')).left, closeTo(41, 3));
     expect(rectOf(find.text('New Order')).top, closeTo(155, 5));
     expect(rectOf(find.text('ORDER #NX4582')).left, closeTo(41, 3));
@@ -221,3 +221,4 @@ void main() {
     expect(find.text('My Products'), findsOneWidget);
   });
 }
+

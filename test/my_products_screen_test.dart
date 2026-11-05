@@ -106,7 +106,7 @@ void main() {
     expect(rectOf(find.text('My Products')).top, closeTo(28, 3));
     expect(
       rectOf(find.byKey(const ValueKey('products-empty'))).left,
-      closeTo(24, 2),
+      closeTo(22, 2),
     );
     expect(
       rectOf(find.byKey(const ValueKey('products-empty'))).top,
@@ -421,3 +421,4 @@ void main() {
     expect(find.text('My Products'), findsOneWidget);
   });
 }
+

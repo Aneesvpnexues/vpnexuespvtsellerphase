@@ -66,7 +66,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Orders & delivery')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Orders & delivery')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Orders & delivery')).top, closeTo(22, 4));
     expect(rectOf(find.text('Delivery help')).left, closeTo(45, 3));
     expect(rectOf(find.text('Delivery help')).top, closeTo(124, 5));
     expect(rectOf(find.text('Articles')).left, closeTo(25, 3));
@@ -152,3 +152,4 @@ void main() {
     );
   });
 }
+

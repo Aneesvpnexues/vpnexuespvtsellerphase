@@ -79,7 +79,7 @@ void main() {
     );
     expect(
       rectOf(find.text('Account & verification').first).top,
-      closeTo(24, 4),
+      closeTo(22, 4),
     );
     expect(
       rectOf(find.text('How do I verify my account?')).left,
@@ -166,3 +166,4 @@ void main() {
     );
   });
 }
+

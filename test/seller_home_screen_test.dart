@@ -100,7 +100,7 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('Hello,')).left, closeTo(24, 2));
+    expect(rectOf(find.text('Hello,')).left, closeTo(22, 2));
     expect(rectOf(find.text('Hello,')).top, closeTo(30, 2));
     expect(rectOf(find.text('ACTIVE ORDERS')).left, closeTo(45, 2));
     expect(rectOf(find.text('ACTIVE ORDERS')).top, closeTo(117, 3));
@@ -407,3 +407,4 @@ void main() {
     expect(find.text('Ramesh Kumar'), findsOneWidget);
   });
 }
+

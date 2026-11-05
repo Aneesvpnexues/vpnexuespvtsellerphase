@@ -110,7 +110,7 @@ class HelpTopicScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: <Widget>[
-              const Positioned(left: 24, top: 73, child: _BackCircle()),
+              const Positioned(left: 22, top: 73, child: _BackCircle()),
               Positioned(
                 left: 68,
                 top: 73,

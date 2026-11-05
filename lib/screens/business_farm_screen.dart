@@ -36,11 +36,11 @@ class BusinessFarmScreen extends StatelessWidget {
                 top: 73,
                 child: PageHeader(title: 'Business & Farm'),
               ),
-              Positioned(left: 24, top: 132, child: _HeroCard()),
-              Positioned(left: 24, top: 307, child: _FormCard()),
-              Positioned(left: 24, top: 609, child: _AddressCard()),
-              Positioned(left: 24, top: 850, child: _OrdersCard()),
-              Positioned(left: 24, top: 1036, child: _SaveBar()),
+              Positioned(left: 22, top: 132, child: _HeroCard()),
+              Positioned(left: 22, top: 307, child: _FormCard()),
+              Positioned(left: 22, top: 609, child: _AddressCard()),
+              Positioned(left: 22, top: 850, child: _OrdersCard()),
+              Positioned(left: 22, top: 1036, child: _SaveBar()),
             ],
           ),
         ),
@@ -55,7 +55,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 161,
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(20)),
@@ -82,7 +82,7 @@ class _HeroCard extends StatelessWidget {
               ),
             ),
             const Positioned(
-              left: 24,
+              left: 22,
               top: 105,
               child: LabelText(
                 'Kumar Organic Farm',
@@ -126,7 +126,7 @@ class _FormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 288,
       decoration: BoxDecoration(
         color: AppColors.profileCardBg,
@@ -302,7 +302,7 @@ class _AddressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 227,
       decoration: BoxDecoration(
         color: AppColors.profileCardBg,
@@ -484,7 +484,7 @@ class _Toggle extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 24,
+            left: 22,
             top: 2,
             child: Container(
               width: 14,

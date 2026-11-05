@@ -41,7 +41,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('Settings')).left, closeTo(68, 3));
-    expect(rectOf(find.text('Settings')).top, closeTo(24, 4));
+    expect(rectOf(find.text('Settings')).top, closeTo(22, 4));
     expect(rectOf(find.text('Preferences').first).left, closeTo(47, 3));
     expect(rectOf(find.text('Preferences').first).top, closeTo(91, 4));
     expect(rectOf(find.text('Language')).left, closeTo(91, 3));
@@ -169,3 +169,4 @@ void main() {
     expect(find.text('Hello,'), findsOneWidget);
   });
 }
+

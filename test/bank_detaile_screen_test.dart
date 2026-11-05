@@ -155,9 +155,9 @@ void main() {
     // Step label + headings + subtitle.
     expect(rectOf(find.text('STEP 02')).left, closeTo(25, 1));
     expect(rectOf(find.text('STEP 02')).top, closeTo(89.13, 1));
-    expect(rectOf(find.text('Add your')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Add your')).left, closeTo(22, 1));
     expect(rectOf(find.text('Add your')).top, closeTo(141.79, 1));
-    expect(rectOf(find.text('bank details')).left, closeTo(24, 1));
+    expect(rectOf(find.text('bank details')).left, closeTo(22, 1));
     expect(rectOf(find.text('bank details')).top, closeTo(175.80, 1));
     expect(rectOf(find.text('To receive your earnings')).left, closeTo(25, 1));
     expect(
@@ -227,7 +227,7 @@ void main() {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(25, 1), reason: 'card $i left');
       expect(rect.top, closeTo(cardTops[i], 1), reason: 'card $i top');
-      expect(rect.width, closeTo(364, 1), reason: 'card $i width');
+      expect(rect.width, closeTo(368, 1), reason: 'card $i width');
       expect(rect.height, closeTo(93, 1), reason: 'card $i height');
     }
 
@@ -302,7 +302,7 @@ void main() {
     final banner = rectOf(_banner());
     expect(banner.left, closeTo(25, 1));
     expect(banner.top, closeTo(793, 1));
-    expect(banner.width, closeTo(364, 1));
+    expect(banner.width, closeTo(368, 1));
     expect(banner.height, closeTo(61, 1));
     expect(
       rectOf(find.text('Your information is safe with us.')).left,
@@ -321,9 +321,9 @@ void main() {
     // Continue button: bottom-anchored, x 24..388, y 866..920 on the 936
     // artboard, radius 18, gradient fill.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(866, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -654,8 +654,9 @@ void main() {
     expect(rectOf(_docCards().first).left, closeTo(25 * scaleX, 1));
 
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.right, closeTo(390 - 24, 1));
     expect(button.height, closeTo(54, 1));
   });
 }
+

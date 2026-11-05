@@ -45,9 +45,9 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
               children: [
                 const Positioned(right: 25, top: 84.2, child: _StepLabel()),
                 const Positioned(left: 40, top: 97, child: _Illustration()),
-                const Positioned(left: 24, top: 441.5, child: _TitleLead()),
-                const Positioned(left: 24, top: 473.5, child: _TitleAccent()),
-                const Positioned(left: 24, top: 512, child: _Subtitle()),
+                const Positioned(left: 22, top: 441.5, child: _TitleLead()),
+                const Positioned(left: 22, top: 473.5, child: _TitleAccent()),
+                const Positioned(left: 22, top: 512, child: _Subtitle()),
                 Positioned(
                   left: 33,
                   top: 582,

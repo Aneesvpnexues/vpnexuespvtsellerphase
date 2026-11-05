@@ -83,7 +83,7 @@ void main() {
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
     expect(rectOf(find.text('About VP NEXUES')).left, closeTo(68, 3));
-    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(24, 4));
+    expect(rectOf(find.text('About VP NEXUES')).top, closeTo(22, 4));
     expect(rectOf(find.text('Rooted in Tamil Nadu.')).left, closeTo(43, 3));
     expect(rectOf(find.text('Rooted in Tamil Nadu.')).top, closeTo(124, 6));
     expect(rectOf(find.text('Connected to the world.')).left, closeTo(43, 3));
@@ -204,3 +204,4 @@ void main() {
     );
   });
 }
+

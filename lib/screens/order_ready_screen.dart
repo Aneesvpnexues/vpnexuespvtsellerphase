@@ -68,17 +68,17 @@ class _OrderReadyScreenState extends State<OrderReadyScreen> {
                 top: 73,
                 child: PageHeader(title: 'Order Details'),
               ),
-              const Positioned(left: 24, top: 117, child: _SegmentTabs()),
+              const Positioned(left: 22, top: 117, child: _SegmentTabs()),
               const Positioned(left: 25, top: 172, child: _OrderHero()),
               const Positioned(left: 41, top: 247, child: _ProgressCard()),
-              const Positioned(left: 24, top: 358, child: _BuyerCard()),
+              const Positioned(left: 22, top: 358, child: _BuyerCard()),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 552,
                 child: _PackingCard(packed: _packed, onToggle: _togglePacked),
               ),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 847,
                 child: _SlideReady(
                   enabled: _allPacked,
@@ -115,12 +115,12 @@ class _SegmentTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 364,
+      width: 368,
       height: 45,
       child: Stack(
         children: [
           Container(
-            width: 364,
+            width: 368,
             height: 45,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -518,7 +518,7 @@ class _BuyerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 181,
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
@@ -728,7 +728,7 @@ class _PackingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 282,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1053,7 +1053,7 @@ class _SlideReadyState extends State<_SlideReady>
           onUpdate: _onDragUpdate,
           onEnd: _onDragEnd,
           child: SizedBox(
-            width: 364,
+            width: 368,
             height: 58,
             child: Stack(
               clipBehavior: Clip.none,

@@ -13,7 +13,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/keyboard_aware_canvas.dart';
 import 'bank_detaile.dart';
-import 'location_screen.dart';
+import 'business_details_screen.dart';
 import 'otp_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
@@ -98,7 +98,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       return;
     }
     final String display = '${_country.dial} $digits';
-    AuthFlow.instance.autoVerified = _openStep01;
+    AuthFlow.instance.autoVerified = _openOnboarding;
     setState(() => _sending = true);
     await AuthFlow.instance.sendOtp(
       e164: '${_country.dial}$digits',
@@ -124,16 +124,16 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   /// confirmed without a typed code. Fetch existing seller data from Supabase,
   /// skip completed onboarding pages, and navigate to the first incomplete
   /// step or directly to Home.
-  void _openStep01() {
+  void _openOnboarding() {
     AuthFlow.instance.autoVerified = null;
     SellerProfileStore.instance.mobile = AuthFlow.instance.displayPhone;
     _routeAfterLogin();
   }
 
-  /// After instant verification, fetch all existing seller data from Supabase
-  /// using the authenticated mobile number, determine which onboarding
-  /// sections are already complete, skip those pages, and navigate to the
-  /// first incomplete step or directly to Home.
+  /// After instant verification (or the Sign Up tab), fetch all existing
+  /// seller data from Supabase using the authenticated mobile number,
+  /// determine which onboarding sections are already complete, skip those
+  /// pages, and navigate to the first incomplete step or directly to Home.
   void _routeAfterLogin() async {
     // Clear any stale data from a previous login session.
     SellerProfileStore.instance.resetCompletionFlags();
@@ -217,11 +217,12 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       }
     }
 
-    // No Supabase data found for this number — new user, onboarding Step 01.
+    // No Supabase data found for this number — new user starts onboarding
+    // at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     setState(() => _sending = false);
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
     );
   }
 
@@ -266,8 +267,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step, or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
+  /// Registration -> Bank Details), or to Home if all sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -276,21 +277,21 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
 
-    if (!profileComplete) {
+    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
+    // so verification is always the first section to check.
+    if (!verificationComplete) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => const Step01LocationScreen(),
+          builder: (_) => const VerifyDetaileScreen(),
         ),
       );
       return;
     }
 
-    // Flow order is STEP 01-03 (profile) -> Verify -> Bank -> Home, so the
-    // first incomplete section after the profile is verification.
-    if (!verificationComplete) {
+    if (!profileComplete) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
+          builder: (_) => const Step03BusinessDetailsScreen(),
         ),
       );
       return;
@@ -338,12 +339,12 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
   }
 
-  void _openSignUpLocation() {
-    setState(() => _sending = false);
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      (Route<dynamic> route) => false,
-    );
+  /// "Create account" on the Sign Up tab. The entered phone number is
+  /// verified with Firebase OTP first, then the same Supabase completion
+  /// check as Login routes the seller into onboarding — or straight to Home
+  /// when every registration detail is already saved.
+  Future<void> _createAccount() async {
+    await _sendOtp();
   }
 
   @override
@@ -376,7 +377,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     top: 168.7,
                     child: _Subtitle(),
                   ),
-                  const Positioned(left: 24, top: 506, child: _SegmentTrack()),
+                  const Positioned(left: 22, top: 506, child: _SegmentTrack()),
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
@@ -387,7 +388,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     child: _SegmentPill(),
                   ),
                   Positioned(
-                    left: 24,
+                    left: 22,
                     width: 191,
                     top: 522.6,
                     child: _SegmentLabel('Login', active: !_signUp),
@@ -399,7 +400,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     child: _SegmentLabel('Sign Up', active: _signUp),
                   ),
                   Positioned(
-                    left: 24,
+                    left: 22,
                     width: 191,
                     top: 506,
                     height: 53,
@@ -424,15 +425,16 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                   ),
                   if (_signUp) ...[
                     const Positioned(
-                      left: 24,
+                      left: 22,
                       top: 574,
                       child: _SignUpField(hint: 'Name'),
                     ),
                     Positioned(
-                      left: 24,
+                      left: 22,
                       top: 644,
                       child: _SignUpField(
                         hint: 'Phone Number',
+                        controller: _phone,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -440,36 +442,36 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       ),
                     ),
                     const Positioned(
-                      left: 24,
+                      left: 22,
                       top: 714,
                       child: _SignUpField(hint: 'Password', obscure: true),
                     ),
                   Positioned(
-                    left: 24,
+                    left: 22,
                     top: 784,
                     child: _CreateAccountButton(
-                      onTap: _openSignUpLocation,
+                      onTap: _createAccount,
                     ),
                   ),
                   ] else ...[
                     const Positioned(
-                      left: 24,
+                      left: 22,
                       top: 587.8,
                       child: _WelcomeBack(),
                     ),
                     const Positioned(
-                      left: 24,
+                      left: 22,
                       right: 0,
                       top: 612.3,
                       child: _PhoneHint(),
                     ),
                     const Positioned(
-                      left: 24,
+                      left: 22,
                       top: 656.5,
                       child: _PhoneLabel(),
                     ),
                     Positioned(
-                      left: 24,
+                      left: 22,
                       top: 684,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -487,7 +489,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       ),
                     ),
                     Positioned(
-                      left: 24,
+                      left: 22,
                       top: 749,
                       child: _SendOtpButton(
                         loading: _sending,
@@ -908,7 +910,7 @@ class _SendOtpButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: loading ? null : onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 52,
         padding: const EdgeInsets.only(right: 6),
         decoration: const BoxDecoration(
@@ -993,12 +995,17 @@ class _SignUpField extends StatefulWidget {
     this.keyboardType,
     this.obscure = false,
     this.inputFormatters,
+    this.controller,
   });
 
   final String hint;
   final TextInputType? keyboardType;
   final bool obscure;
   final List<TextInputFormatter>? inputFormatters;
+
+  /// Shared controller so the Sign Up phone field feeds the same OTP flow
+  /// as the Login tab.
+  final TextEditingController? controller;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
@@ -1012,7 +1019,7 @@ class _SignUpFieldState extends State<_SignUpField> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 54,
       decoration: const BoxDecoration(
         color: AppColors.fieldFill,
@@ -1022,6 +1029,7 @@ class _SignUpFieldState extends State<_SignUpField> {
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
       child: TextField(
+        controller: widget.controller,
         keyboardType: widget.keyboardType,
         inputFormatters: widget.inputFormatters,
         obscureText: widget.obscure && !_visible,
@@ -1076,7 +1084,7 @@ class _CreateAccountButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 364,
+        width: 368,
         height: 52,
         alignment: Alignment.center,
         decoration: const BoxDecoration(

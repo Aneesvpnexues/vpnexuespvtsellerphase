@@ -44,9 +44,9 @@ class _WalletPageState extends State<WalletPage> {
                 top: 24,
                 child: PageHeader(title: 'Wallet'),
               ),
-              const Positioned(left: 24, top: 65, child: _BalanceCard()),
+              const Positioned(left: 22, top: 65, child: _BalanceCard()),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 271,
                 child: _Chip(
                   width: 48.5,
@@ -76,7 +76,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
               ),
               Positioned(
-                left: 24,
+                left: 22,
                 top: 320,
                 child: _TransactionsCard(filter: _filter),
               ),
@@ -112,7 +112,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 184.5,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -346,7 +346,7 @@ class _TransactionsCard extends StatelessWidget {
       _ => _txns,
     };
     return Container(
-      width: 364,
+      width: 368,
       height: 290,
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,

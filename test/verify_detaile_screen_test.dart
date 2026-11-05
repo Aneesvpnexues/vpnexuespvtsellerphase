@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
+import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
@@ -90,12 +91,12 @@ void main() {
     expect(back.top, closeTo(30, 2));
 
     // Heading: left 24, design glyph tops 102 / 138.
-    expect(rectOf(find.text('Verify your')).left, closeTo(24, 1));
+    expect(rectOf(find.text('Verify your')).left, closeTo(22, 1));
     expect(rectOf(find.text('Verify your')).top, closeTo(99.15, 1));
     expect(rectOf(find.text('details')).top, closeTo(134.79, 1));
 
     // Subtitle.
-    expect(rectOf(find.text('A quick verification')).left, closeTo(24, 1));
+    expect(rectOf(find.text('A quick verification')).left, closeTo(22, 1));
     expect(rectOf(find.text('A quick verification')).top, closeTo(180.74, 1));
 
     // Profile completion card: x 24..386, y 367..428.
@@ -107,7 +108,7 @@ void main() {
             (w.decoration as BoxDecoration).color == AppColors.pcCardBg,
       ),
     );
-    expect(pcCard.left, closeTo(24, 1));
+    expect(pcCard.left, closeTo(22, 1));
     expect(pcCard.top, closeTo(367, 1));
     expect(pcCard.width, closeTo(362, 1));
     expect(pcCard.height, closeTo(61, 1));
@@ -162,7 +163,7 @@ void main() {
       final rect = rectOf(_docCards().at(i));
       expect(rect.left, closeTo(23, 1), reason: 'card $i left');
       expect(rect.top, closeTo(cardTops[i], 1), reason: 'card $i top');
-      expect(rect.width, closeTo(364, 1), reason: 'card $i width');
+      expect(rect.width, closeTo(368, 1), reason: 'card $i width');
       expect(rect.height, closeTo(62, 1), reason: 'card $i height');
     }
 
@@ -179,9 +180,9 @@ void main() {
 
     // Continue button: x 24..388, y 803..857, radius 18.
     final button = rectOf(_continueButton());
-    expect(button.left, closeTo(24, 1));
+    expect(button.left, closeTo(22, 1));
     expect(button.top, closeTo(803, 1));
-    expect(button.width, closeTo(364, 1));
+    expect(button.width, closeTo(368, 1));
     expect(button.height, closeTo(54, 1));
     final decoration =
         tester.widget<Container>(_continueButton()).decoration!
@@ -344,9 +345,28 @@ void main() {
     expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(3));
   });
 
-  testWidgets('Continue opens the bank-details screen', (tester) async {
+  testWidgets('Continue opens the registration page when the profile section '
+      'is not done yet', (tester) async {
     await pumpScreen(tester);
 
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Verify -> Registration -> Bank is the onboarding order, so the missing
+    // profile section comes next.
+    expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
+    expect(find.text('Fill Your Bank Details'), findsNothing);
+  });
+
+  testWidgets('Continue opens the bank-details screen when only the profile '
+      'section is done', (tester) async {
+    SellerProfileStore.instance.setCompletion(
+      profileComplete: true,
+      bankComplete: false,
+      verificationComplete: false,
+    );
+
+    await pumpScreen(tester);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -354,7 +374,7 @@ void main() {
     expect(find.text('Account Holder Name'), findsOneWidget);
   });
 
-  testWidgets('Continue opens Home when the bank section is already done', (
+  testWidgets('Continue opens Home when profile and bank are already done', (
     tester,
   ) async {
     SellerProfileStore.instance.setCompletion(
@@ -432,3 +452,4 @@ void main() {
     );
   });
 }
+

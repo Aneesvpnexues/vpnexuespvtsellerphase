@@ -13,6 +13,7 @@ import '../widgets/artboard.dart';
 import '../widgets/continue_button.dart';
 import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
+import 'business_details_screen.dart';
 import 'seller_home_screen.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
@@ -185,12 +186,23 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
         verificationComplete: verificationComplete,
       );
 
-      // Bank is next in the flow — skip straight to Home when it is already
+      // Verify -> Registration -> Bank -> Home: skip whatever is already
       // done so a returning seller never re-enters completed pages.
-      if (profile.bankComplete) {
+      if (profile.profileComplete && profile.bankComplete) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
           (Route<dynamic> route) => false,
+        );
+        return;
+      }
+
+      // Registration is the second step — open it while the profile section
+      // is still missing, then Bank Details, then Home.
+      if (!profile.profileComplete) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Step03BusinessDetailsScreen(),
+          ),
         );
         return;
       }
@@ -226,9 +238,9 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 const Positioned(left: 200, top: 0, child: _Illustration()),
                 const Positioned(left: 21, top: 30, child: _BackButton()),
                 const Positioned(right: 22.5, top: 34.63, child: _StepLabel()),
-                const Positioned(left: 24, top: 99.15, child: _TitleLead()),
-                const Positioned(left: 24, top: 134.79, child: _TitleAccent()),
-                const Positioned(left: 24, top: 180.74, child: _Subtitle()),
+                const Positioned(left: 22, top: 99.15, child: _TitleLead()),
+                const Positioned(left: 22, top: 134.79, child: _TitleAccent()),
+                const Positioned(left: 22, top: 180.74, child: _Subtitle()),
                 const Positioned(
                   left: 23,
                   top: 209.75,
@@ -236,7 +248,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 ),
                 const Positioned(left: 0, top: 342, child: _Sheet()),
                 // Profile completion card.
-                const Positioned(left: 24, top: 367, child: _PcCard()),
+                const Positioned(left: 22, top: 367, child: _PcCard()),
                 const Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
                 const Positioned(right: 40, top: 384.37, child: _PcPercent()),
                 const Positioned(left: 34, top: 406, child: _PcBar()),
@@ -316,7 +328,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 497,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-aadhaar'),
@@ -327,7 +339,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 573,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-pan'),
@@ -338,7 +350,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 23,
                   top: 650,
-                  width: 364,
+                  width: 368,
                   height: 62,
                   child: GestureDetector(
                     key: const Key('verify-doc-business'),
@@ -650,7 +662,7 @@ class _DocCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 62,
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.docCardBorder),

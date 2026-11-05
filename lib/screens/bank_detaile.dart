@@ -203,8 +203,8 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                   top: 118.75,
                   child: _ProgressTrack(),
                 ),
-                const Positioned(left: 24, top: 141.79, child: _TitleLead()),
-                const Positioned(left: 24, top: 175.80, child: _TitleAccent()),
+                const Positioned(left: 22, top: 141.79, child: _TitleLead()),
+                const Positioned(left: 22, top: 175.80, child: _TitleAccent()),
                 const Positioned(left: 25, top: 218.12, child: _Subtitle()),
                 // Bank details section row.
                 const Positioned(left: 27, top: 319, child: _SectionTick()),
@@ -356,7 +356,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                 Positioned(
                   left: 25,
                   top: 467,
-                  width: 364,
+                  width: 368,
                   height: 93,
                   child: GestureDetector(
                     key: const Key('bank-selector'),
@@ -683,7 +683,7 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 93,
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -1204,7 +1204,7 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 368,
       height: 61,
       decoration: BoxDecoration(
         color: AppColors.bankBannerBg,

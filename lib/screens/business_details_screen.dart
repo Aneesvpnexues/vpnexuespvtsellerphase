@@ -189,16 +189,16 @@ class _Step03BusinessDetailsScreenState
             child: Stack(
               children: [
                 const Positioned(left: 200, top: 0, child: _Leaves()),
-                const Positioned(left: 24, top: 105.63, child: _StepLabel()),
+                const Positioned(left: 22, top: 105.63, child: _StepLabel()),
                 const Positioned(left: 25, top: 139, child: _ProgressTrack()),
-                const Positioned(left: 24, top: 162.33, child: _TitleLead()),
-                const Positioned(left: 24, top: 196.83, child: _TitleYour()),
+                const Positioned(left: 22, top: 162.33, child: _TitleLead()),
+                const Positioned(left: 22, top: 196.83, child: _TitleYour()),
                 const Positioned(left: 105, top: 196.83, child: _TitleAccent()),
-                const Positioned(left: 24, top: 248.2, child: _Subtitle()),
-                const Positioned(left: 24, top: 330.89, child: _SectionTitle()),
+                const Positioned(left: 22, top: 248.2, child: _Subtitle()),
+                const Positioned(left: 22, top: 330.89, child: _SectionTitle()),
                 const Positioned(right: 24.5, top: 326, child: _PillNote()),
                 // Field rows.
-                const Positioned(left: 24, top: 380.5, child: _TileName()),
+                const Positioned(left: 22, top: 380.5, child: _TileName()),
                 const Positioned(left: 43, top: 419.5, child: _Connector1()),
                 const Positioned(left: 89, top: 438, child: _Divider1()),
                 const Positioned(left: 89, top: 383.8, child: _LabelName()),
@@ -212,7 +212,7 @@ class _Step03BusinessDetailsScreenState
                     hint: 'Enter your name..',
                   ),
                 ),
-                const Positioned(left: 24, top: 457.5, child: _TileBusiness()),
+                const Positioned(left: 22, top: 457.5, child: _TileBusiness()),
                 const Positioned(left: 43, top: 496.5, child: _Connector2()),
                 const Positioned(left: 89, top: 515, child: _Divider2()),
                 const Positioned(
@@ -230,7 +230,7 @@ class _Step03BusinessDetailsScreenState
                     hint: 'Enter Business name',
                   ),
                 ),
-                const Positioned(left: 24, top: 533.5, child: _TilePhone()),
+                const Positioned(left: 22, top: 533.5, child: _TilePhone()),
                 const Positioned(left: 43, top: 572.5, child: _Connector3()),
                 const Positioned(left: 89, top: 593, child: _Divider3()),
                 const Positioned(left: 89, top: 537.31, child: _LabelPhone()),
@@ -249,7 +249,7 @@ class _Step03BusinessDetailsScreenState
                   top: 541,
                   child: _VerifiedBadge(),
                 ),
-                const Positioned(left: 24, top: 611.5, child: _TileLocation()),
+                const Positioned(left: 22, top: 611.5, child: _TileLocation()),
                 const Positioned(left: 43, top: 650.5, child: _Connector4()),
                 const Positioned(left: 89, top: 670, child: _Divider4()),
                 const Positioned(
@@ -267,7 +267,7 @@ class _Step03BusinessDetailsScreenState
                   ),
                 ),
                 const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
-                const Positioned(left: 24, top: 688.5, child: _TileAddress()),
+                const Positioned(left: 22, top: 688.5, child: _TileAddress()),
                 const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
                 Positioned(
                   left: 89,
