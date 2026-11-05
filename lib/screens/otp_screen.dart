@@ -286,9 +286,13 @@ class _OtpScreenState extends State<OtpScreen> {
   }) {
     if (!mounted) return;
 
+    print('ONBOARDING ROUTE: profile=$profileComplete '
+        'bank=$bankComplete kyc=$verificationComplete');
+
     // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
     // so verification is always the first section to check.
     if (!verificationComplete) {
+      print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const VerifyDetaileScreen(),
@@ -298,6 +302,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     if (!profileComplete) {
+      print('DESTINATION: Registration (Business Details)');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const Step03BusinessDetailsScreen(),
@@ -307,6 +312,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     if (!bankComplete) {
+      print('DESTINATION: Bank Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const BankDetaileScreen(),
@@ -316,6 +322,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     // All sections complete — go straight to Home.
+    print('DESTINATION: Home (all sections already complete)');
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
     );

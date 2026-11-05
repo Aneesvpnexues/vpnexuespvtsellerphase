@@ -91,9 +91,14 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   /// an SMS. The OTP screen opens only from the codeSent callback, so the
   /// flow never advances before Firebase accepted the number.
   Future<void> _sendOtp() async {
-    if (_sending) return;
+    if (_sending) {
+      print('SEND OTP BLOCKED: already sending');
+      return;
+    }
     final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
     if (digits.length != _country.maxDigits) {
+      print('VALIDATION FAILED: digits="$digits" '
+          '(need ${_country.maxDigits}) - staying on welcome');
       _showError('Enter a valid ${_country.maxDigits}-digit mobile number.');
       return;
     }
@@ -277,9 +282,13 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
 
+    print('ONBOARDING ROUTE: profile=$profileComplete '
+        'bank=$bankComplete kyc=$verificationComplete');
+
     // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
     // so verification is always the first section to check.
     if (!verificationComplete) {
+      print('DESTINATION: Verify Your Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const VerifyDetaileScreen(),
@@ -289,6 +298,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
 
     if (!profileComplete) {
+      print('DESTINATION: Registration (Business Details)');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const Step03BusinessDetailsScreen(),
@@ -298,6 +308,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
 
     if (!bankComplete) {
+      print('DESTINATION: Bank Details');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const BankDetaileScreen(),
@@ -307,6 +318,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
 
     // All sections complete — go straight to Home.
+    print('DESTINATION: Home (all sections already complete)');
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
     );

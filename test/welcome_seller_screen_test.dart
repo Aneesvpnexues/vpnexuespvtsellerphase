@@ -523,6 +523,30 @@ void main() {
     expect(find.byType(Image), findsNWidgets(2));
   });
 
+  testWidgets('Create account with empty fields shows a validation error '
+      'and stays on Welcome', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
+    await tester.pumpAndSettle();
+
+    // Name, Phone Number and Password are all empty.
+    expect(fake.sentE164, isEmpty);
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    // No navigation to OTP or Home happened.
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
+    expect(fake.sentE164, isEmpty, reason: 'Firebase must not be called');
+    expect(
+      find.text('Enter a valid 10-digit mobile number.'),
+      findsOneWidget,
+      reason: 'validation snackbar must appear',
+    );
+  });
+
   testWidgets('layout scales down instead of overflowing', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
