@@ -26,7 +26,9 @@ public class WebConfig {
   @Bean
   public CorsFilter corsFilter() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(properties.web().allowedOrigins());
+    // Patterns (not setAllowedOrigins) so values such as http://localhost:*
+    // and * work with allowCredentials=true.
+    config.setAllowedOriginPatterns(properties.web().allowedOrigins());
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
     config.setExposedHeaders(List.of("Content-Disposition"));

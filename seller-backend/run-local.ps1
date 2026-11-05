@@ -18,7 +18,7 @@ Set-Location $backend
 
 if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) {
     Write-Host "Maven is not on your PATH." -ForegroundColor Red
-    Write-Host "See 'vpnexues backend/SETUP.md', section 1, for install steps."
+    Write-Host "See 'seller-backend/SETUP.md', section 1, for install steps."
     exit 1
 }
 

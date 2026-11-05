@@ -86,7 +86,7 @@ and a warning is logged on every save.
 3. The app refuses to start with the file inside `src/main/resources` on
    purpose — a committed service-account key cannot be un-leaked.
 
-The original `vpnexues backend/src/main/resources/firebase.json` was a placeholder with
+The original `seller-backend/src/main/resources/firebase.json` was a placeholder with
 `"REPLACE"` in place of the private key and has been deleted. It could never
 have worked, and it taught the wrong habit.
 
@@ -155,7 +155,7 @@ create table if not exists seller_bank_details (
 ### First run — no accounts needed
 
 ```powershell
-cd "vpnexues backend"
+cd seller-backend
 .\run-local.ps1
 ```
 

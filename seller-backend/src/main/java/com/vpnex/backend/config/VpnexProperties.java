@@ -35,7 +35,14 @@ public record VpnexProperties(
        * {@code GOOGLE_APPLICATION_CREDENTIALS}; when empty the app starts
        * without Firebase and rejects every token with a clear 503.
        */
-      String credentialsPath) {
+      String credentialsPath,
+      /**
+       * Full service-account JSON, read from {@code FIREBASE_SERVICE_ACCOUNT}.
+       * Render has no persistent credentials file, so the JSON (raw or
+       * base64-encoded) can be supplied directly in an environment variable.
+       * Takes precedence over {@link #credentialsPath()}.
+       */
+      String serviceAccountContent) {
   }
 
   /** Limits applied to step 04 uploads. */
