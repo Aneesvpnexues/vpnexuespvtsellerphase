@@ -1,48 +1,30 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:http/http.dart' as http;
 
 /// Thin HTTP client for the Spring Boot seller API.
 ///
-/// The API lives on the developer machine or a server while the app runs on a
-/// phone, so the host differs per platform:
-///
-/// * Android **emulator** — `localhost` is the emulator itself, so the host
-///   machine is reached through `10.0.2.2`.
-/// * Android **device** / iOS simulator — the machine's LAN IP.
-/// * Web / desktop — `localhost` is correct.
-///
-/// Override any of them at build time, e.g.
-/// `flutter run --dart-define=API_BASE_URL=http://192.168.1.50:8080/api`.
+/// The deployed seller API lives on Render. For local development, override
+/// it at build time, e.g.
+/// `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api`.
 class BackendService {
   BackendService._();
 
-  static const String _override =
-      String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  static const String _override = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  static const String _productionBase =
+      'https://vpnexues-seller-backend.onrender.com/api';
 
   /// Where the API is, including the `/api` prefix and no trailing slash.
-  ///
-  /// Note: plain `http://` will be blocked on Android 9+ unless the domain is
-  /// whitelisted in `android/app/src/main/AndroidManifest.xml`. Use `https`
-  /// for anything outside local development.
-  static final String base = _override.isNotEmpty ? _override : _defaultBase();
-
-  static String _defaultBase() {
-    if (kIsWeb) return 'http://localhost:8080/api';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      // 10.0.2.2 is the Android emulator's alias for the host machine. On a
-      // physical device this will not resolve — build with API_BASE_URL.
-      return 'http://10.0.2.2:8080/api';
-    }
-    return 'http://localhost:8080/api';
-  }
+  static final String base = _override.isNotEmpty ? _override : _productionBase;
 
   static Map<String, String> _authHeaders(String token) => {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer $token',
+    'Content-Type': 'application/json',
+  };
 
   /// Exchanges a Firebase ID token for the seller record, creating it on
   /// first login. Call this after `firebase_auth` signs the seller in.
@@ -70,19 +52,15 @@ class BackendService {
     double? latitude,
     double? longitude,
   }) async {
-    await _put(
-      '/onboarding/location',
-      idToken,
-      {
-        'country': ?country,
-        'state': ?state,
-        'city': ?city,
-        'address': ?address,
-        'pincode': ?pincode,
-        'latitude': ?latitude,
-        'longitude': ?longitude,
-      },
-    );
+    await _put('/onboarding/location', idToken, {
+      'country': ?country,
+      'state': ?state,
+      'city': ?city,
+      'address': ?address,
+      'pincode': ?pincode,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
+    });
   }
 
   /// Step 02 — `sellerType` is one of the six values the backend's
@@ -98,18 +76,13 @@ class BackendService {
     required String phone,
     required String businessLocation,
     required String businessAddress,
-  }) =>
-      _put(
-        '/onboarding/business',
-        idToken,
-        {
-          'ownerName': ownerName,
-          'businessName': businessName,
-          'phone': phone,
-          'businessLocation': businessLocation,
-          'businessAddress': businessAddress,
-        },
-      );
+  }) => _put('/onboarding/business', idToken, {
+    'ownerName': ownerName,
+    'businessName': businessName,
+    'phone': phone,
+    'businessLocation': businessLocation,
+    'businessAddress': businessAddress,
+  });
 
   /// Step 05 — the account number is encrypted server-side and only the last
   /// four digits ever come back.
@@ -120,18 +93,13 @@ class BackendService {
     required String accountNumber,
     required String ifsc,
     bool ifscVerified = false,
-  }) =>
-      _put(
-        '/onboarding/bank',
-        idToken,
-        {
-          'holderName': holderName,
-          'bankName': bankName,
-          'accountNumber': accountNumber,
-          'ifsc': ifsc,
-          'ifscVerified': ifscVerified,
-        },
-      );
+  }) => _put('/onboarding/bank', idToken, {
+    'holderName': holderName,
+    'bankName': bankName,
+    'accountNumber': accountNumber,
+    'ifsc': ifsc,
+    'ifscVerified': ifscVerified,
+  });
 
   /// Replaces the bank screen's always-true local IFSC check.
   static Future<bool> verifyIfsc(String idToken, String ifsc) async {
@@ -157,7 +125,11 @@ class BackendService {
     return _decode(res.body);
   }
 
-  static Future<void> _put(String path, String idToken, Map<String, dynamic> body) async {
+  static Future<void> _put(
+    String path,
+    String idToken,
+    Map<String, dynamic> body,
+  ) async {
     final res = await http.put(
       Uri.parse('$base$path'),
       headers: _authHeaders(idToken),
@@ -183,7 +155,9 @@ class BackendService {
   static String _messageOf(String body) {
     final map = _decode(body);
     final message = map['message'];
-    return message is String && message.isNotEmpty ? message : 'Request failed.';
+    return message is String && message.isNotEmpty
+        ? message
+        : 'Request failed.';
   }
 }
 
@@ -200,10 +174,10 @@ class SessionResult {
   final String onboardingStep;
 
   factory SessionResult.fromMap(Map<String, dynamic> map) => SessionResult(
-        sellerId: map['sellerId'] as String? ?? '',
-        newSeller: map['newSeller'] == true,
-        onboardingStep: map['onboardingStep'] as String? ?? 'LOCATION',
-      );
+    sellerId: map['sellerId'] as String? ?? '',
+    newSeller: map['newSeller'] == true,
+    onboardingStep: map['onboardingStep'] as String? ?? 'LOCATION',
+  );
 }
 
 /// A non-2xx response from the API. [code] is the backend's machine-readable

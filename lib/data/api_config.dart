@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class ApiConfig {
@@ -104,14 +103,12 @@ class ApiConfig {
   static bool get hasCloudinaryCredentials =>
       cloudinaryCloudName.isNotEmpty && cloudinaryUploadPreset.isNotEmpty;
 
+  static const String _defaultApiBaseUrl =
+      'https://vpnexues-seller-backend.onrender.com';
+
   static String get apiBaseUrl {
     final configured = _configuredApiBaseUrl.trim();
-    if (configured.isNotEmpty) return _trimSlash(configured);
-    if (kIsWeb) return 'http://localhost:8080';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8080';
-    }
-    return 'http://localhost:8080';
+    return _trimSlash(configured.isNotEmpty ? configured : _defaultApiBaseUrl);
   }
 
   static String _trimSlash(String value) {
