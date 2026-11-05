@@ -5,9 +5,9 @@ import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import 'order_details_screen.dart';
-import 'order_privew.dart';
 
 /// My Orders list — replica of Zeplin
 /// "Android Compact - 132" (project 6a8d49709e27bd8b35213d35,
@@ -67,17 +67,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  void _openOrder(_Order order) {
+  void _openOrder() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        settings: RouteSettings(
-          name: order.opensDetails
-              ? AppRoutes.orderDetails
-              : AppRoutes.orderPrivew,
-        ),
-        builder: (_) => order.opensDetails
-            ? const OrderDetailsScreen()
-            : const OrderPrivewScreen(),
+        settings: const RouteSettings(name: AppRoutes.orderDetails),
+        builder: (_) => const OrderDetailsScreen(),
       ),
     );
   }
@@ -98,13 +92,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 trimTop: MyOrdersScreen.trimTop,
                 child: Stack(
                   children: [
-                    const Positioned(
+                    Positioned(
                       left: 0,
                       top: 73,
                       child: PageHeader(
                         title: 'My Orders',
-                        backButtonKey: ValueKey<String>('my-orders-back'),
-                        titleKey: ValueKey<String>('my-orders-title'),
+                        backButtonKey: const ValueKey<String>('my-orders-back'),
+                        titleKey: const ValueKey<String>('my-orders-title'),
+                        onBack: () => goToHome(context),
                       ),
                     ),
                     Positioned(
@@ -131,11 +126,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           iconBg: orders[i].iconBg,
                           iconColor: orders[i].iconColor,
                           items: orders[i].items,
-                          thumbs: orders[i].thumbs,
+                          thumbImages: orders[i].thumbImages,
                           extra: orders[i].extra,
                           price: orders[i].price,
                           status: orders[i].status,
-                          onTap: () => _openOrder(orders[i]),
+                          onTap: _openOrder,
                         ),
                       ),
                   ],
@@ -173,12 +168,11 @@ class _Order {
     required this.iconBg,
     this.iconColor = const Color(0xFF5A4A1A),
     required this.items,
-    required this.thumbs,
+    required this.thumbImages,
     required this.extra,
     required this.price,
     required this.amount,
     required this.status,
-    this.opensDetails = false,
   });
 
   final String store;
@@ -188,12 +182,11 @@ class _Order {
   final Color iconBg;
   final Color iconColor;
   final String items;
-  final int thumbs;
+  final List<String> thumbImages;
   final String extra;
   final String price;
   final int amount;
   final String status;
-  final bool opensDetails;
 }
 
 const _orders = <_Order>[
@@ -204,12 +197,15 @@ const _orders = <_Order>[
     recency: 4582,
     iconBg: AppColors.orderYellowBg,
     items: '4 items',
-    thumbs: 3,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ],
     extra: '+1',
     price: '\u20B92,400',
     amount: 2400,
     status: 'Accepted',
-    opensDetails: true,
   ),
   _Order(
     store: 'Hotel Green Leaf',
@@ -218,7 +214,10 @@ const _orders = <_Order>[
     recency: 4581,
     iconBg: AppColors.orderBlueBg,
     items: '2 items',
-    thumbs: 2,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+    ],
     extra: '',
     price: '\u20B91,400',
     amount: 1400,
@@ -232,7 +231,11 @@ const _orders = <_Order>[
     iconBg: AppColors.darkCard,
     iconColor: Colors.white,
     items: '5 items',
-    thumbs: 3,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ],
     extra: '+2',
     price: '\u20B93,400',
     amount: 3400,
@@ -245,7 +248,11 @@ const _orders = <_Order>[
     recency: 4579,
     iconBg: AppColors.attentionRedBg,
     items: '4 items',
-    thumbs: 3,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ],
     extra: '+1',
     price: '\u20B93,000',
     amount: 3000,
@@ -258,7 +265,11 @@ const _orders = <_Order>[
     recency: 4579,
     iconBg: AppColors.orderPurpleBg,
     items: '3 items',
-    thumbs: 3,
+    thumbImages: [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ],
     extra: '',
     price: '\u20B93,500',
     amount: 3500,
@@ -355,35 +366,37 @@ class _SearchSort extends StatelessWidget {
               key: const ValueKey('order-sort-button'),
               behavior: HitTestBehavior.opaque,
               onTap: onSortTap,
-              child: Container(
-                width: 103,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
-                ),
-                child: const FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.filter_list, size: 14, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        'Sort by',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+              child: HoverPress.button(
+                child: Container(
+                  width: 103,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkCard,
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.filter_list, size: 14, color: Colors.white),
+                        SizedBox(width: 6),
+                        Text(
+                          'Sort by',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 12,
                           color: Colors.white,
                         ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -447,57 +460,20 @@ class _OrderTabs extends StatelessWidget {
           Positioned(
             left: 4,
             top: 0,
-            bottom: 0,
-            width: 99,
-            child: Center(
-              child: Text(
-                _OrderFilter.all.label,
-                style: styleFor(_OrderFilter.all),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 125,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.active.label,
-                style: styleFor(_OrderFilter.active),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 200,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.pending.label,
-                style: styleFor(_OrderFilter.pending),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 282,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _OrderFilter.confirmed.label,
-                style: styleFor(_OrderFilter.confirmed),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            top: 0,
             width: 99,
             height: 45,
             child: GestureDetector(
               key: const ValueKey('order-filter-all'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.all),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.all.label,
+                    style: styleFor(_OrderFilter.all),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -509,6 +485,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-active'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.active),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.active.label,
+                    style: styleFor(_OrderFilter.active),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -520,6 +504,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-pending'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.pending),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.pending.label,
+                    style: styleFor(_OrderFilter.pending),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -531,6 +523,14 @@ class _OrderTabs extends StatelessWidget {
               key: const ValueKey('order-filter-confirmed'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_OrderFilter.confirmed),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _OrderFilter.confirmed.label,
+                    style: styleFor(_OrderFilter.confirmed),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -572,7 +572,9 @@ class _SortSheet extends StatelessWidget {
                 IconButton(
                   key: const ValueKey('order-sort-close'),
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: const HoverPress.icon(
+                    child: Icon(Icons.close, size: 20),
+                  ),
                 ),
               ],
             ),
@@ -636,7 +638,7 @@ class _OrderBlock extends StatelessWidget {
     required this.iconBg,
     this.iconColor = const Color(0xFF5A4A1A),
     required this.items,
-    required this.thumbs,
+    required this.thumbImages,
     required this.extra,
     required this.price,
     required this.status,
@@ -649,7 +651,7 @@ class _OrderBlock extends StatelessWidget {
   final Color iconBg;
   final Color iconColor;
   final String items;
-  final int thumbs;
+  final List<String> thumbImages;
   final String extra;
   final String price;
   final String status;
@@ -789,28 +791,39 @@ class _OrderBlock extends StatelessWidget {
                 ),
               ),
             ),
-            for (int i = 0; i < thumbs; i++)
+            for (int i = 0; i < thumbImages.length; i++)
               Positioned(
                 left: 20.0 + i * 52.0,
                 top: 98,
                 child: Container(
                   width: 46,
                   height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7BAE5A),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF7BAE5A),
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  foregroundDecoration: BoxDecoration(
                     borderRadius: const BorderRadius.all(Radius.circular(10)),
                     border: Border.all(color: const Color(0x12000000)),
                   ),
-                  child: const Icon(
-                    Icons.eco_outlined,
-                    size: 20,
-                    color: Colors.white,
+                  child: Image.asset(
+                    thumbImages[i],
+                    key: ValueKey<String>('order-thumb-$i'),
+                    width: 46,
+                    height: 46,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.eco_outlined,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             if (extra.isNotEmpty)
               Positioned(
-                left: 20.0 + thumbs * 52.0,
+                left: 20.0 + thumbImages.length * 52.0,
                 top: 98,
                 child: Container(
                   width: 46,

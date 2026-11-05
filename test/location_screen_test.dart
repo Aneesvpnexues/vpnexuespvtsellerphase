@@ -119,19 +119,26 @@ void main() {
     expect(find.text('STEP 02'), findsNothing);
   });
 
-  testWidgets('the underlined manual link is interactive and opens the STEP 02 '
-      'screen', (tester) async {
+  testWidgets('manual link opens the STEP 02 screen and back', (tester) async {
     await pumpScreen(tester);
 
-    final manual = tester.widget<Text>(find.text('Select it Manually'));
-    expect(manual.style?.color, AppColors.linkGreen);
-
-    await tester.tap(find.text('Select it Manually'));
+    await tester.tap(find.byKey(const Key('manualLocationLink')));
     await tester.pumpAndSettle();
 
+    expect(find.text('STEP 02'), findsOneWidget);
     expect(find.text('What best'), findsOneWidget);
     expect(find.text('describes you?'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Choose your location'), findsNothing);
+
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
+    navigator.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your location'), findsOneWidget);
+    expect(find.text('STEP 02'), findsNothing);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

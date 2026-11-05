@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/keyboard_aware_canvas.dart';
 import 'seller_type_screen.dart';
 
 /// "STEP 01 — Choose your location" — static replica of Zeplin
@@ -10,9 +12,8 @@ import 'seller_type_screen.dart';
 ///
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
-/// sizes it scales down uniformly instead of overflowing. The primary button
-/// opens the STEP 02 screen; the manual link does too (the real location
-/// picker arrives with the backend phase).
+/// sizes it scales down uniformly instead of overflowing. Both the primary
+/// button and the "Select it Manually" link open the STEP 02 screen.
 class Step01LocationScreen extends StatelessWidget {
   const Step01LocationScreen({super.key});
 
@@ -24,37 +25,19 @@ class Step01LocationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: designWidth,
-              height: designHeight,
-              child: Stack(
-                children: const [
-                  Positioned(left: -94.2, top: -159.5, child: _PaleCircle()),
-                  Positioned(left: 0, top: 151, child: _Illustration()),
-                  Positioned(right: 28, top: 76.4, child: _StepLabel()),
-                  Positioned(left: 0, right: 8, top: 488.4, child: _Title()),
-                  Positioned(
-                    left: 0,
-                    right: 8,
-                    top: 541.5,
-                    child: _Description(),
-                  ),
-                  Positioned(left: 24, top: 731, child: _LocationButton()),
-                  Positioned(
-                    left: 0,
-                    right: 10,
-                    top: 818.5,
-                    child: _ManualLink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
+      body: KeyboardAwareCanvas(
+        designWidth: designWidth,
+        designHeight: designHeight,
+        child: Stack(
+          children: const [
+            Positioned(left: -94.2, top: -159.5, child: _PaleCircle()),
+            Positioned(left: 0, top: 151, child: _Illustration()),
+            Positioned(right: 28, top: 76.4, child: _StepLabel()),
+            Positioned(left: 0, right: 8, top: 488.4, child: _Title()),
+            Positioned(left: 0, right: 8, top: 541.5, child: _Description()),
+            Positioned(left: 24, top: 731, child: _LocationButton()),
+            Positioned(left: 0, right: 10, top: 818.5, child: _ManualLink()),
+          ],
         ),
       ),
     );
@@ -132,6 +115,7 @@ class _LocationButton extends StatelessWidget {
   const _LocationButton();
 
   void _openSellerTypePage(BuildContext context) {
+    FocusScope.of(context).unfocus();
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
@@ -142,26 +126,25 @@ class _LocationButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => _openSellerTypePage(context),
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 364,
-        height: 54,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
-        child: const Text(
-          'Use my current Location',
-          style: AppTextStyles.locationButton,
+      child: HoverPress.button(
+        child: Container(
+          width: 364,
+          height: 54,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+          child: const Text(
+            'Use my current Location',
+            style: AppTextStyles.locationButton,
+          ),
         ),
       ),
     );
   }
 }
 
-/// The underlined "Select it Manually" link. It used to be dead text; it now
-/// behaves like a link and opens the STEP 02 screen too (a real manual picker
-/// needs the backend phase).
 class _ManualLink extends StatelessWidget {
   const _ManualLink();
 
@@ -177,7 +160,7 @@ class _ManualLink extends StatelessWidget {
       key: const Key('manualLocationLink'),
       behavior: HitTestBehavior.opaque,
       onTap: () => _openSellerTypePage(context),
-      child: Text(
+      child: const Text(
         'Select it Manually',
         textAlign: TextAlign.center,
         style: AppTextStyles.manualLink,

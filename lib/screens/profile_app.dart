@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/session_store.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
 import 'help_support_screen.dart';
@@ -174,8 +175,16 @@ class _AppListCard extends StatelessWidget {
             height: 34,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () {
+              onTap: () async {
+                // Real Firebase sign-out first, then the local session
+                // cache, so no auth state survives the logout.
+                try {
+                  await AuthFlow.instance.signOut();
+                } catch (_) {
+                  // Firebase unavailable — still clear the local session.
+                }
                 SessionStore.instance.endSession();
+                if (!context.mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const WelcomeSellerScreen()),
                   (route) => false,

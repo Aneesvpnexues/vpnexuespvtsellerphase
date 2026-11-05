@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'write_review_screen.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -205,30 +206,30 @@ class _ReviewsCard extends StatelessWidget {
 
   static const _reviews = <_Review>[
     _Review(
-      initials: 'LP',
-      name: 'Lakshmi Priya',
+      initials: 'AN',
+      name: 'Anees',
       rating: 5,
       date: '14 Mar 2024',
       comment:
           'Fresh tomatoes every time and quick delivery. Excellent quality!',
     ),
     _Review(
-      initials: 'AK',
-      name: 'Arjun Kumar',
+      initials: 'JH',
+      name: 'Jhon',
       rating: 5,
       date: '10 Mar 2024',
       comment: 'Best seller in the market. Always delivers on time.',
     ),
     _Review(
-      initials: 'DS',
-      name: 'Divya Sundaram',
+      initials: 'AJ',
+      name: 'Anjith',
       rating: 4,
       date: '2 Mar 2024',
       comment: 'Good produce overall. Packing could be better.',
     ),
     _Review(
-      initials: 'MR',
-      name: 'Mohamed Rafi',
+      initials: 'SE',
+      name: 'Senthil',
       rating: 5,
       date: '25 Feb 2024',
       comment: 'Consistent quality on every single order.',
@@ -239,7 +240,7 @@ class _ReviewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 364,
-      height: 520,
+      height: 620,
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -260,22 +261,26 @@ class _ReviewsCard extends StatelessWidget {
           ),
           for (var i = 0; i < _reviews.length; i++) ...[
             Positioned(
-              left: 0,
-              right: 0,
+              left: 0, right: 0,
               top: 55 + 112.0 * i,
-              child: SizedBox(
-                height: 112,
-                child: _ReviewRow(review: _reviews[i]),
-              ),
+              child: SizedBox(height: 112, child: _ReviewRow(review: _reviews[i])),
             ),
             if (i < _reviews.length - 1)
-              Positioned(
-                left: 22,
-                right: 17,
-                top: 166 + 112.0 * i,
-                child: const _Divider(),
-              ),
+              Positioned(left: 22, right: 17, top: 166 + 112.0 * i, child: const _Divider()),
           ],
+          Positioned(
+            left: 22, bottom: 20,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WriteReviewScreen())),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.darkCard,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: const Text('Write a Review'),
+            ),
+          ),
         ],
       ),
     );
@@ -371,6 +376,7 @@ class _ReviewRow extends StatelessWidget {
             child: Text(review.comment, style: _comment),
           ),
         ),
+        const SizedBox.shrink(),
       ],
     );
   }

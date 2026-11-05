@@ -41,13 +41,17 @@ void main() {
     await pumpApp(tester);
 
     expect(find.byKey(const Key('splashTap')), findsOneWidget);
-    expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+    expect(find.byType(WelcomeSellerScreen), findsNothing);
+
+    await tester.tapAt(const Offset(40, 120));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('splashTap')), findsOneWidget);
+    expect(find.byType(WelcomeSellerScreen), findsNothing);
 
     await tester.tap(find.byKey(const Key('splashTap')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
-    expect(find.text('Send OTP'), findsOneWidget);
+    expect(find.byType(WelcomeSellerScreen), findsOneWidget);
   });
 
   testWidgets('the splash is never shown again: a second launch goes '

@@ -51,5 +51,16 @@ app.*.map.json
 # opencode tooling
 .opencode/
 
+# Local runtime config (use assets/config/*.example.json)
+assets/config/supabase.json
+assets/config/cloudinary.json
+
+# Local-only folders (not pushed)
+.kilo/
+backend/
+
 # Maven build output (vpnexues backend)
 target/
+
+# Android Gradle build outputs
+/android/build/

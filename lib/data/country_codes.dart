@@ -18,8 +18,8 @@ class CountryCode {
 
   /// Flag emoji derived from the ISO code's regional indicator symbols.
   String get flag => String.fromCharCodes(
-        iso.codeUnits.map((unit) => 0x1F1E6 + (unit - 0x41)),
-      );
+    iso.codeUnits.map((unit) => 0x1F1E6 + (unit - 0x41)),
+  );
 
   /// Maximum national digits accepted for this dial code.
   int get maxDigits => length ?? (16 - dial.length);

@@ -29,18 +29,6 @@ class _FakeStore implements KeyValueStore {
 
 void main() {
   group('SessionStore', () {
-    test('accepts only the fixed login phone and OTP', () {
-      expect(SessionStore.credentialsValid(phone: '9876543210', otp: '786123'),
-          isTrue);
-      expect(SessionStore.credentialsValid(phone: '9876543210', otp: '000000'),
-          isFalse);
-      expect(SessionStore.credentialsValid(phone: '1234567890', otp: '786123'),
-          isFalse);
-      expect(SessionStore.loginPhoneValid('9876543210'), isTrue);
-      expect(SessionStore.loginPhoneValid(' 9876543210 '), isTrue);
-      expect(SessionStore.loginPhoneValid('1234567890'), isFalse);
-    });
-
     test('the session survives a relaunch and logout removes only the session',
         () async {
       final _FakeStore storage = _FakeStore();
@@ -160,6 +148,7 @@ void main() {
       store.updateProduct(
         Product(
           id: edited.id,
+          userId: edited.userId,
           name: 'Tomato (organic)',
           category: 'Vegetables',
           price: 55,

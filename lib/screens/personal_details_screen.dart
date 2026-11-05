@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
@@ -15,7 +18,14 @@ import '../widgets/label_text.dart';
 /// Built against a 412x917 artboard. Same zoom-scroll pattern as 117/123/132/135:
 /// fit width, scroll vertically.
 class PersonalDetailsScreen extends StatefulWidget {
-  const PersonalDetailsScreen({super.key});
+  const PersonalDetailsScreen({super.key, this.profileSaver});
+
+  /// Persists the profile. Defaults to [SupabaseProductApi.saveSellerProfile].
+  final SellerProfileSaver? profileSaver;
+
+  /// Fallback for tests that cannot inject [profileSaver].
+  @visibleForTesting
+  static SellerProfileSaver? debugProfileSaver;
 
   static const double designWidth = 412;
   static const double designHeight = 917;
@@ -26,7 +36,6 @@ class PersonalDetailsScreen extends StatefulWidget {
 }
 
 class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
-  String errorText = '';
   late final TextEditingController _name;
   late final TextEditingController _mobile;
   late final TextEditingController _email;
@@ -56,7 +65,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _save() {
+  Future<void> _save() async {
     final String name = _name.text.trim();
     final String mobile = _mobile.text.trim();
     final String email = _email.text.trim();
@@ -67,30 +76,69 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     }
     final int mobileDigits = mobile.replaceAll(RegExp(r'\D'), '').length;
     if (mobileDigits < 10 || mobileDigits > 13) {
-      errorText = 'Enter a valid mobile number.';
+      _showMessage('Enter a valid mobile number.');
       return;
     }
     if (email.isNotEmpty &&
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      errorText = 'Enter a valid email address.';
+      _showMessage('Enter a valid email address.');
       return;
     }
 
     FocusScope.of(context).unfocus();
+    final SellerProfileSaver save = widget.profileSaver ??
+        PersonalDetailsScreen.debugProfileSaver ??
+        _saveToSupabase;
+    try {
+      await save(
+        name: name,
+        mobile: mobile,
+        sellerType: _sellerType.dbValue,
+        businessName: '',
+        businessLocation: '',
+        businessAddress: '',
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showMessage(error.message);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Could not save profile. Please try again.');
+      return;
+    }
     SellerProfileStore.instance.save(
       name: name,
       mobile: mobile,
       email: email,
       sellerType: _sellerType,
     );
+    if (!mounted) return;
     _showMessage('Personal details saved');
     Navigator.of(context).maybePop();
+  }
+
+  static Future<String> _saveToSupabase({
+    required String name,
+    required String mobile,
+    required String sellerType,
+    required String businessName,
+    required String businessLocation,
+    required String businessAddress,
+  }) {
+    return SupabaseProductApi().saveSellerProfile(
+      name: name,
+      mobile: mobile,
+      sellerType: sellerType,
+      businessName: businessName,
+      businessLocation: businessLocation,
+      businessAddress: businessAddress,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
@@ -464,22 +512,24 @@ class _SellerTypePill extends StatelessWidget {
         key: pillKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: width,
-          height: 31,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orderDark : AppColors.homeBg,
-            borderRadius: const BorderRadius.all(Radius.circular(14)),
-            border: selected
-                ? null
-                : Border.all(color: const Color(0x12000000)),
-          ),
-          child: Text(
-            label,
-            style: selected
-                ? AppTextStyles.personalPillActive
-                : AppTextStyles.personalPillIdle,
+        child: HoverPress.chip(
+          child: Container(
+            width: width,
+            height: 31,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.orderDark : AppColors.homeBg,
+              borderRadius: const BorderRadius.all(Radius.circular(14)),
+              border: selected
+                  ? null
+                  : Border.all(color: const Color(0x12000000)),
+            ),
+            child: Text(
+              label,
+              style: selected
+                  ? AppTextStyles.personalPillActive
+                  : AppTextStyles.personalPillIdle,
+            ),
           ),
         ),
       ),
@@ -501,15 +551,20 @@ class _SaveBar extends StatelessWidget {
         key: const ValueKey('save-personal-details'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: 362,
-          height: 53,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: AppColors.orderDark,
-            borderRadius: BorderRadius.all(Radius.circular(26)),
+        child: HoverPress.button(
+          child: Container(
+            width: 362,
+            height: 53,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.orderDark,
+              borderRadius: BorderRadius.all(Radius.circular(26)),
+            ),
+            child: const Text(
+              'Save changes',
+              style: AppTextStyles.personalSave,
+            ),
           ),
-          child: const Text('Save changes', style: AppTextStyles.personalSave),
         ),
       ),
     );

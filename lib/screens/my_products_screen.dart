@@ -8,7 +8,9 @@ import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
+import '../widgets/product_image_view.dart';
 
 /// My Products list — replica of Zeplin
 /// "Android Compact - 123" (project 6a8d49709e27bd8b35213d35,
@@ -71,10 +73,13 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                     trimTop: MyProductsScreen.trimTop,
                     child: Stack(
                       children: [
-                        const Positioned(
+                        Positioned(
                           left: 0,
                           top: 68,
-                          child: PageHeader(title: 'My Products'),
+                          child: PageHeader(
+                            title: 'My Products',
+                            onBack: () => goToHome(context),
+                          ),
                         ),
                         Positioned(
                           left: 24,
@@ -288,57 +293,20 @@ class _FilterTabs extends StatelessWidget {
           Positioned(
             left: 4,
             top: 0,
-            bottom: 0,
-            width: 99,
-            child: Center(
-              child: Text(
-                _ProductFilter.all.label,
-                style: styleFor(_ProductFilter.all),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 125,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _ProductFilter.active.label,
-                style: styleFor(_ProductFilter.active),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 200,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _ProductFilter.outOfStock.label,
-                style: styleFor(_ProductFilter.outOfStock),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 311,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                _ProductFilter.draft.label,
-                style: styleFor(_ProductFilter.draft),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            top: 0,
             width: 99,
             height: 45,
             child: GestureDetector(
               key: const ValueKey('products-filter-all'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_ProductFilter.all),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _ProductFilter.all.label,
+                    style: styleFor(_ProductFilter.all),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -350,6 +318,14 @@ class _FilterTabs extends StatelessWidget {
               key: const ValueKey('products-filter-active'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_ProductFilter.active),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _ProductFilter.active.label,
+                    style: styleFor(_ProductFilter.active),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -361,6 +337,14 @@ class _FilterTabs extends StatelessWidget {
               key: const ValueKey('products-filter-out-of-stock'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_ProductFilter.outOfStock),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _ProductFilter.outOfStock.label,
+                    style: styleFor(_ProductFilter.outOfStock),
+                  ),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -372,6 +356,14 @@ class _FilterTabs extends StatelessWidget {
               key: const ValueKey('products-filter-draft'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(_ProductFilter.draft),
+              child: HoverPress.chip(
+                child: Center(
+                  child: Text(
+                    _ProductFilter.draft.label,
+                    style: styleFor(_ProductFilter.draft),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -451,23 +443,25 @@ class _EmptyProductsState extends StatelessWidget {
           GestureDetector(
             key: const ValueKey('products-empty-add'),
             onTap: () => goToAddProduct(context),
-            child: Container(
-              width: 92,
-              height: 32,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: const BoxDecoration(
-                color: AppColors.darkCard,
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'Add product',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.limeLight,
+            child: HoverPress.button(
+              child: Container(
+                width: 92,
+                height: 32,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Add product',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.limeLight,
+                    ),
                   ),
                 ),
               ),
@@ -522,11 +516,7 @@ class _ProductRow extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              left: 7,
-              top: 7,
-              child: _ProductImage(photo: product.coverPhoto),
-            ),
+            Positioned(left: 7, top: 7, child: _ProductImage(product: product)),
             const Positioned(left: 82, top: 13, child: _DotsIcon()),
             Positioned(
               left: 122,
@@ -672,30 +662,29 @@ class _ProductRow extends StatelessWidget {
 }
 
 class _ProductImage extends StatelessWidget {
-  const _ProductImage({this.photo});
+  const _ProductImage({required this.product});
 
-  final ProductPhoto? photo;
+  final Product product;
 
   @override
   Widget build(BuildContext context) {
-    if (photo != null) {
-      return SizedBox(
-        width: 98,
-        height: 102,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
-          child: Image.memory(photo!.bytes, fit: BoxFit.cover),
-        ),
-      );
-    }
-    return Container(
+    return SizedBox(
       width: 98,
       height: 102,
-      decoration: const BoxDecoration(
-        color: Color(0xFF7BAE5A),
-        borderRadius: BorderRadius.all(Radius.circular(14)),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        child: ProductImageView(
+          product: product,
+          placeholder: Container(
+            color: const Color(0xFF7BAE5A),
+            child: const Icon(
+              Icons.eco_outlined,
+              size: 32,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
-      child: const Icon(Icons.eco_outlined, size: 32, color: Colors.white),
     );
   }
 }
@@ -912,51 +901,57 @@ class _PromoCard extends StatelessWidget {
               key: const ValueKey('products-add-product'),
               onTap: onAdd,
               behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: 96,
-                height: 23,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0D3B20),
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 4,
-                      top: 4,
-                      child: Container(
-                        width: 15,
-                        height: 15,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFCAEA71),
-                          shape: BoxShape.circle,
+              child: HoverPress.button(
+                child: Container(
+                  width: 96,
+                  height: 23,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0D3B20),
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 4,
+                        top: 4,
+                        child: Container(
+                          width: 15,
+                          height: 15,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFCAEA71),
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                    ),
-                    const Positioned(
-                      left: 7,
-                      top: 7,
-                      child: Icon(Icons.add, size: 9, color: Color(0xFF0D3B20)),
-                    ),
-                    const Positioned(
-                      left: 25,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'Add product',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                      const Positioned(
+                        left: 7,
+                        top: 7,
+                        child: Icon(
+                          Icons.add,
+                          size: 9,
+                          color: Color(0xFF0D3B20),
+                        ),
+                      ),
+                      const Positioned(
+                        left: 25,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Add product',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -18,11 +18,27 @@ export '../data/product_store.dart' show ProductPhoto;
 
 typedef ProductPhotoPicker = Future<ProductPhoto?> Function();
 
+/// Saves a [ProductDraft] with its photos and returns the stored product.
+/// Used by tests to intercept the save without touching the real store.
+typedef ProductSaver = Future<Product> Function(
+  ProductDraft draft,
+  List<ProductPhoto> photos,
+);
+
 /// "Add Products" screen for farmers and grocery shop owners to list items.
 class AddProductsScreen extends StatefulWidget {
-  const AddProductsScreen({super.key, this.photoPicker});
+  const AddProductsScreen({super.key, this.photoPicker, this.productSaver});
 
   final ProductPhotoPicker? photoPicker;
+  final ProductSaver? productSaver;
+
+  /// Fallbacks for tests that open this screen through [goToAddProduct],
+  /// which builds it without injectable dependencies.
+  @visibleForTesting
+  static ProductPhotoPicker? debugPhotoPicker;
+
+  @visibleForTesting
+  static ProductSaver? debugProductSaver;
 
   static const int maxPhotos = 5;
   static const String tomatoAsset = 'assets/products/tomato.png';
@@ -115,8 +131,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
 
     // If a custom photoPicker is injected (e.g. in tests), use it directly.
     // Otherwise, let the seller choose between Camera or Gallery.
+    final ProductPhotoPicker? picker =
+        widget.photoPicker ?? AddProductsScreen.debugPhotoPicker;
     ImageSource? chosenSource;
-    if (widget.photoPicker == null) {
+    if (picker == null) {
       chosenSource = await _showImageSourceSheet();
       if (chosenSource == null || !mounted) return;
     }
@@ -125,8 +143,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
 
     ProductPhoto? photo;
     try {
-      if (widget.photoPicker != null) {
-        photo = await widget.photoPicker!();
+      if (picker != null) {
+        photo = await picker();
       } else {
         photo = await _pickPhoto(chosenSource!);
       }
@@ -315,7 +333,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     }
   }
 
-  void _saveProduct() {
+  Future<void> _saveProduct() async {
     if (_isSaving) return;
     final String name = _name.text.trim();
     if (name.isEmpty) {
@@ -355,17 +373,34 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     setState(() => _isSaving = true);
     FocusScope.of(context).unfocus();
 
+    final ProductDraft draft = ProductDraft(
+      name: name,
+      category: _categories[_category],
+      price: price,
+      unit: _selectedUnit,
+      quantity: _quantity,
+      description: _description.text.trim(),
+      status: ProductStatus.values[_status],
+    );
+
     try {
-      ProductStore.instance.addProduct(
-        name: name,
-        category: _categories[_category],
-        price: price,
-        unit: _selectedUnit,
-        quantity: _quantity,
-        description: _description.text.trim(),
-        status: ProductStatus.values[_status],
-        photos: _photos,
-      );
+      final ProductSaver? saver =
+          widget.productSaver ?? AddProductsScreen.debugProductSaver;
+      if (saver != null) {
+        await saver(draft, _photos);
+        if (!mounted) return;
+      } else {
+        ProductStore.instance.addProduct(
+          name: draft.name,
+          category: draft.category,
+          price: draft.price,
+          unit: draft.unit,
+          quantity: draft.quantity,
+          description: draft.description,
+          status: draft.status,
+          photos: _photos,
+        );
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Product added successfully!')),
       );
@@ -1060,12 +1095,18 @@ class _ProgressCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Text('Step $step', style: AppTextStyles.stepSoftStrong),
-              const SizedBox(width: 4),
-              Text('of 5 • $label', style: AppTextStyles.stepSoftLabel),
-            ],
+          // Scales the step caption down instead of overflowing when the
+          // label renders wider than the card (e.g. the test font).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Step $step', style: AppTextStyles.stepSoftStrong),
+                const SizedBox(width: 4),
+                Text('of 5 • $label', style: AppTextStyles.stepSoftLabel),
+              ],
+            ),
           ),
         ],
       ),

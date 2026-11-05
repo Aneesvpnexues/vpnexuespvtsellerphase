@@ -2,52 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
-import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'account_help_article_screen.dart';
+import 'account_verification_help_screen.dart';
+import 'orders_delivery_help_screen.dart';
+import 'payment_help_article_screen.dart';
+import 'payments_wallet_help_screen.dart';
+import 'product_help_article_screen.dart';
+import 'products_stock_help_screen.dart';
 import 'report_problem_screen.dart';
 
-enum _HelpTab { topics, questions, tickets }
-
-class _Faq {
-  const _Faq({required this.question, required this.answer});
-
-  final String question;
-  final String answer;
-}
-
-const List<_Faq> _faqs = <_Faq>[
-  _Faq(
-    question: 'How do I mark an order as ready?',
-    answer:
-        'Open the order from My Orders, review the items and pickup details, '
-        'then slide the accept control to mark it ready.',
-  ),
-  _Faq(
-    question: 'When will I receive my payout?',
-    answer:
-        'Payouts are released to your registered bank account after the order '
-        'is picked up or delivered and the buyer confirms it.',
-  ),
-  _Faq(
-    question: 'How do I add a new product?',
-    answer:
-        'Tap the plus button on My Products, add photos and details, then save '
-        'the product to publish it in your store.',
-  ),
-  _Faq(
-    question: 'How do I update my bank details?',
-    answer:
-        'Go to Profile, open Business, then Bank Details to add or edit your '
-        'account number and IFSC.',
-  ),
-  _Faq(
-    question: 'How do I contact the buyer?',
-    answer:
-        'Open the order and tap the call icon next to the buyer details to '
-        'reach them directly.',
-  ),
-];
-
+/// Help & Support — Zeplin "Android Compact - 199" (Topics tab),
+/// "Android Compact - 221" (Questions tab) and "Android Compact - 222"
+/// (Tickets tab), project 6a8d49709e27bd8b35213d35.
+///
+/// All tabs share the hero and the segmented control. Topics lists the five
+/// help categories; Questions lists four frequently asked articles; Tickets
+/// shows the open support ticket.
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
 
@@ -60,6 +31,13 @@ class HelpSupportScreen extends StatefulWidget {
   static const _muted = Color(0xFF6B7B6F);
   static const _rowInk = Color(0x7A000000);
 
+  static const _titleStyle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
+    color: Colors.black,
+  );
   static const _heroKicker = TextStyle(
     fontFamily: 'Inter',
     fontSize: 12,
@@ -76,7 +54,7 @@ class HelpSupportScreen extends StatefulWidget {
   );
   static const _heroSubtitle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.12,
     color: Color(0xFFB6C5BC),
@@ -123,17 +101,24 @@ class HelpSupportScreen extends StatefulWidget {
   );
   static const _rowTitle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.12,
     color: Colors.black,
   );
   static const _rowSubtitle = TextStyle(
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.1,
     color: _rowInk,
+  );
+  static const _questionTitle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.1,
+    color: Colors.black,
   );
 
   @override
@@ -141,20 +126,13 @@ class HelpSupportScreen extends StatefulWidget {
 }
 
 class _HelpSupportScreenState extends State<HelpSupportScreen> {
-  _HelpTab _tab = _HelpTab.topics;
+  /// 0 = Topics (Zeplin 199), 1 = Questions (Zeplin 221),
+  /// 2 = Tickets (Zeplin 222).
+  int _tab = 0;
 
-  double get _tabPillLeft {
-    switch (_tab) {
-      case _HelpTab.topics:
-        return 28;
-      case _HelpTab.questions:
-        return 157;
-      case _HelpTab.tickets:
-        return 280;
-    }
-  }
+  double get _pillLeft => _tab == 0 ? 28 : (_tab == 1 ? 150 : 271);
 
-  void _selectTab(_HelpTab tab) {
+  void _selectTab(int tab) {
     if (_tab == tab) return;
     setState(() => _tab = tab);
   }
@@ -171,10 +149,15 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           trimTop: HelpSupportScreen.trimTop,
           child: Stack(
             children: [
+              const Positioned(left: 24, top: 73, child: _BackCircle()),
               const Positioned(
-                left: 0,
+                left: 68,
                 top: 73,
-                child: PageHeader(title: 'Help & Support'),
+                child: LabelText(
+                  'Help & Support',
+                  HelpSupportScreen._titleStyle,
+                  width: 149,
+                ),
               ),
               const Positioned(left: 25, top: 121, child: _HelpHero()),
               Positioned(
@@ -190,85 +173,72 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   ),
                 ),
               ),
-              Positioned(
-                left: _tabPillLeft,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _pillLeft,
                 top: 437,
                 child: const _SelectedTab(),
               ),
-              Positioned(
-                left: 64,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 0 ? 64 : 61,
                 top: 443,
-                child: LabelText(
-                  'Topics',
-                  _tab == _HelpTab.topics
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 40,
-                ),
-              ),
-              Positioned(
-                left: 182,
-                top: 442,
-                child: LabelText(
-                  'Questions',
-                  _tab == _HelpTab.questions
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 61,
-                ),
-              ),
-              Positioned(
-                left: 314,
-                top: 442,
-                child: LabelText(
-                  'Tickets',
-                  _tab == _HelpTab.tickets
-                      ? HelpSupportScreen._tabSelected
-                      : HelpSupportScreen._tabIdle,
-                  width: 44,
-                ),
-              ),
-              Positioned(
-                left: 28,
-                top: 433,
-                width: 112,
-                height: 45,
                 child: GestureDetector(
                   key: const Key('help-tab-topics'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(_HelpTab.topics),
-                  child: const SizedBox.expand(),
+                  onTap: () => _selectTab(0),
+                  child: LabelText(
+                    'Topics',
+                    _tab == 0
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 40,
+                  ),
                 ),
               ),
-              Positioned(
-                left: 157,
-                top: 433,
-                width: 112,
-                height: 45,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 0 ? 182 : 175,
+                top: 442,
                 child: GestureDetector(
                   key: const Key('help-tab-questions'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(_HelpTab.questions),
-                  child: const SizedBox.expand(),
+                  onTap: () => _selectTab(1),
+                  child: LabelText(
+                    'Questions',
+                    _tab == 1
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 64,
+                  ),
                 ),
               ),
-              Positioned(
-                left: 280,
-                top: 433,
-                width: 112,
-                height: 45,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                left: _tab == 2 ? 305 : 314,
+                top: 442,
                 child: GestureDetector(
                   key: const Key('help-tab-tickets'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(_HelpTab.tickets),
-                  child: const SizedBox.expand(),
+                  onTap: () => _selectTab(2),
+                  child: LabelText(
+                    'Tickets',
+                    _tab == 2
+                        ? HelpSupportScreen._tabSelected
+                        : HelpSupportScreen._tabIdle,
+                    width: 44,
+                  ),
                 ),
               ),
               Positioned(
                 left: 25,
                 top: 492,
                 width: 362,
-                height: 300,
+                height: _tab == 0 ? 300 : (_tab == 1 ? 210 : 67),
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEFEFE),
@@ -304,279 +274,225 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   ),
                 ),
               ),
-              if (_tab == _HelpTab.topics) ..._topicRows(context),
-              if (_tab == _HelpTab.questions) ..._questionRows(context),
-              if (_tab == _HelpTab.tickets) _ticketsEmptyState(context),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _topicRows(BuildContext context) {
-    return [
-      for (final double y in <double>[554, 611, 670, 728])
-        Positioned(
-          left: 47,
-          top: y,
-          child: Container(
-            width: 324,
-            height: 1,
-            color: const Color(0x12000000),
-          ),
-        ),
-      const Positioned(
-        left: 46,
-        top: 505,
-        child: _TopicRow(
-          icon: 'assets/help/tile_orders.png',
-          title: 'Orders & delivery',
-          titleWidth: 103,
-          subtitle: '3 articles',
-          onTap: null,
-        ),
-      ),
-      const Positioned(
-        left: 46,
-        top: 563,
-        child: _TopicRow(
-          icon: 'assets/help/tile_products.png',
-          title: 'Products & stock',
-          titleWidth: 101,
-          subtitle: '3 articles',
-          onTap: null,
-        ),
-      ),
-      const Positioned(
-        left: 46,
-        top: 621,
-        child: _TopicRow(
-          icon: 'assets/help/tile_payments.png',
-          title: 'Payments & wallet',
-          titleWidth: 109,
-          subtitle: '3 articles',
-          onTap: null,
-        ),
-      ),
-      const Positioned(
-        left: 46,
-        top: 679,
-        child: _TopicRow(
-          icon: 'assets/help/tile_account.png',
-          title: 'Account & verification',
-          titleWidth: 131,
-          subtitle: '3 articles',
-          onTap: null,
-        ),
-      ),
-      Positioned(
-        left: 46,
-        top: 737,
-        child: _TopicRow(
-          icon: 'assets/help/tile_report.png',
-          title: 'Report a problem',
-          titleWidth: 102,
-          subtitle: 'Tell us what went wrong',
-          subtitleWidth: 117,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const ReportProblemScreen(),
-            ),
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _questionRows(BuildContext context) {
-    const List<double> rowTops = <double>[505, 563, 621, 679, 737];
-    const List<double> dividerTops = <double>[554, 611, 670, 728];
-    return [
-      for (final double y in dividerTops)
-        Positioned(
-          left: 47,
-          top: y,
-          child: Container(
-            width: 324,
-            height: 1,
-            color: const Color(0x12000000),
-          ),
-        ),
-      for (int i = 0; i < _faqs.length; i++)
-        Positioned(
-          left: 46,
-          top: rowTops[i],
-          child: _FaqRow(
-            key: Key('help-faq-$i'),
-            question: _faqs[i].question,
-            onTap: () => _showAnswer(context, _faqs[i]),
-          ),
-        ),
-    ];
-  }
-
-  Widget _ticketsEmptyState(BuildContext context) {
-    return Positioned(
-      left: 47,
-      top: 518,
-      width: 318,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEFF9D2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.confirmation_number_outlined,
-              size: 28,
-              color: HelpSupportScreen._darkGreen,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'No support tickets yet',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Tickets you raise will appear here.\nWe usually reply within 24 hours.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              height: 1.5,
-              color: HelpSupportScreen._muted,
-            ),
-          ),
-          const SizedBox(height: 18),
-          GestureDetector(
-            key: const Key('help-create-ticket'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ReportProblemScreen(),
-              ),
-            ),
-            child: Container(
-              width: 184,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: HelpSupportScreen._darkGreen,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Text(
-                'Report a problem',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: HelpSupportScreen._lime,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAnswer(BuildContext context, _Faq faq) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) => Container(
-        key: const Key('help-answer-sheet'),
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFEFEFE),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      faq.question,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                        color: Colors.black,
+              if (_tab == 0) ...[
+                for (final double y in <double>[554, 611, 670, 728])
+                  Positioned(
+                    left: 47,
+                    top: y,
+                    child: Container(
+                      width: 324,
+                      height: 1,
+                      color: const Color(0x12000000),
+                    ),
+                  ),
+                Positioned(
+                  left: 46,
+                  top: 505,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_orders.png',
+                    title: 'Orders & delivery',
+                    titleWidth: 103,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OrdersDeliveryHelpScreen(),
                       ),
                     ),
                   ),
-                  IconButton(
-                    key: const Key('help-answer-close'),
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    icon: const Icon(Icons.close, size: 20),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                faq.answer,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w400,
-                  height: 1.6,
-                  color: Color(0x99000000),
                 ),
-              ),
-              const SizedBox(height: 20),
-              GestureDetector(
-                key: const Key('help-answer-report'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ReportProblemScreen(),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: HelpSupportScreen._darkGreen,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Text(
-                    'Report a problem',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: HelpSupportScreen._lime,
+                Positioned(
+                  left: 46,
+                  top: 563,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_products.png',
+                    title: 'Products & stock',
+                    titleWidth: 101,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ProductsStockHelpScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  left: 46,
+                  top: 621,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_payments.png',
+                    title: 'Payments & wallet',
+                    titleWidth: 109,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PaymentsWalletHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 46,
+                  top: 679,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_account.png',
+                    title: 'Account & verification',
+                    titleWidth: 131,
+                    subtitle: '3 articles',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const AccountVerificationHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 46,
+                  top: 737,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_report.png',
+                    title: 'Report a problem',
+                    titleWidth: 102,
+                    subtitle: 'Tell us what went wrong',
+                    subtitleWidth: 117,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReportProblemScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+              ] else if (_tab == 1) ...[
+                for (final double y in <double>[549, 600, 645])
+                  Positioned(
+                    left: 42,
+                    top: y,
+                    child: Container(
+                      width: 324,
+                      height: 1,
+                      color: const Color(0x12000000),
+                    ),
+                  ),
+                Positioned(
+                  left: 25,
+                  top: 492,
+                  child: _QuestionRow(
+                    title: 'When will i get my money?',
+                    textTop: 25,
+                    chevronTop: 27.5,
+                    height: 57,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PayoutTimingHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 549,
+                  child: _QuestionRow(
+                    title: 'How do i update my stock?',
+                    textTop: 17,
+                    chevronTop: 19.5,
+                    height: 51,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const UpdateStockHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 600,
+                  child: _QuestionRow(
+                    title: 'How do i accept a new order?',
+                    textTop: 15,
+                    chevronTop: 17.5,
+                    height: 45,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OrdersDeliveryHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 25,
+                  top: 645,
+                  child: _QuestionRow(
+                    title: 'How do i get verified?',
+                    textTop: 15,
+                    chevronTop: 17.5,
+                    height: 57,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const VerifyAccountHelpScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Positioned(
+                  left: 46,
+                  top: 505,
+                  child: _TopicRow(
+                    icon: 'assets/help/tile_orders.png',
+                    title: 'Payout delayed',
+                    titleWidth: 91,
+                    subtitle: '#HS-2026, 3Mar',
+                    subtitleWidth: 90,
+                  ),
+                ),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackCircle extends StatelessWidget {
+  const _BackCircle();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).maybePop(),
+      child: Container(
+        width: 25,
+        height: 25,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Color(0x1A000000), blurRadius: 1),
+            BoxShadow(
+              color: Color(0x17000000),
+              offset: Offset(0, 1),
+              blurRadius: 1,
+            ),
+            BoxShadow(
+              color: Color(0x0D000000),
+              offset: Offset(1, 2),
+              blurRadius: 1,
+            ),
+            BoxShadow(
+              color: Color(0x03000000),
+              offset: Offset(1, 3),
+              blurRadius: 1,
+            ),
+            BoxShadow(
+              color: Color(0x00000000),
+              offset: Offset(2, 5),
+              blurRadius: 2,
+            ),
+          ],
+        ),
+        child: Center(
+          child: Image.asset('assets/order/ic_back.png', width: 15, height: 15),
         ),
       ),
     );
@@ -939,72 +855,57 @@ class _SelectedTab extends StatelessWidget {
   }
 }
 
-class _FaqRow extends StatelessWidget {
-  const _FaqRow({super.key, required this.question, required this.onTap});
+class _QuestionRow extends StatelessWidget {
+  const _QuestionRow({
+    required this.title,
+    required this.textTop,
+    required this.chevronTop,
+    required this.height,
+    this.onTap,
+  });
 
-  final String question;
-  final VoidCallback onTap;
+  final String title;
+  final double textTop;
+  final double chevronTop;
+  final double height;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final Widget content = SizedBox(
+      width: 362,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 17,
+            top: textTop,
+            child: LabelText(
+              title,
+              HelpSupportScreen._questionTitle,
+              width: 300,
+              height: 17,
+            ),
+          ),
+          Positioned(
+            left: 331.5,
+            top: chevronTop,
+            child: Image.asset(
+              'assets/help/chevron.png',
+              width: 12,
+              height: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(
-        width: 327,
-        height: 40,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 0,
-              top: 3,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEFF9D2),
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                child: const Icon(
-                  Icons.help_outline,
-                  size: 16,
-                  color: HelpSupportScreen._darkGreen,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 45,
-              top: 0,
-              width: 250,
-              child: Text(
-                question,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: HelpSupportScreen._rowTitle,
-              ),
-            ),
-            const Positioned(
-              left: 45,
-              top: 15,
-              child: LabelText(
-                'Tap to read answer',
-                HelpSupportScreen._rowSubtitle,
-                width: 92,
-              ),
-            ),
-            const Positioned(
-              left: 309,
-              top: 11,
-              child: Image(
-                image: AssetImage('assets/help/chevron.png'),
-                width: 18,
-                height: 18,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 }

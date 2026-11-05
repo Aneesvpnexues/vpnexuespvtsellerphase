@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'hover_press.dart';
 
 /// Shared seller-dashboard bottom navigation (Zeplin "Android Compact - 124/
 /// 151/152/159"): Home, Products, a lime FAB, Orders, Profile.
@@ -68,59 +69,81 @@ class BottomNavBar extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(left: _homeCenter - 30, top: 14, child: _NavItem(
-            icon: Icons.home_outlined,
-            label: 'Home',
-            active: selectedIndex == 0,
-            onTap: onHomeTap,
-          )),
-          Positioned(left: _productsCenter - 30, top: 14, child: _NavItem(
-            icon: Icons.inventory_2_outlined,
-            label: 'Products',
-            active: selectedIndex == 1,
-            onTap: onProductsTap,
-          )),
-          Positioned(left: _ordersCenter - 30, top: 14, child: _NavItem(
-            icon: Icons.receipt_long_outlined,
-            label: 'Orders',
-            active: selectedIndex == 2,
-            onTap: onOrdersTap,
-          )),
-          Positioned(left: _profileCenter - 30, top: 14, child: _NavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            active: selectedIndex == 3,
-            onTap: onProfileTap,
-          )),
+          Positioned(
+            left: _homeCenter - 30,
+            top: 14,
+            child: _NavItem(
+              icon: Icons.home_outlined,
+              label: 'Home',
+              active: selectedIndex == 0,
+              onTap: onHomeTap,
+            ),
+          ),
+          Positioned(
+            left: _productsCenter - 30,
+            top: 14,
+            child: _NavItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Products',
+              active: selectedIndex == 1,
+              onTap: onProductsTap,
+            ),
+          ),
+          Positioned(
+            left: _ordersCenter - 30,
+            top: 14,
+            child: _NavItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Orders',
+              active: selectedIndex == 2,
+              onTap: onOrdersTap,
+            ),
+          ),
+          Positioned(
+            left: _profileCenter - 30,
+            top: 14,
+            child: _NavItem(
+              icon: Icons.person_outline,
+              label: 'Profile',
+              active: selectedIndex == 3,
+              onTap: onProfileTap,
+            ),
+          ),
           Positioned(
             left: (designWidth - 66) / 2,
             top: -22,
             child: GestureDetector(
               onTap: onAddTap,
-              child: Container(
-                width: 66,
-                height: 66,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x1F000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 3),
+              child: HoverPress.icon(
+                enabled: onAddTap != null,
+                child: Container(
+                  width: 66,
+                  height: 66,
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x1F000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.fabLime,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 28,
+                        color: AppColors.darkGreenInk,
+                      ),
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: AppColors.fabLime,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.add,
-                        size: 28, color: AppColors.darkGreenInk),
                   ),
                 ),
               ),
@@ -209,18 +232,18 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 60,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 26, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppTextStyles.navLabel.copyWith(color: color),
-            ),
-          ],
+      child: HoverPress.chip(
+        enabled: onTap != null,
+        child: SizedBox(
+          width: 60,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 26, color: color),
+              const SizedBox(height: 4),
+              Text(label, style: AppTextStyles.navLabel.copyWith(color: color)),
+            ],
+          ),
         ),
       ),
     );

@@ -10,19 +10,13 @@ import 'app_storage.dart';
 /// [endSession] removes only the session record, so logging out never deletes
 /// the seller profile or the products.
 ///
-/// Login accepts exactly one credential pair — phone [validPhone] with OTP
-/// [validOtp] — regardless of which accounts exist in [UserStore]. These are
-/// test-only credentials; a local check like this is not production-secure.
+/// A session is opened only after Firebase phone authentication succeeds
+/// ([startSession] is called from the post-verification flow). This store is
+/// a local cache of who is signed in — it never grants access on its own.
 class SessionStore extends ChangeNotifier {
   SessionStore({this._storage});
 
   static final SessionStore instance = SessionStore();
-
-  /// The only phone number the Login flow accepts.
-  static const String validPhone = '9876543210';
-
-  /// The only OTP the Login flow accepts.
-  static const String validOtp = '786123';
 
   KeyValueStore? _storage;
   bool _authenticated = false;
@@ -40,14 +34,6 @@ class SessionStore extends ChangeNotifier {
 
   /// How the session was opened: 'signup' or 'login'.
   String get method => _method;
-
-  /// Whether [phone] + [otp] is the fixed credential pair this build accepts.
-  static bool credentialsValid({required String phone, required String otp}) =>
-      phone.trim() == validPhone && otp.trim() == validOtp;
-
-  /// Whether [phone] alone is the fixed login phone number.
-  static bool loginPhoneValid(String phone) =>
-      phone.trim() == validPhone;
 
   /// Attaches persistent [storage] and restores a saved session, if any
   /// (app relaunch). Called once at boot from `main()`.

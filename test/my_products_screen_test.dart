@@ -11,6 +11,7 @@ import 'package:seller_app/screens/product_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
+import 'package:seller_app/widgets/page_header.dart';
 
 Future<void> pumpScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(412, 1008);
@@ -56,6 +57,28 @@ void main() {
       userName: 'Test Seller',
       method: 'login',
     );
+    AddProductsScreen.debugPhotoPicker =
+        () async => ProductPhoto(bytes: _photoBytes);
+    AddProductsScreen.debugProductSaver = (
+      ProductDraft draft,
+      List<ProductPhoto> photos,
+    ) async {
+      return ProductStore.instance.addProduct(
+        name: draft.name,
+        category: draft.category,
+        price: draft.price,
+        unit: draft.unit,
+        quantity: draft.quantity,
+        description: draft.description,
+        status: draft.status,
+        photos: photos,
+      );
+    };
+  });
+
+  tearDown(() {
+    AddProductsScreen.debugPhotoPicker = null;
+    AddProductsScreen.debugProductSaver = null;
   });
 
   testWidgets('renders the empty 123 products content', (tester) async {
@@ -99,6 +122,16 @@ void main() {
     );
   });
 
+  testWidgets('the header back opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(PageHeader.backKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyProductsScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
   testWidgets('renders store products and removes dummy rows', (tester) async {
     _product(photos: <ProductPhoto>[ProductPhoto(bytes: _photoBytes)]);
     _product(
@@ -129,6 +162,22 @@ void main() {
       ),
     );
     expect(image.image, isA<MemoryImage>());
+  });
+
+  testWidgets('lists every product even when ProductStore.userId is set',
+      (tester) async {
+    // ProductStore.userId is the seller profile id (and the Settings mobile
+    // field used to write into it). It must never hide rows: this app has a
+    // single seller, and sellers_products.user_id cannot hold text ids anyway.
+    ProductStore.instance.userId = '9876543210';
+    addTearDown(() => ProductStore.instance.userId = '');
+    _product(name: 'Brinjal');
+
+    await pumpScreen(tester);
+
+    expect(find.byKey(const ValueKey('products-empty')), findsNothing);
+    expect(find.text('1 Product'), findsOneWidget);
+    expect(find.text('Brinjal'), findsOneWidget);
   });
 
   testWidgets('status tabs filter the product list', (tester) async {
@@ -288,7 +337,18 @@ void main() {
       find.byKey(const ValueKey('product-name')),
       'Green Chilli',
     );
-    await tester.enterText(find.byKey(const ValueKey('product-price')), '24');
+    await tester.enterText(
+      find.byKey(const ValueKey('product-price')),
+      '24',
+    );
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('add-photo')),
+      find.byType(SingleChildScrollView),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add-photo')));
+    await tester.pumpAndSettle();
     await tester.dragUntilVisible(
       find.byKey(const ValueKey('add-product-continue')),
       find.byType(SingleChildScrollView),

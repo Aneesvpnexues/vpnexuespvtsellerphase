@@ -7,7 +7,10 @@ import 'package:seller_app/data/user_store.dart';
 import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
+import 'package:seller_app/services/auth_flow.dart';
 import 'package:seller_app/theme/app_colors.dart';
+
+import 'fake_auth_flow.dart';
 
 /// Pumps the Welcome Seller screen on the 412x917 artboard the design was
 /// drawn for.
@@ -20,11 +23,20 @@ Future<void> pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  late FakeAuthFlow fake;
+
   setUp(() {
+    fake = FakeAuthFlow();
+    AuthFlow.debugOverride = fake;
     // Sign-up registers an account and opens a session; start every test
     // signed out with an empty registry so they stay independent.
     SessionStore.instance.endSession();
     UserStore.instance.clear();
+    SellerProfileStore.instance.reset();
+  });
+
+  tearDown(() {
+    AuthFlow.debugOverride = null;
     SellerProfileStore.instance.reset();
   });
   testWidgets('renders the Welcome Seller content', (tester) async {
@@ -148,8 +160,11 @@ void main() {
     expect(phone.left, closeTo(112, 1));
     expect(phone.width, closeTo(277, 1));
 
-    // Redesigned box shows the placeholder instead of a static caret.
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    // The field shows the design's placeholder while empty.
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      'Mobile number',
+    );
 
     // Send OTP button: x 24..388, y 749..801.
     final button = rectOf(_findPrimaryContainers(tester).last);
@@ -228,7 +243,10 @@ void main() {
       (tester) async {
     await pumpScreen(tester);
 
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      'Mobile number',
+    );
 
     // Tapping the field opens the input connection (keyboard on device).
     expect(tester.testTextInput.isVisible, isFalse);
@@ -251,7 +269,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('9876543210'), findsNothing);
-    expect(find.text('Mobile number', findRichText: true), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
+      'Mobile number',
+    );
   });
 
   testWidgets('phone input is numeric only and the length follows the '
@@ -335,46 +356,19 @@ void main() {
     expect(find.text('+91'), findsNothing);
   });
 
-  testWidgets('send OTP validates the phone, rejects any number that is not '
-      'the login number and opens the OTP screen for it', (tester) async {
+  testWidgets('send OTP opens the OTP screen and back returns', (tester) async {
     await pumpScreen(tester);
 
-    // Empty number: validation message, no navigation.
-    await tester.tap(find.text('Send OTP'));
-    await tester.pumpAndSettle();
-    expect(find.text('Enter a valid phone number'), findsOneWidget);
-    expect(find.text('Enter OTP'), findsNothing);
-    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
-
-    // Too short for the selected country: still blocked.
-    await tester.enterText(find.byType(TextField), '987654321');
-    await tester.pump();
-    await tester.tap(find.text('Send OTP'));
-    await tester.pumpAndSettle();
-    expect(find.text('Enter a valid phone number'), findsOneWidget);
-    expect(find.text('Enter OTP'), findsNothing);
-
-    // Full-length but not the fixed login number: rejected even though it
-    // could belong to a registered account.
-    await tester.enterText(find.byType(TextField), '1234567890');
-    await tester.pump();
-    await tester.tap(find.text('Send OTP'));
-    await tester.pumpAndSettle();
-    expect(find.text('Invalid phone number'), findsOneWidget);
-    expect(find.text('Enter OTP'), findsNothing);
-    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
-
-    // The fixed login number: the OTP screen shows it with the dial code
-    // instead of the mockup's placeholder.
-    await tester.enterText(find.byType(TextField), '9876543210');
-    await tester.pump();
+    await tester.enterText(find.byKey(const Key('loginPhone')), '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
 
     expect(find.text('Enter OTP'), findsOneWidget);
-    expect(find.text('+91 9876543210'), findsOneWidget);
     expect(find.text('Verify'), findsOneWidget);
     expect(find.text('Welcome Seller!', findRichText: true), findsNothing);
+    // The E.164 number composed from the picked country reached Firebase.
+    expect(fake.sentE164, <String>['+919876543210']);
+    expect(fake.sentDisplay, <String>['+91 9876543210']);
 
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
     navigator.pop();

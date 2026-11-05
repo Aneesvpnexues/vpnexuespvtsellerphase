@@ -438,24 +438,31 @@ class _ActiveOrdersCard extends StatelessWidget {
                       Radius.circular(22),
                     ),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'View orders',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                  // FittedBox keeps the pill layout intact with real font
+                  // metrics and scales the label+arrow down instead of
+                  // overflowing when the test font renders text wider.
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View orders',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 7),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 16,
-                        color: AppColors.limeLight,
-                      ),
-                    ],
+                        SizedBox(width: 7),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: AppColors.limeLight,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

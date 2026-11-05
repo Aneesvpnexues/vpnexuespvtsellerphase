@@ -4,6 +4,7 @@ import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/add_products_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
+import 'package:seller_app/screens/order_details_screen.dart';
 import 'package:seller_app/screens/profile_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
@@ -47,6 +48,23 @@ void main() {
     expect(find.text('Orders'), findsOneWidget);
   });
 
+  testWidgets('order thumbnails show real product photos', (tester) async {
+    await pumpScreen(tester);
+
+    const expected = [
+      'assets/order/tomatoes.png',
+      'assets/order/chillies.png',
+      'assets/order/chillies2.png',
+    ];
+    for (var i = 0; i < expected.length; i++) {
+      final image = tester.widget<Image>(
+        find.byKey(ValueKey<String>('order-thumb-$i')).first,
+      );
+      expect((image.image as AssetImage).assetName, expected[i]);
+    }
+    expect(find.text('+1'), findsWidgets);
+  });
+
   testWidgets('layout matches the 412x1154 design geometry', (tester) async {
     await pumpScreen(tester);
 
@@ -64,6 +82,31 @@ void main() {
     expect(title.height, closeTo(20, 1));
     expect(rectOf(find.text('Akash Stores')).left, closeTo(89, 2));
     expect(rectOf(find.text('Akash Stores')).top, closeTo(205, 3));
+  });
+
+  testWidgets('the header back opens the Home tab', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const ValueKey('my-orders-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyOrdersScreen), findsNothing);
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+  });
+
+  testWidgets('every order row opens the order process', (tester) async {
+    await pumpScreen(tester);
+
+    for (final String store in ['Akash Stores', 'Hotel Green Leaf']) {
+      await tester.tap(find.text(store));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderDetailsScreen), findsOneWidget);
+      expect(find.text('ORDER #NX4582'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('page-header-back')));
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('status tabs filter the order list', (tester) async {

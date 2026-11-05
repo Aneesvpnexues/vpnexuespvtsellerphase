@@ -18,17 +18,19 @@ class OtpFieldRow extends StatefulWidget {
   static const int boxCount = 6;
   static const double boxGap = 9;
 
-  /// Reports the current digits on every change so the parent can read the
-  /// code (the field's controller stays private to this widget).
+  /// Fires with the digits currently typed (including `''` after [clear]).
   final ValueChanged<String>? onChanged;
 
   @override
-  State<OtpFieldRow> createState() => _OtpFieldRowState();
+  State<OtpFieldRow> createState() => OtpFieldRowState();
 }
 
-class _OtpFieldRowState extends State<OtpFieldRow> {
+class OtpFieldRowState extends State<OtpFieldRow> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
+  /// Empties the boxes — used after a rejected OTP so the seller can retype.
+  void clear() => _controller.clear();
 
   @override
   void initState() {
@@ -37,8 +39,8 @@ class _OtpFieldRowState extends State<OtpFieldRow> {
   }
 
   void _onChanged() {
-    setState(() {});
     widget.onChanged?.call(_controller.text);
+    setState(() {});
   }
 
   @override
@@ -75,9 +77,6 @@ class _OtpFieldRowState extends State<OtpFieldRow> {
               scrollPadding: const EdgeInsets.only(bottom: 180),
               controller: _controller,
               focusNode: _focusNode,
-              // The keyboard opens as soon as the screen shows so the code
-              // can be typed without an extra tap.
-              autofocus: true,
               maxLength: OtpFieldRow.boxCount,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],

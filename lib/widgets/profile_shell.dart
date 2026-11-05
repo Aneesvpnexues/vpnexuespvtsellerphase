@@ -6,6 +6,7 @@ import '../theme/app_text_styles.dart';
 import 'app_navigation.dart';
 import 'artboard.dart';
 import 'bottom_nav_bar.dart';
+import 'hover_press.dart';
 import 'page_header.dart';
 
 /// Shared chrome for the seller Profile screens — Zeplin "Android Compact -
@@ -66,20 +67,23 @@ class ProfileShell extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Positioned(
-                left: 0,
-                top: 24,
-                child: PageHeader(title: 'Profile'),
-              ),
-              const Positioned(left: 24, top: 65, child: _BalanceCard()),
               Positioned(
-                left: 24,
+                left: -2,
+                top: 25,
+                child: PageHeader(
+                  title: 'Profile',
+                  onBack: () => goToHome(context),
+                ),
+              ),
+              const Positioned(left: 17, top: 65, child: _BalanceCard()),
+              Positioned(
+                left: 17,
                 top: 336,
                 child: _SellerCard(onPersonalDetails: onPersonalDetails),
               ),
-              const Positioned(left: 24, top: 427, child: _StatsRow()),
+              const Positioned(left: 17, top: 427, child: _StatsRow()),
               Positioned(
-                left: 24,
+                left: 17,
                 top: 502,
                 child: _TabBar(
                   selectedTab: selectedTab,
@@ -88,7 +92,7 @@ class ProfileShell extends StatelessWidget {
                   onAppTab: onAppTab,
                 ),
               ),
-              Positioned(left: 24, top: 560, child: listCard),
+              Positioned(left: 17, top: 560, child: listCard),
               Positioned(
                 left: 0,
                 bottom: 0,
@@ -115,7 +119,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 378,
       height: 250,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -293,7 +297,7 @@ class _SellerCard extends StatelessWidget {
         builder: (context, _) {
           final SellerProfileStore store = SellerProfileStore.instance;
           return Container(
-            width: 364,
+            width: 378,
             height: 78,
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
@@ -343,7 +347,7 @@ class _SellerCard extends StatelessWidget {
                 Positioned(
                   left: 81,
                   top: 46,
-                  width: 165,
+                  width: 200,
                   child: Text(
                     store.sellerSummary,
                     maxLines: 1,
@@ -352,8 +356,8 @@ class _SellerCard extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  right: 18,
-                  top: 28,
+                  right: 17,
+                  top: 18,
                   child: Container(
                     height: 26,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -449,7 +453,7 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 378,
       height: 44,
       decoration: BoxDecoration(
         color: AppColors.tabTrack,
@@ -525,14 +529,17 @@ class _TabLabel extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.tabLabel.copyWith(
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected
-                  ? AppColors.tabSelectedText
-                  : AppColors.tabUnselectedText,
+        child: HoverPress.chip(
+          enabled: onTap != null,
+          child: Center(
+            child: Text(
+              label,
+              style: AppTextStyles.tabLabel.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected
+                    ? AppColors.tabSelectedText
+                    : AppColors.tabUnselectedText,
+              ),
             ),
           ),
         ),
@@ -583,7 +590,7 @@ class ProfileListCard extends StatelessWidget {
       children.add(rows[i]);
     }
     return Container(
-      width: 364,
+      width: 378,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),

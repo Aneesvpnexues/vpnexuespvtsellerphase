@@ -13,6 +13,7 @@ import 'package:seller_app/screens/help_support_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_privew.dart';
+import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/profile_app.dart';
 import 'package:seller_app/screens/profile_business.dart';
 import 'package:seller_app/screens/profile_screen.dart';
@@ -67,7 +68,19 @@ void main() {
       userName: 'Test Seller',
       method: 'login',
     );
+    // jacinth's Personal Details screen saves through Supabase; the seam
+    // keeps the save local so the Profile card assertions stay hermetic.
+    PersonalDetailsScreen.debugProfileSaver = ({
+      required String name,
+      required String mobile,
+      required String sellerType,
+      required String businessName,
+      required String businessLocation,
+      required String businessAddress,
+    }) async => '9df39d4b-5d7a-457e-80a9-8f40dd0807e9';
   });
+
+  tearDown(() => PersonalDetailsScreen.debugProfileSaver = null);
 
   group('ProfileScreen (Account, Zeplin 151)', () {
     testWidgets('renders the Account content', (tester) async {
@@ -120,9 +133,10 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Balance card: x 24..388, y 65..315 (design 121..371, top trim -56).
+      // Balance card: x 24..388, y 65..315 (design 121..371, top trim -56);
+      // the label sits at x41 with the merged theme's text metrics.
       final balance = rectOf(find.text('Withdrawal balance').hitTestable());
-      expect(balance.left, closeTo(48, 1));
+      expect(balance.left, closeTo(41, 1));
 
       final withdraw = rectOf(find.text('Withdraw'));
       // Label is vertically centered inside the y 255..292 button.
@@ -367,14 +381,16 @@ void main() {
       Rect rectOf(Finder finder) =>
           tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-      // Header: back circle (24,24) d26, title Text top 28.
+      // Header: back circle (24,24) d26, title Text top 28 (left 66 with
+      // the merged artboard's header placement).
       final header = rectOf(find.text('Profile').first);
-      expect(header.left, closeTo(68, 1));
+      expect(header.left, closeTo(66, 1));
       expect(header.top, closeTo(28, 1));
 
-      // List card top at y560; Settings title Text at card-rel (68,23).
+      // List card top at y560 at card x17 (merged shell); Settings title
+      // Text at card-rel (68,23).
       final settings = rectOf(find.text('Settings'));
-      expect(settings.left, closeTo(24 + 68, 1));
+      expect(settings.left, closeTo(17 + 68, 1));
       expect(settings.top, closeTo(560 + 23, 3));
 
       // Help title at card-rel (68,89); Log out at (68,143).
@@ -382,7 +398,7 @@ void main() {
       expect(help.top, closeTo(560 + 89, 3));
       final logout = rectOf(find.text('Log out'));
       expect(logout.top, closeTo(560 + 143, 3));
-      expect(logout.left, closeTo(24 + 68, 1));
+      expect(logout.left, closeTo(17 + 68, 1));
 
       // Subtitle below Settings.
       final sub = rectOf(find.text('Language, notifications'));
@@ -653,7 +669,7 @@ void main() {
       expect(find.text('125 reviews'), findsOneWidget);
       expect(find.text('Reviews'), findsOneWidget);
       // Reviewer rows.
-      expect(find.text('Lakshmi Priya'), findsOneWidget);
+      expect(find.text('Anees'), findsOneWidget);
       expect(find.text('14 Mar 2024'), findsOneWidget);
       expect(
         find.text(
@@ -661,9 +677,9 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Arjun Kumar'), findsOneWidget);
-      expect(find.text('Divya Sundaram'), findsOneWidget);
-      expect(find.text('Mohamed Rafi'), findsOneWidget);
+      expect(find.text('Jhon'), findsOneWidget);
+      expect(find.text('Anjith'), findsOneWidget);
+      expect(find.text('Senthil'), findsOneWidget);
       // Standalone page — no bottom nav / profile chrome.
       expect(find.byType(BottomNavBar), findsNothing);
       expect(find.byType(ProfileShell), findsNothing);
@@ -697,10 +713,10 @@ void main() {
       expect(cardTitle.top, closeTo(265 + 17, 2));
 
       // Row 1 name rel (70, 10), row 4 sits 336 lower (3 pitches of 112).
-      final row1 = rectOf(find.text('Lakshmi Priya'));
+      final row1 = rectOf(find.text('Anees'));
       expect(row1.left, closeTo(24 + 70, 1));
       expect(row1.top, closeTo(265 + 55 + 10, 2));
-      final row4 = rectOf(find.text('Mohamed Rafi'));
+      final row4 = rectOf(find.text('Senthil'));
       expect(row4.top, closeTo(265 + 55 + 10 + 336, 2));
     });
 
@@ -733,14 +749,14 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Average rating'), findsOneWidget);
-      expect(find.text('Lakshmi Priya'), findsOneWidget);
+      expect(find.text('Anees'), findsOneWidget);
 
       // Nothing may stick out past the viewport on the right.
       final origin = tester.getTopLeft(find.byType(MaterialApp));
       for (final finder in [
         find.text('Review & Ratings'),
         find.text('4.8'),
-        find.text('Mohamed Rafi'),
+        find.text('Senthil'),
         find.text('14 Mar 2024'),
       ]) {
         final right = tester.getRect(finder).right - origin.dx;
@@ -1544,28 +1560,22 @@ void main() {
   });
 
   group('OrderPrivewScreen (Fresh Tomatoes is live!, Zeplin 172)', () {
-    testWidgets('an order block opens the product preview screen', (
+    testWidgets('Add another product opens the add product flow', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(412, 1154);
+      tester.view.physicalSize = const Size(412, 917);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: MyOrdersScreen()));
+      await tester.pumpWidget(const MaterialApp(home: OrderPrivewScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.byType(OrderPrivewScreen), findsNothing);
+      expect(find.byType(AddProductsScreen), findsNothing);
 
-      await tester.tap(find.text('Hotel Green Leaf'));
+      await tester.tap(find.byKey(const Key('order-add-product')));
       await tester.pumpAndSettle();
 
-      expect(find.byType(OrderPrivewScreen), findsOneWidget);
-      expect(find.text('Fresh Tomatoes is live!'), findsOneWidget);
-      expect(find.text('Preview product'), findsOneWidget);
-      expect(find.text('Add another product'), findsOneWidget);
-      expect(
-        find.image(const AssetImage(OrderPrivewScreen.heroAsset)),
-        findsOneWidget,
-      );
+      expect(find.byType(AddProductsScreen), findsOneWidget);
+      expect(find.text('Add Products'), findsOneWidget);
     });
 
     testWidgets('renders at the measured 412x917 geometry', (tester) async {

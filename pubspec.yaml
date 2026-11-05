@@ -37,10 +37,13 @@ dependencies:
   image_picker: ^1.2.4
   share_plus: ^13.3.1
   file_picker: ^13.1.0
-  # Used by lib/services/backend_service.dart to talk to the Spring Boot API.
-  # Declared explicitly — it was previously only a transitive dependency, so
-  # it could disappear from the lockfile and break the import.
-  http: ^1.2.0
+  http: ^1.6.0
+  http_parser: ^4.1.2
+  firebase_core: ^5.1.0
+  firebase_auth: ^7.0.1
+  firebase_messaging: ^17.0.1
+  flutter_local_notifications: ^22.3.3
+  supabase_flutter: ^2.18.3
   # Persistent local storage: seller profile, products, registered sign-up
   # accounts and the active session all survive app restarts through this.
   shared_preferences: ^2.3.0
@@ -68,6 +71,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/config/
     - assets/otp/illustration.png
     - assets/otp/bottom_deco.png
     - assets/step01/illustration.png
@@ -78,13 +82,14 @@ flutter:
     - assets/welcome/wave.png
     - assets/welcome/send.png
     - assets/order/
-    - assets/products/tomato.png
+    - assets/products/
     - assets/profile/
     - assets/personal/
     - assets/business/
     - assets/kyc/
     - assets/bank/
     - assets/settings/
+    - assets/help/
     - assets/order_accepted/
     - assets/order_ready/
     - assets/order_delivery/
@@ -92,7 +97,6 @@ flutter:
     - assets/product_details/
     - assets/step03/
     - assets/verify/
-    - assets/help/
     - assets/language/
     - assets/splash/splash.png
 

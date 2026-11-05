@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import '../widgets/slide_drag_detector.dart';
@@ -22,12 +23,33 @@ import '../widgets/slide_drag_detector.dart';
 /// The slide CTA keeps the 135/139 gesture: a drag past 70% settles at the end,
 /// a shorter one springs back. A full slide opens the out-for-delivery state
 /// (141), a tap only settles the knob.
-class OrderReadyScreen extends StatelessWidget {
+///
+/// The checklist is live: tapping a row ticks it off, the "n/3 packed" counter
+/// and the rail follow, and the slide stays disabled until all three items are
+/// packed.
+class OrderReadyScreen extends StatefulWidget {
   const OrderReadyScreen({super.key});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
   static const double trimTop = 49;
+
+  @override
+  State<OrderReadyScreen> createState() => _OrderReadyScreenState();
+}
+
+class _OrderReadyScreenState extends State<OrderReadyScreen> {
+  final Set<int> _packed = <int>{0, 1, 2};
+
+  bool get _allPacked => _packed.length == 3;
+
+  void _togglePacked(int index) {
+    setState(() {
+      if (!_packed.remove(index)) {
+        _packed.add(index);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +58,9 @@ class OrderReadyScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: OrderReadyScreen.designWidth,
+          designHeight: OrderReadyScreen.designHeight,
+          trimTop: OrderReadyScreen.trimTop,
           child: Stack(
             children: [
               const Positioned(
@@ -50,11 +72,16 @@ class OrderReadyScreen extends StatelessWidget {
               const Positioned(left: 25, top: 172, child: _OrderHero()),
               const Positioned(left: 41, top: 247, child: _ProgressCard()),
               const Positioned(left: 24, top: 358, child: _BuyerCard()),
-              const Positioned(left: 24, top: 552, child: _PackingCard()),
+              Positioned(
+                left: 24,
+                top: 552,
+                child: _PackingCard(packed: _packed, onToggle: _togglePacked),
+              ),
               Positioned(
                 left: 24,
                 top: 847,
                 child: _SlideReady(
+                  enabled: _allPacked,
                   onComplete: () => goToOrderDelivery(context),
                 ),
               ),
@@ -282,7 +309,7 @@ class _ProgressCard extends StatelessWidget {
       left: 85,
       labelLeft: 79,
       labelWidth: 48,
-      icon: 'assets/order/ic_step_tick.png',
+      icon: 'assets/order/ic_step_tick_white.png',
       iconSize: 19,
       iconDx: 9,
       iconDy: 9,
@@ -693,7 +720,10 @@ class _BuyerCard extends StatelessWidget {
 }
 
 class _PackingCard extends StatelessWidget {
-  const _PackingCard();
+  const _PackingCard({required this.packed, required this.onToggle});
+
+  final Set<int> packed;
+  final ValueChanged<int> onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -777,11 +807,11 @@ class _PackingCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 280,
             top: 20,
             child: LabelText(
-              '3/3 packed',
+              '${packed.length}/3 packed',
               AppTextStyles.orderStepLabel,
               width: 59,
               height: 20,
@@ -791,7 +821,8 @@ class _PackingCard extends StatelessWidget {
             left: 17,
             top: 59,
             child: Container(
-              width: 330,
+              key: const Key('packing_progress_fill'),
+              width: 330 * packed.length / 3,
               height: 4,
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(7)),
@@ -808,7 +839,7 @@ class _PackingCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 79,
             child: _PackRow(
@@ -817,9 +848,11 @@ class _PackingCard extends StatelessWidget {
               qty: '50 kg',
               start: AppColors.orderRow1Start,
               end: AppColors.orderRow1End,
+              packed: packed.contains(0),
+              onTap: () => onToggle(0),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 142,
             child: _PackRow(
@@ -828,9 +861,11 @@ class _PackingCard extends StatelessWidget {
               qty: '30 kg',
               start: AppColors.orderRow2Start,
               end: AppColors.orderRow2End,
+              packed: packed.contains(1),
+              onTap: () => onToggle(1),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 205,
             child: _PackRow(
@@ -839,6 +874,8 @@ class _PackingCard extends StatelessWidget {
               qty: '20 kg',
               start: AppColors.orderRow3Start,
               end: AppColors.orderRow3End,
+              packed: packed.contains(2),
+              onTap: () => onToggle(2),
             ),
           ),
         ],
@@ -854,6 +891,8 @@ class _PackRow extends StatelessWidget {
     required this.qty,
     required this.start,
     required this.end,
+    required this.packed,
+    required this.onTap,
   });
 
   final String image;
@@ -861,80 +900,93 @@ class _PackRow extends StatelessWidget {
   final String qty;
   final Color start;
   final Color end;
+  final bool packed;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      width: 331,
-      height: 59,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [start, end],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        width: 331,
+        height: 59,
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [start, end],
+          ),
         ),
-      ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-        border: Border.all(color: const Color(0x0D000000)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 5,
-            top: 5,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(10)),
-              child: Image(image: AssetImage(image), width: 49, height: 49),
-            ),
-          ),
-          Positioned(
-            left: 67,
-            top: 8,
-            child: LabelText(name, AppTextStyles.orderItemName, width: 120),
-          ),
-          Positioned(
-            left: 67,
-            top: 26,
-            child: LabelText(qty, AppTextStyles.orderItemMeta, width: 60),
-          ),
-          Positioned(
-            left: 295,
-            top: 17,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(
-                color: AppColors.orderStepGreen,
-                borderRadius: BorderRadius.all(Radius.circular(7)),
-              ),
-              child: const Stack(
-                children: [
-                  Positioned(
-                    left: 7,
-                    top: 7.5,
-                    child: Image(
-                      image: AssetImage(
-                        'assets/order_ready/ic_badge_check.png',
-                      ),
-                      width: 10.5,
-                      height: 9,
-                    ),
-                  ),
-                ],
+        foregroundDecoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          border: Border.all(color: const Color(0x0D000000)),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 5,
+              top: 5,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image(image: AssetImage(image), width: 49, height: 49),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 67,
+              top: 8,
+              child: LabelText(name, AppTextStyles.orderItemName, width: 120),
+            ),
+            Positioned(
+              left: 67,
+              top: 26,
+              child: LabelText(qty, AppTextStyles.orderItemMeta, width: 60),
+            ),
+            Positioned(
+              left: 295,
+              top: 17,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: packed ? AppColors.orderStepGreen : Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(7)),
+                  border: packed
+                      ? null
+                      : Border.all(color: AppColors.orderCheckBorder),
+                ),
+                child: packed
+                    ? const Stack(
+                        children: [
+                          Positioned(
+                            left: 7,
+                            top: 7.5,
+                            child: Image(
+                              image: AssetImage(
+                                'assets/order_ready/ic_badge_check.png',
+                              ),
+                              width: 10.5,
+                              height: 9,
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SlideReady extends StatefulWidget {
-  const _SlideReady({required this.onComplete});
+  const _SlideReady({required this.enabled, required this.onComplete});
+
+  final bool enabled;
 
   /// Called once the knob has been dragged all the way to the end.
   final VoidCallback onComplete;
@@ -992,64 +1044,89 @@ class _SlideReadyState extends State<_SlideReady>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => setState(() => _knobX = _end),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
-            stops: [0.11656297743320465, 1],
+    return IgnorePointer(
+      ignoring: !widget.enabled,
+      child: HoverPress.slide(
+        enabled: widget.enabled,
+        child: SlideDragDetector(
+          onTap: () => setState(() => _knobX = _end),
+          onUpdate: _onDragUpdate,
+          onEnd: _onDragEnd,
+          child: SizedBox(
+            width: 364,
+            height: 58,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: widget.enabled ? 1 : 0.65,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(28),
+                        ),
+                        gradient: const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            AppColors.orderSlideStart,
+                            AppColors.orderSlideEnd,
+                          ],
+                          stops: [0.11656297743320465, 1],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x2E000000),
+                            offset: Offset(0, 22),
+                            blurRadius: 30,
+                            spreadRadius: -2,
+                          ),
+                        ],
+                      ),
+                      foregroundDecoration: BoxDecoration(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(28),
+                        ),
+                        border: Border.all(color: const Color(0x0F000000)),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: _knobX,
+                  top: 4,
+                  child: Container(
+                    alignment: Alignment.center,
+                    width: 50,
+                    height: 50,
+                    decoration: const BoxDecoration(
+                      color: AppColors.orderSlideLime,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Image(
+                      image: AssetImage('assets/order/ic_slide.png'),
+                      width: 26,
+                      height: 26,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 109,
+                  top: 15,
+                  child: LabelText(
+                    widget.enabled
+                        ? 'Slide to mark as ready'
+                        : 'Pack all items to continue',
+                    widget.enabled
+                        ? AppTextStyles.orderSlideLabel
+                        : AppTextStyles.orderSlideLabelMuted,
+                    width: 179,
+                  ),
+                ),
+              ],
+            ),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x2E000000),
-              offset: Offset(0, 22),
-              blurRadius: 30,
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          border: Border.all(color: const Color(0x0F000000)),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderSlideLime,
-                  shape: BoxShape.circle,
-                ),
-                child: const Image(
-                  image: AssetImage('assets/order/ic_slide.png'),
-                  width: 26,
-                  height: 26,
-                ),
-              ),
-            ),
-            const Positioned(
-              left: 109,
-              top: 15,
-              child: LabelText(
-                'Slide to mark as ready',
-                AppTextStyles.orderSlideLabel,
-                width: 154,
-              ),
-            ),
-          ],
         ),
       ),
     );

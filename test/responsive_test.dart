@@ -31,7 +31,7 @@ void main() {
 
   final screens = <String, Widget Function()>{
     'WelcomeSellerScreen': () => const WelcomeSellerScreen(),
-    'OtpScreen': () => const OtpScreen(),
+    'OtpScreen': () => const OtpScreen(phone: '+91 1234567890'),
     'Step01LocationScreen': () => const Step01LocationScreen(),
     'Step02SellerTypeScreen': () => const Step02SellerTypeScreen(),
     'Step03BusinessDetailsScreen': () => const Step03BusinessDetailsScreen(),
@@ -99,7 +99,7 @@ void main() {
 
     // 800x1280 is height-bound: scale = 1280/924 ~= 1.385, so the header
     // sits further right than at the design size (proof of upscale).
-    expect(atDesign, closeTo(68, 1));
+    expect(atDesign, closeTo(66, 1));
     expect(atLarge, greaterThan(atDesign + 100));
   });
 
@@ -114,9 +114,9 @@ void main() {
 
     // scale = min(2000/412, 3000/924, 1.5) = 1.5 -> artboard 618x1386,
     // centered horizontally at x = (2000-618)/2 = 691; header at artboard
-    // rel x68 -> 691 + 68*1.5 = 793.
+    // rel x66 -> 691 + 66*1.5 = 790.
     final header = tester.getRect(find.text('Profile').first);
-    expect(header.left, closeTo(793, 2));
+    expect(header.left, closeTo(790, 2));
     expect(header.top, closeTo(28 * 1.5, 2));
   });
 

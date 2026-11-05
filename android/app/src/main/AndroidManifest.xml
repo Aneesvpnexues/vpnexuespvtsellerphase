@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Firebase auth + FCM need network access in release builds too
+         (debug/profile get it from their own manifests). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ runtime notification permission (FCM + local display). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="seller_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Notifications arrive on this channel; NotificationService
+             creates it with the same id (kNotificationChannelId). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="seller_app_default" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/api_error.dart';
 import '../data/product_store.dart';
+import '../data/seller_product_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 
 typedef ProductShare = Future<void> Function(Product product);
+typedef ProductUpdater = Future<Product> Function(Product product);
+typedef ProductDeleter = Future<void> Function(String id);
 
 /// Product Details — replica of Zeplin "Android Compact - 171"
 /// (screen 6ad1b035a75614448d4a39f8).
@@ -15,10 +20,18 @@ typedef ProductShare = Future<void> Function(Product product);
 /// [product] is supplied its image and details are rendered; otherwise the
 /// original static design copy is kept.
 class ProductDetailsScreen extends StatefulWidget {
-  const ProductDetailsScreen({super.key, this.product, this.shareProduct});
+  const ProductDetailsScreen({
+    super.key,
+    this.product,
+    this.shareProduct,
+    this.productUpdater,
+    this.productDeleter,
+  });
 
   final Product? product;
   final ProductShare? shareProduct;
+  final ProductUpdater? productUpdater;
+  final ProductDeleter? productDeleter;
 
   static const double designWidth = 412;
   static const double designHeight = 1564;
@@ -84,26 +97,59 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     _photoIndex = 0;
   }
 
-  void _persistProduct() {
+  void _toggleBuyerPickup() {
     final Product? product = _product;
     if (product == null) return;
-    ProductStore.instance.updateProduct(product);
-  }
-
-  void _toggleBuyerPickup() {
-    setState(() {
-      _buyerPickupEnabled = !_buyerPickupEnabled;
-      _product = _product?.copyWith(buyerPickupEnabled: _buyerPickupEnabled);
-    });
-    _persistProduct();
+    _saveToggle(
+      product.copyWith(buyerPickupEnabled: !_buyerPickupEnabled),
+      product,
+    );
   }
 
   void _toggleDelivery() {
+    final Product? product = _product;
+    if (product == null) return;
+    _saveToggle(product.copyWith(deliveryEnabled: !_deliveryEnabled), product);
+  }
+
+  Future<void> _saveToggle(Product next, Product previous) async {
     setState(() {
-      _deliveryEnabled = !_deliveryEnabled;
-      _product = _product?.copyWith(deliveryEnabled: _deliveryEnabled);
+      _product = next;
+      _buyerPickupEnabled = next.buyerPickupEnabled;
+      _deliveryEnabled = next.deliveryEnabled;
     });
-    _persistProduct();
+    ProductStore.instance.updateProduct(next);
+    try {
+      final Product saved = await (widget.productUpdater ?? _updateRemote)(next);
+      if (!mounted) return;
+      setState(() {
+        _product = saved;
+        _buyerPickupEnabled = saved.buyerPickupEnabled;
+        _deliveryEnabled = saved.deliveryEnabled;
+      });
+      ProductStore.instance.updateProduct(saved);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _restoreToggle(previous);
+      _showError(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      _restoreToggle(previous);
+      _showError('Could not update the product. Please try again.');
+    }
+  }
+
+  void _restoreToggle(Product previous) {
+    setState(() {
+      _product = previous;
+      _buyerPickupEnabled = previous.buyerPickupEnabled;
+      _deliveryEnabled = previous.deliveryEnabled;
+    });
+    ProductStore.instance.updateProduct(previous);
+  }
+
+  Future<Product> _updateRemote(Product product) {
+    return SellerProductRepository().updateProduct(product);
   }
 
   Future<void> _deleteProduct() async {
@@ -120,25 +166,47 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         title: const Text('Delete product?'),
         content: Text('Remove ${product.name} from your listings?'),
         actions: [
-          TextButton(
-            key: const ValueKey('cancel-delete-product'),
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+          HoverPress.button(
+            child: TextButton(
+              key: const ValueKey('cancel-delete-product'),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
           ),
-          TextButton(
-            key: const ValueKey('confirm-delete-product'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+          HoverPress.button(
+            child: TextButton(
+              key: const ValueKey('confirm-delete-product'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
           ),
         ],
       ),
     );
     if (!mounted || confirmed != true) return;
 
-    ProductStore.instance.removeProduct(product.id);
+    try {
+      await (widget.productDeleter ?? _deleteRemote)(product.id);
+      if (!mounted) return;
+      ProductStore.instance.removeProduct(product.id);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Product deleted')));
+      Navigator.of(context).maybePop();
+    } on ApiException catch (error) {
+      if (mounted) _showError(error.message);
+    } catch (_) {
+      if (mounted) _showError('Could not delete the product. Please try again.');
+    }
+  }
+
+  Future<void> _deleteRemote(String id) {
+    return SellerProductRepository().deleteProduct(id);
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Product deleted')));
-    Navigator.of(context).maybePop();
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _shareProduct(BuildContext buttonContext) async {
@@ -184,7 +252,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final Product? product = _product;
     final List<ProductPhoto> photos = product?.photos ?? const <ProductPhoto>[];
-    final int photoIndicatorCount = product == null ? 3 : photos.length;
+    final List<String> imageUrls = product?.imageUrls ?? const <String>[];
+    debugPrint('[product_details] build imageUrls=${imageUrls.length} photos=${photos.length} productId=${product?.id ?? "null"}');
+    final int photoIndicatorCount = product == null
+        ? 3
+        : photos.isNotEmpty
+        ? photos.length
+        : imageUrls.length;
     final int activePhotoIndex = _photoIndex < photoIndicatorCount
         ? _photoIndex
         : 0;
@@ -238,6 +312,31 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           itemBuilder: (context, index) => Image.memory(
                             photos[index].bytes,
                             fit: BoxFit.cover,
+                          ),
+                        )
+                      : imageUrls.isNotEmpty
+                      ? PageView.builder(
+                          key: const ValueKey('product-details-photo-carousel'),
+                          controller: _photoController,
+                          itemCount: imageUrls.length,
+                          onPageChanged: (index) {
+                            setState(() => _photoIndex = index);
+                          },
+                          itemBuilder: (context, index) => Image.network(
+                            imageUrls[index],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('[product_details] Image.network error index=$index url=${imageUrls[index]} error=$error');
+                              return _photoFallback(category);
+                            },
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) {
+                                debugPrint('[product_details] Image.network loaded index=$index url=${imageUrls[index]}');
+                                return child;
+                              }
+                              debugPrint('[product_details] Image.network loading index=$index loaded=${progress.cumulativeBytesLoaded}/${progress.expectedTotalBytes}');
+                              return _photoFallback(category);
+                            },
                           ),
                         )
                       : Container(
@@ -377,39 +476,43 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   key: const ValueKey('delete-product'),
                   behavior: HitTestBehavior.opaque,
                   onTap: _deleteProduct,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE1DA),
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(22.5),
+                  child: HoverPress.button(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE1DA),
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(22.5),
+                              ),
+                              border: Border.all(
+                                color: const Color(0xFFEBCFC9),
+                              ),
                             ),
-                            border: Border.all(color: const Color(0xFFEBCFC9)),
                           ),
                         ),
-                      ),
-                      const Positioned(
-                        left: 122,
-                        top: 21.7,
-                        width: 11,
-                        height: 12.5,
-                        child: Image(
-                          image: AssetImage(
-                            'assets/product_details/ic_trash.png',
+                        const Positioned(
+                          left: 122,
+                          top: 21.7,
+                          width: 11,
+                          height: 12.5,
+                          child: Image(
+                            image: AssetImage(
+                              'assets/product_details/ic_trash.png',
+                            ),
                           ),
                         ),
-                      ),
-                      const Positioned(
-                        left: 140.5,
-                        top: 17.8,
-                        child: Text(
-                          'Delete product',
-                          style: _Styles.deleteLabel,
+                        const Positioned(
+                          left: 140.5,
+                          top: 17.8,
+                          child: Text(
+                            'Delete product',
+                            style: _Styles.deleteLabel,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -422,29 +525,33 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   key: const ValueKey('product-details-back'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => Navigator.of(context).maybePop(),
-                  child: Container(
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(Radius.circular(21)),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0F4324), Color(0xFF28AA59)],
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x38000000),
-                          offset: Offset(0, 14),
-                          blurRadius: 28,
+                  child: HoverPress.button(
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(21),
                         ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Go back to order',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                        color: Colors.white,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0F4324), Color(0xFF28AA59)],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x38000000),
+                            offset: Offset(0, 14),
+                            blurRadius: 28,
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'Go back to order',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -583,20 +690,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     key: const ValueKey('share-product'),
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _shareProduct(buttonContext),
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFC6E96D),
-                        borderRadius: BorderRadius.all(Radius.circular(14)),
-                      ),
-                      child: const Text(
-                        'Share',
-                        style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
-                          color: Color(0xFF0D3B25),
+                    child: HoverPress.button(
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFC6E96D),
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                        child: const Text(
+                          'Share',
+                          style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                            color: Color(0xFF0D3B25),
+                          ),
                         ),
                       ),
                     ),
@@ -693,6 +802,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
   }
+}
+
+Widget _photoFallback(String category) {
+  return Container(
+    color: _categoryColor(category),
+    alignment: Alignment.center,
+    child: const Icon(Icons.eco_outlined, size: 72, color: Color(0xCCFFFFFF)),
+  );
 }
 
 Color _categoryColor(String category) {
@@ -967,20 +1084,22 @@ class _Toggle extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: isOn ? const Color(0xFF2E8B4B) : const Color(0xFFD5DCD6),
-              borderRadius: const BorderRadius.all(Radius.circular(9)),
-            ),
-            child: AnimatedAlign(
+          child: HoverPress.control(
+            child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-              alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 1.75),
-                child: _Dot(size: 14.5, color: Colors.white),
+              decoration: BoxDecoration(
+                color: isOn ? const Color(0xFF2E8B4B) : const Color(0xFFD5DCD6),
+                borderRadius: const BorderRadius.all(Radius.circular(9)),
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 1.75),
+                  child: _Dot(size: 14.5, color: Colors.white),
+                ),
               ),
             ),
           ),

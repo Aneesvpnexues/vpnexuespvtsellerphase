@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import '../widgets/slide_drag_detector.dart';
@@ -1003,64 +1004,66 @@ class _SlideDeliveryState extends State<_SlideDelivery>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: () => setState(() => _knobX = _end),
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: Container(
-        width: 364,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
-            stops: [0.11656297743320465, 1],
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: () => setState(() => _knobX = _end),
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          width: 364,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+              stops: [0.11656297743320465, 1],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2E000000),
+                offset: Offset(0, 22),
+                blurRadius: 30,
+                spreadRadius: -2,
+              ),
+            ],
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x2E000000),
-              offset: Offset(0, 22),
-              blurRadius: 30,
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(28)),
-          border: Border.all(color: const Color(0x0F000000)),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: Container(
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderSlideLime,
-                  shape: BoxShape.circle,
-                ),
-                child: const Image(
-                  image: AssetImage('assets/order/ic_slide.png'),
-                  width: 26,
-                  height: 26,
+          foregroundDecoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            border: Border.all(color: const Color(0x0F000000)),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 4,
+                child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
+                  ),
                 ),
               ),
-            ),
-            const Positioned(
-              left: 93,
-              top: 15,
-              child: LabelText(
-                'Slide when the buyer arrives',
-                AppTextStyles.orderSlideLabel,
-                width: 199,
+              const Positioned(
+                left: 93,
+                top: 15,
+                child: LabelText(
+                  'Slide when the buyer arrives',
+                  AppTextStyles.orderSlideLabel,
+                  width: 199,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
