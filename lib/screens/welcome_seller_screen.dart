@@ -55,6 +55,10 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   /// in [_PhoneBox] only borrows it.
   final TextEditingController _phone = TextEditingController();
 
+  /// Sign Up only: read by the demo login check in [_createAccount].
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+
   void _showLogin() => setState(() => _signUp = false);
 
   void _showSignUp() => setState(() => _signUp = true);
@@ -78,6 +82,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   void dispose() {
     AuthFlow.instance.autoVerified = null;
     _phone.dispose();
+    _name.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -351,11 +357,38 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     }
   }
 
-  /// "Create account" on the Sign Up tab. The entered phone number is
-  /// verified with Firebase OTP first, then the same Supabase completion
-  /// check as Login routes the seller into onboarding — or straight to Home
-  /// when every registration detail is already saved.
+  /// "Create account" on the Sign Up tab.
+  ///
+  /// - Empty form: jump straight to Home (demo shortcut, no OTP).
+  /// - Demo credentials (john / 1234567890 / vpnesuxe): also open Home
+  ///   directly.
+  /// - Anything else: Firebase OTP first, then the same Supabase completion
+  ///   check as Login routes the seller into onboarding — or straight to Home
+  ///   when every registration detail is already saved.
   Future<void> _createAccount() async {
+    final String name = _name.text.trim();
+    final String phone = _phone.text.replaceAll(RegExp(r'\D'), '');
+    final String password = _password.text.trim();
+
+    if (name.isEmpty && phone.isEmpty && password.isEmpty) {
+      print('DEMO LOGIN: empty sign-up form - going straight to Home');
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
+      return;
+    }
+
+    if (name.toLowerCase() == 'john' &&
+        phone == '1234567890' &&
+        password.toLowerCase() == 'vpnesuxe') {
+      print('DEMO LOGIN: john / 1234567890 - going straight to Home');
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
+      return;
+    }
     await _sendOtp();
   }
 
@@ -436,10 +469,10 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     ),
                   ),
                   if (_signUp) ...[
-                    const Positioned(
+                    Positioned(
                       left: 22,
                       top: 574,
-                      child: _SignUpField(hint: 'Name'),
+                      child: _SignUpField(hint: 'Name', controller: _name),
                     ),
                     Positioned(
                       left: 22,
@@ -453,10 +486,14 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                         ],
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 22,
                       top: 714,
-                      child: _SignUpField(hint: 'Password', obscure: true),
+                      child: _SignUpField(
+                        hint: 'Password',
+                        obscure: true,
+                        controller: _password,
+                      ),
                     ),
                   Positioned(
                     left: 22,

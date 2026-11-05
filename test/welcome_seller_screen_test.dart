@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
+import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/services/auth_flow.dart';
 import 'package:seller_app/theme/app_colors.dart';
@@ -523,8 +524,8 @@ void main() {
     expect(find.byType(Image), findsNWidgets(2));
   });
 
-  testWidgets('Create account with empty fields shows a validation error '
-      'and stays on Welcome', (tester) async {
+  testWidgets('Create account with empty fields goes straight to Home',
+      (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
@@ -536,15 +537,38 @@ void main() {
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
-    // No navigation to OTP or Home happened.
+    // No validation snackbar, no OTP — goes straight to Home.
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
     expect(find.text('Enter OTP'), findsNothing);
-    expect(find.text('Welcome Seller!', findRichText: true), findsOneWidget);
     expect(fake.sentE164, isEmpty, reason: 'Firebase must not be called');
     expect(
       find.text('Enter a valid 10-digit mobile number.'),
-      findsOneWidget,
-      reason: 'validation snackbar must appear',
+      findsNothing,
+      reason: 'no validation error for empty demo',
     );
+  });
+
+  testWidgets('Create account with demo credentials goes straight to Home',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('welcomeTabSignUp')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'john');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Phone Number'),
+      '1234567890',
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'vpnesuxe');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerHomeScreen), findsOneWidget);
+    expect(find.text('Enter OTP'), findsNothing);
+    expect(fake.sentE164, isEmpty, reason: 'demo login must skip Firebase');
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {
