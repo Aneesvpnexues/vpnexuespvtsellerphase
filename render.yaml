@@ -1,0 +1,38 @@
+# Render Blueprint for the seller backend, kept separate from the buyer
+# backend. Create a project named "Sellers" in Render, then add this
+# Blueprint (or create the service manually with rootDir=seller-backend).
+services:
+  - type: web
+    name: vpnexues-seller-backend
+    runtime: docker
+    branch: main
+    rootDir: seller-backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_DB_USER
+        sync: false
+      - key: SUPABASE_DB_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_KYC_BUCKET
+        value: kyc-documents
+      - key: FIREBASE_PROJECT_ID
+        value: vpnexues-otp-and-img-s
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: VPNEX_ENCRYPTION_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: JAVA_OPTS
+        value: "-Xms256m -Xmx512m"
