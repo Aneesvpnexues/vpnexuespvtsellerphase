@@ -486,31 +486,53 @@ class SupabaseProductApi {
     return _mostComplete(rows, _bankFieldCount);
   }
 
-  /// Like [getBankDetailsByUserId] but tries every id in [userIds] in order
-  /// and returns the best row found across them.
-  ///
-  /// A seller may have rows under both the Firebase UID and a legacy backend
-  /// id, so the caller passes both.
-  Future<Map<String, dynamic>?> getBankDetailsForUsers(
-    List<String> userIds,
-  ) async {
-    Map<String, dynamic>? best;
-    int bestScore = -1;
-    for (final String id in userIds) {
-      if (id.trim().isEmpty) continue;
-      final Map<String, dynamic>? row = await getBankDetailsByUserId(id);
-      if (row == null) continue;
-      final int score = _bankFieldCount(row);
-      if (score > bestScore) {
-        best = row;
-        bestScore = score;
-      }
-      if (bestScore >= 4) break; // fully complete — nothing better to find.
-    }
-    return best;
+/// Like [getBankDetailsByUserId] but fetches ALL rows for every id in [userIds]
+/// and returns them all as a list.
+///
+/// A seller may have rows under both the Firebase UID and a legacy backend
+/// id, so the caller passes both.
+Future<List<Map<String, dynamic>>> getBankDetailsForUsers(
+  List<String> userIds,
+) async {
+  final List<Map<String, dynamic>> allAccounts = [];
+  for (final String id in userIds) {
+    if (id.trim().isEmpty) continue;
+    final List<Map<String, dynamic>> rows = await _rowsWhere(
+      table: 'seller_bank_details',
+      column: 'user_id',
+      value: id,
+      select:
+          'id,user_id,account_houlder_name,bank_name,account_number,IFSC_code',
+    );
+    allAccounts.addAll(rows);
   }
+  return allAccounts;
+}
 
-  /// Fetches verification (KYC) details for a seller identified by [userId].
+/// Fetches the active_bank_account_id from seller_profiles for a seller.
+/// Used to load the active bank account ID when restoring session.
+Future<String?> getActiveBankAccountId(String userId) async {
+  _ensureConfigured();
+  final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+    queryParameters: <String, String>{
+      'select': 'active_bank_account_id',
+      'user_id': 'eq.$userId',
+      'limit': '1',
+    },
+  );
+  final http.Response response = await _client.get(uri, headers: _headers);
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    return null;
+  }
+  final Object? decoded = _decode(response.body);
+  if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+    final row = decoded.first as Map;
+    return row['active_bank_account_id']?.toString();
+  }
+  return null;
+}
+
+/// Fetches verification (KYC) details for a seller identified by [userId].
   ///
   /// Returns the row with the most uploaded documents, or null when the seller
   /// has no verification row.
@@ -622,6 +644,7 @@ class SupabaseProductApi {
     required String businessName,
     required String businessLocation,
     required String businessAddress,
+    String? activeBankAccountId,
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
@@ -635,6 +658,8 @@ class SupabaseProductApi {
       'business_name': businessName.trim(),
       'seller_type': sellerType.trim().isEmpty ? 'farmer' : sellerType.trim(),
       'updated_at': now,
+      if (activeBankAccountId != null && activeBankAccountId!.isNotEmpty)
+        'active_bank_account_id': activeBankAccountId.trim(),
     };
 
     final String uid = userId!.trim();

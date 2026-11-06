@@ -197,9 +197,20 @@ class _OtpScreenState extends State<OtpScreen> {
         Map<String, dynamic>? bankDetails;
         Map<String, dynamic>? verificationDetails;
         if (candidateIds.isNotEmpty) {
-          bankDetails = await api.getBankDetailsForUsers(candidateIds);
+          final accounts = await api.getBankDetailsForUsers(candidateIds);
+          bankDetails = accounts.isNotEmpty ? accounts.first : null;
           verificationDetails =
               await api.getVerificationForUsers(candidateIds);
+
+          // Load active bank account ID from seller_profiles
+          if (firebaseUid.isNotEmpty) {
+            final activeBankId = await api.getActiveBankAccountId(
+              firebaseUid,
+            );
+            SellerProfileStore.instance.setActiveBankAccountId(
+              activeBankId,
+            );
+          }
         }
 
         final bool profileComplete =
@@ -372,11 +383,13 @@ class _OtpScreenState extends State<OtpScreen> {
         sellerType = SellerType.farmer;
     }
     if (name.isNotEmpty) {
-      SellerProfileStore.instance.save(
+      SellerProfileStore.instance.saveBusinessDetails(
         name: name,
-        mobile: mobile,
-        email: '',
-        sellerType: sellerType,
+        business: name,
+        phone: mobile,
+        location: '',
+        address: '',
+        farmSize: '',
       );
     } else {
       SellerProfileStore.instance.mobile = mobile;

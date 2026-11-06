@@ -75,6 +75,7 @@ class SellerProfileStore extends ChangeNotifier {
   /// Saved bank accounts from Supabase.
   List<Map<String, dynamic>> _bankAccounts = [];
   int _activeBankIndex = 0;
+  String? _activeBankAccountId;
 
   /// Completion status of each onboarding section, populated from Supabase
   /// after Firebase OTP login. Used to skip already-completed pages.
@@ -112,6 +113,30 @@ class SellerProfileStore extends ChangeNotifier {
   /// The currently active bank account, or null if none saved.
   Map<String, dynamic>? get activeBankAccount =>
       _bankAccounts.isNotEmpty ? _bankAccounts[_activeBankIndex] : null;
+
+  /// The ID of the currently active bank account, persisted in Supabase.
+  String? get activeBankAccountId => _activeBankAccountId;
+
+  /// Sets the active bank account index and persists it to Supabase.
+  Future<void> setActiveBankIndex(int index) async {
+    if (index >= 0 && index < _bankAccounts.length) {
+      _activeBankIndex = index;
+      _activeBankAccountId = _bankAccounts[index]['id']?.toString();
+      notifyListeners();
+    }
+  }
+
+  /// Sets the active bank account ID directly (used when loading from Supabase).
+  void setActiveBankAccountId(String? id) {
+    _activeBankAccountId = id;
+    if (id != null) {
+      _activeBankIndex = _bankAccounts.indexWhere(
+        (acc) => acc['id']?.toString() == id,
+      );
+      if (_activeBankIndex == -1) _activeBankIndex = 0;
+      notifyListeners();
+    }
+  }
 
   /// The Supabase `user_id` for the currently logged-in seller. Drives
   /// product queries and all user-scoped lookups.
@@ -185,14 +210,6 @@ class SellerProfileStore extends ChangeNotifier {
       _activeBankIndex = _bankAccounts.length - 1;
     }
     notifyListeners();
-  }
-
-  /// Sets the active bank account index.
-  void setActiveBankIndex(int index) {
-    if (index >= 0 && index < _bankAccounts.length) {
-      _activeBankIndex = index;
-      notifyListeners();
-    }
   }
 
   /// Updates only the mobile number (used by the Settings screen, which must

@@ -41,7 +41,7 @@ class _BankDetailsViewScreenState extends State<BankDetailsViewScreen> {
         final fetched = await api.getBankDetailsForUsers(
           [SellerProfileStore.instance.userId],
         );
-        if (fetched != null) accounts.add(fetched);
+        accounts.addAll(fetched);
       }
 
       if (!mounted) return;

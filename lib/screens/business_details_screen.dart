@@ -119,11 +119,13 @@ class _Step03BusinessDetailsScreenState
     }
 
     final SellerProfileStore profile = SellerProfileStore.instance;
-    profile.save(
+    profile.saveBusinessDetails(
       name: _name.text.trim(),
-      mobile: _phone.text.trim(),
-      email: profile.email,
-      sellerType: profile.sellerType,
+      business: _business.text.trim(),
+      phone: _phone.text.trim(),
+      location: _location.text.trim(),
+      address: _address.text.trim(),
+      farmSize: '',
     );
 
     // The profile section just completed successfully. Keep the existing

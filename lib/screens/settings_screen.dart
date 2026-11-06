@@ -131,7 +131,7 @@ class _PreferencesCardState extends State<_PreferencesCard> {
               ),
             ),
             child: const _MenuRow(
-              icon: 'assets/settings/ic_bank.png',
+              icon: 'assets/settings/ic_card.png',
               iconSize: 16,
               title: 'Bank Details',
               titleWidth: 80,
