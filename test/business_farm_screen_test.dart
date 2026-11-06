@@ -16,6 +16,8 @@ void main() {
     await pumpScreen(tester);
 
     expect(find.text('Business & Farm'), findsOneWidget);
+    // Hero shows static text; the Farm / Business Name field renders it as
+    // an editable TextField, so find.text matches both widgets.
     expect(find.text('Kumar Organic Farm'), findsNWidgets(2));
     expect(find.text('Salem, Tamil Nadu'), findsNWidgets(2));
     expect(find.text('Farm / Business Name'), findsOneWidget);

@@ -5,6 +5,7 @@ import '../data/country_codes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'otp_screen.dart';
+import 'seller_home_screen.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad0633d41c4e26df3c1017) with
@@ -64,15 +65,11 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.welcomeBg,
-      body: LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: WelcomeSellerScreen.designWidth,
-              height: WelcomeSellerScreen.designHeight,
-              child: Stack(
+      body: SingleChildScrollView(
+        child: SizedBox(
+          width: WelcomeSellerScreen.designWidth,
+          height: WelcomeSellerScreen.designHeight,
+          child: Stack(
                 children: [
                   const Positioned(left: 0, top: 64, child: _Leaf()),
                   const Positioned(left: 0, top: 225, child: _Hero()),
@@ -160,10 +157,18 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 714,
                       child: _SignUpField(hint: 'Password', obscure: true),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 784,
-                      child: _CreateAccountButton(),
+                      child: _CreateAccountButton(
+                        onTap: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SellerHomeScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ] else ...[
                     const Positioned(
@@ -250,10 +255,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                   ),
                 ],
               ),
-            ),
           ),
         ),
-      ),
     );
   }
 }
@@ -710,26 +713,31 @@ class _SignUpFieldState extends State<_SignUpField> {
 }
 
 class _CreateAccountButton extends StatelessWidget {
-  const _CreateAccountButton();
+  const _CreateAccountButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x2E000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 364,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x2E000000),
+              blurRadius: 12,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Text('Create account', style: AppTextStyles.sendOtp),
       ),
-      child: const Text('Create account', style: AppTextStyles.sendOtp),
     );
   }
 }
