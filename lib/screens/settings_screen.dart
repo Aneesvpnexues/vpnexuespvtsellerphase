@@ -11,6 +11,7 @@ import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 import 'about_vpnexues_screen.dart';
 import 'app_language_screen.dart';
+import 'bank_details_view.dart';
 import 'welcome_seller_screen.dart';
 
 /// Settings — replica of Zeplin "Android Compact - 164"
@@ -84,7 +85,7 @@ class _PreferencesCardState extends State<_PreferencesCard> {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 112,
+      height: 160,
       children: [
         const Positioned(
           left: 22,
@@ -113,6 +114,29 @@ class _PreferencesCardState extends State<_PreferencesCard> {
               titleWidth: 59,
               subtitle: 'English',
               subtitleWidth: 35,
+              chevron: true,
+            ),
+          ),
+        ),
+        Positioned(left: 21, top: 93, child: _Divider()),
+        Positioned(
+          left: 21,
+          top: 102,
+          child: GestureDetector(
+            key: const Key('settings-bank-details'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const BankDetailsViewScreen(),
+              ),
+            ),
+            child: const _MenuRow(
+              icon: 'assets/settings/ic_bank.png',
+              iconSize: 16,
+              title: 'Bank Details',
+              titleWidth: 80,
+              subtitle: 'Manage your bank accounts',
+              subtitleWidth: 120,
               chevron: true,
             ),
           ),

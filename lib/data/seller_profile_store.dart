@@ -72,6 +72,10 @@ class SellerProfileStore extends ChangeNotifier {
   bool _buyerPickup = true;
   bool _delivery = false;
 
+  /// Saved bank accounts from Supabase.
+  List<Map<String, dynamic>> _bankAccounts = [];
+  int _activeBankIndex = 0;
+
   /// Completion status of each onboarding section, populated from Supabase
   /// after Firebase OTP login. Used to skip already-completed pages.
   bool _profileComplete = false;
@@ -98,6 +102,16 @@ class SellerProfileStore extends ChangeNotifier {
 
   /// Whether the seller delivers to buyers.
   bool get delivery => _delivery;
+
+  /// Saved bank accounts from Supabase.
+  List<Map<String, dynamic>> get bankAccounts => _bankAccounts;
+
+  /// Index of the currently active bank account.
+  int get activeBankIndex => _activeBankIndex;
+
+  /// The currently active bank account, or null if none saved.
+  Map<String, dynamic>? get activeBankAccount =>
+      _bankAccounts.isNotEmpty ? _bankAccounts[_activeBankIndex] : null;
 
   /// The Supabase `user_id` for the currently logged-in seller. Drives
   /// product queries and all user-scoped lookups.
@@ -164,6 +178,23 @@ class SellerProfileStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Loads saved bank accounts from Supabase into the store.
+  void setBankAccounts(List<Map<String, dynamic>> accounts) {
+    _bankAccounts = accounts;
+    if (_bankAccounts.isNotEmpty && _activeBankIndex >= _bankAccounts.length) {
+      _activeBankIndex = _bankAccounts.length - 1;
+    }
+    notifyListeners();
+  }
+
+  /// Sets the active bank account index.
+  void setActiveBankIndex(int index) {
+    if (index >= 0 && index < _bankAccounts.length) {
+      _activeBankIndex = index;
+      notifyListeners();
+    }
+  }
+
   /// Updates only the mobile number (used by the Settings screen, which must
   /// not touch `ProductStore.userId` - that field is the id of the
   /// `seller_profiles` row and drives the KYC/bank upserts).
@@ -210,6 +241,8 @@ class SellerProfileStore extends ChangeNotifier {
     _email = '';
     _userId = '';
     _sellerType = SellerType.farmer;
+    _bankAccounts = [];
+    _activeBankIndex = 0;
     resetCompletionFlags();
     notifyListeners();
   }
