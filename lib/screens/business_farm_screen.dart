@@ -29,6 +29,15 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   bool _buyerPickup = true;
   bool _delivery = true;
 
+  final List<String> _allCrops = [
+    'Tomatoes',
+    'Spinach',
+    'Carrots',
+    'Onions',
+    'Green Chillies',
+    'Potatoes',
+  ];
+
   final List<String> _selectedCrops = [
     'Tomatoes',
     'Spinach',
@@ -334,8 +343,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
           // WHAT YOU GROW SECTION
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
             children: [
               const Text(
                 'What you grow',
@@ -367,13 +377,17 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _selectedCrops.map((crop) {
+            children: _allCrops.map((crop) {
+              final isSelected = _selectedCrops.contains(crop);
               return Chip(
                 label: Text(crop),
-                backgroundColor: AppColors.orderDark,
-                labelStyle: AppTextStyles.businessChipActive,
+                backgroundColor:
+                    isSelected ? AppColors.orderDark : Colors.white,
+                labelStyle: isSelected
+                    ? AppTextStyles.businessChipActive
+                    : AppTextStyles.businessChipIdle,
 
-                deleteIcon: _isEditingCrops
+                deleteIcon: _isEditingCrops && isSelected
                     ? const Icon(
                         Icons.close,
                         size: 14,
@@ -381,7 +395,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                       )
                     : null,
 
-                onDeleted: _isEditingCrops
+                onDeleted: _isEditingCrops && isSelected
                     ? () {
                         setState(() {
                           _selectedCrops.remove(crop);

@@ -62,6 +62,12 @@ class SellerProfileStore extends ChangeNotifier {
   String _userId = '';
   SellerType _sellerType = SellerType.farmer;
 
+  /// Business & Farm details
+  String _businessName = '';
+  String _farmSize = '';
+  String _businessLocation = '';
+  String _businessAddress = '';
+
   /// Completion status of each onboarding section, populated from Supabase
   /// after Firebase OTP login. Used to skip already-completed pages.
   bool _profileComplete = false;
@@ -73,6 +79,14 @@ class SellerProfileStore extends ChangeNotifier {
   String get mobile => _mobile;
 
   String get email => _email;
+
+  String get businessName => _businessName;
+
+  String get farmSize => _farmSize;
+
+  String get businessLocation => _businessLocation;
+
+  String get businessAddress => _businessAddress;
 
   /// The Supabase `user_id` for the currently logged-in seller. Drives
   /// product queries and all user-scoped data lookups.
@@ -141,6 +155,24 @@ class SellerProfileStore extends ChangeNotifier {
     _mobile = mobile.trim();
     _email = email.trim();
     _sellerType = sellerType;
+    notifyListeners();
+  }
+
+  /// Saves Business & Farm details entered on the Business & Farm screen.
+  void saveBusinessDetails({
+    required String name,
+    required String business,
+    required String phone,
+    required String location,
+    required String address,
+    required String farmSize,
+  }) {
+    _name = name.trim();
+    _mobile = phone.trim();
+    _businessName = business.trim();
+    _businessLocation = location.trim();
+    _businessAddress = address.trim();
+    _farmSize = farmSize.trim();
     notifyListeners();
   }
 
