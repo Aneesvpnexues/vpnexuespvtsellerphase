@@ -702,7 +702,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           builder: (context, constraints) {
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
-                horizontal: 19,
+                horizontal: 16,
                 vertical: 16,
               ),
 
@@ -718,7 +718,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                       // PAGE HEADER
 
                       Transform.translate(
-                        offset: const Offset(-19, 0),
+                        offset: const Offset(-16, 0),
                         child: const PageHeader(
                           title: 'Business & Farm',
                         ),
