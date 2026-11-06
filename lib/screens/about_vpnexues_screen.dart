@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
@@ -619,44 +621,62 @@ class _ContactPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _ContactRow(
+          _ContactRow(
             icon: Icons.phone_outlined,
             label: 'PHONE',
-            value: '+0199439 94603',
+            value: '+91 78100 77636',
             action: 'Call',
             actionIcon: Icons.phone_outlined,
+            onPressed: () => _launch('tel:+917810077636'),
           ),
           const _Divider(left: 20),
           const SizedBox(height: 11),
-          const _ContactRow(
+          _ContactRow(
             icon: Icons.language,
             label: 'WEBSITE',
             value: 'www.vpnexues.com',
             action: 'Visit',
             actionIcon: Icons.open_in_new,
+            onPressed: () => _launch('https://www.vpnexues.com'),
           ),
           const _Divider(left: 20),
           const SizedBox(height: 11),
-          const _ContactRow(
+          _ContactRow(
             icon: Icons.place_outlined,
             label: 'LOCATION',
-            value: 'Salem, Tamil Nadu, India',
+            value: 'Bengaluru, India',
             action: 'HQ',
             actionIcon: Icons.place_outlined,
+            onPressed: () => _launch(
+              'https://www.google.com/maps/search/?api=1&query=1st+Main+Road,+Lakshmipathi+Layout,+Lingarajapuram,+Bengaluru,+Karnataka+560084',
+            ),
           ),
           const _Divider(left: 20),
           const SizedBox(height: 12),
-          const _ContactRow(
+          _ContactRow(
             icon: Icons.mail_outline,
             label: 'MAIL',
             value: 'Support@vpnexues.com',
             action: 'Email',
-            actionIcon: Icons.mail_outline,
+            actionIcon: Icons.mail_outlined,
+            onPressed: () {
+              Clipboard.setData(
+                const ClipboardData(text: 'Support@vpnexues.com'),
+              );
+              _launch('mailto:Support@vpnexues.com');
+            },
           ),
           const SizedBox(height: 12),
         ],
       ),
     );
+  }
+
+  static Future<void> _launch(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }
 
@@ -667,6 +687,7 @@ class _ContactRow extends StatelessWidget {
     required this.value,
     required this.action,
     required this.actionIcon,
+    required this.onPressed,
   });
 
   final IconData icon;
@@ -674,6 +695,7 @@ class _ContactRow extends StatelessWidget {
   final String value;
   final String action;
   final IconData actionIcon;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -729,29 +751,33 @@ class _ContactRow extends StatelessWidget {
           const SizedBox(width: 8),
           Padding(
             padding: const EdgeInsets.only(top: 4.5),
-            child: Container(
-              height: 22.5,
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              decoration: const BoxDecoration(
-                color: AppColors.listIconTile,
-                borderRadius: BorderRadius.all(Radius.circular(11.25)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    action,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.1,
-                      color: Color(0xFF2E6B34),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onPressed,
+              child: Container(
+                height: 22.5,
+                padding: const EdgeInsets.symmetric(horizontal: 13),
+                decoration: const BoxDecoration(
+                  color: AppColors.listIconTile,
+                  borderRadius: BorderRadius.all(Radius.circular(11.25)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      action,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.1,
+                        color: Color(0xFF2E6B34),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(actionIcon, size: 10, color: const Color(0xFF2E6B34)),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(actionIcon, size: 10, color: const Color(0xFF2E6B34)),
+                  ],
+                ),
               ),
             ),
           ),

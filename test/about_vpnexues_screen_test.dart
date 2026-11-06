@@ -70,7 +70,7 @@ void main() {
     expect(find.text('B2B & B2C Supply'), findsOneWidget);
     expect(find.text('100% Pure'), findsOneWidget);
     expect(find.text('Bulk & Retail'), findsOneWidget);
-    expect(find.text('+0199439 94603'), findsNothing);
+    expect(find.text('+91 78100 77636'), findsNothing);
     expect(find.text('FARM TO TABLE'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -121,11 +121,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PHONE'), findsOneWidget);
-    expect(find.text('+0199439 94603'), findsOneWidget);
+    expect(find.text('+91 78100 77636'), findsOneWidget);
     expect(find.text('WEBSITE'), findsOneWidget);
     expect(find.text('www.vpnexues.com'), findsOneWidget);
     expect(find.text('LOCATION'), findsOneWidget);
-    expect(find.text('Salem, Tamil Nadu, India'), findsOneWidget);
+    expect(find.text('Bengaluru, India'), findsOneWidget);
     expect(find.text('MAIL'), findsOneWidget);
     expect(find.text('Support@vpnexues.com'), findsOneWidget);
     expect(find.text('Call'), findsOneWidget);
