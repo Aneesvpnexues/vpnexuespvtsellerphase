@@ -99,7 +99,7 @@ void main() {
 
     // 800x1280 is height-bound: scale = 1280/924 ~= 1.385, so the header
     // sits further right than at the design size (proof of upscale).
-    expect(atDesign, closeTo(68, 1));
+    expect(atDesign, closeTo(92, 1));
     expect(atLarge, greaterThan(atDesign + 100));
   });
 
@@ -114,9 +114,9 @@ void main() {
 
     // scale = min(2000/412, 3000/924, 1.5) = 1.5 -> artboard 618x1386,
     // centered horizontally at x = (2000-618)/2 = 691; header at artboard
-    // rel x68 -> 691 + 68*1.5 = 793.
+    // rel x92 -> 691 + 92*1.5 = 829.
     final header = tester.getRect(find.text('Profile').first);
-    expect(header.left, closeTo(793, 2));
+    expect(header.left, closeTo(829, 2));
     expect(header.top, closeTo(28 * 1.5, 2));
   });
 

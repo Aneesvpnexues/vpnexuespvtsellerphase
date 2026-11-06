@@ -42,6 +42,13 @@ class ProfileShell extends StatelessWidget {
   static const double designWidth = 412;
   static const double designHeight = 924;
 
+  /// Horizontal padding applied to all profile page content.
+  static const double paddingLeft = 24;
+  static const double paddingRight = 24;
+
+  /// Content width after left/right padding on the 412px artboard.
+  static const double contentWidth = designWidth - paddingLeft - paddingRight;
+
   /// 0 = Account, 1 = Business, 2 = App.
   final int selectedTab;
   final Widget listCard;
@@ -68,22 +75,22 @@ class ProfileShell extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: -2,
+                left: paddingLeft,
                 top: 25,
                 child: PageHeader(
                   title: 'Profile',
                   onBack: () => goToHome(context),
                 ),
               ),
-              const Positioned(left: 17, top: 65, child: _BalanceCard()),
+              const Positioned(left: paddingLeft, top: 65, child: _BalanceCard()),
               Positioned(
-                left: 17,
+                left: paddingLeft,
                 top: 336,
                 child: _SellerCard(onPersonalDetails: onPersonalDetails),
               ),
-              const Positioned(left: 17, top: 427, child: _StatsRow()),
+              const Positioned(left: paddingLeft, top: 427, child: _StatsRow()),
               Positioned(
-                left: 17,
+                left: paddingLeft,
                 top: 502,
                 child: _TabBar(
                   selectedTab: selectedTab,
@@ -92,9 +99,9 @@ class ProfileShell extends StatelessWidget {
                   onAppTab: onAppTab,
                 ),
               ),
-              Positioned(left: 17, top: 560, child: listCard),
+              Positioned(left: paddingLeft, top: 560, child: listCard),
               Positioned(
-                left: 0,
+                left: paddingLeft,
                 bottom: 0,
                 child: BottomNavBar(
                   selectedIndex: 3,
@@ -119,7 +126,7 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 378,
+      width: ProfileShell.contentWidth,
       height: 250,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -296,8 +303,8 @@ class _SellerCard extends StatelessWidget {
         animation: SellerProfileStore.instance,
         builder: (context, _) {
           final SellerProfileStore store = SellerProfileStore.instance;
-          return Container(
-            width: 378,
+            return Container(
+            width: ProfileShell.contentWidth,
             height: 78,
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
@@ -453,7 +460,7 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 378,
+      width: ProfileShell.contentWidth,
       height: 44,
       decoration: BoxDecoration(
         color: AppColors.tabTrack,
@@ -590,7 +597,7 @@ class ProfileListCard extends StatelessWidget {
       children.add(rows[i]);
     }
     return Container(
-      width: 378,
+      width: ProfileShell.contentWidth,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),

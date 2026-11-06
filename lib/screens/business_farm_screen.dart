@@ -14,6 +14,13 @@ class BusinessFarmScreen extends StatefulWidget {
   static const double designHeight = 1150;
   static const double trimTop = 49;
 
+  /// Horizontal padding applied to all business & farm page content.
+  static const double paddingLeft = 24;
+  static const double paddingRight = 24;
+
+  /// Content width after left/right padding on the 412px artboard.
+  static const double contentWidth = designWidth - paddingLeft - paddingRight;
+
   @override
   State<BusinessFarmScreen> createState() =>
       _BusinessFarmScreenState();
@@ -701,8 +708,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
+              padding: EdgeInsets.symmetric(
+                horizontal: BusinessFarmScreen.paddingLeft,
                 vertical: 16,
               ),
 
@@ -718,7 +725,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                       // PAGE HEADER
 
                       Transform.translate(
-                        offset: const Offset(-24, 0),
+                        offset: Offset.zero,
                         child: const PageHeader(
                           title: 'Business & Farm',
                         ),
