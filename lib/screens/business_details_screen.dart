@@ -133,6 +133,7 @@ class _Step03BusinessDetailsScreenState
       profileComplete: true,
       bankComplete: profile.bankComplete,
       verificationComplete: profile.verificationComplete,
+      personalComplete: profile.personalComplete,
     );
 
     if (!mounted) return;

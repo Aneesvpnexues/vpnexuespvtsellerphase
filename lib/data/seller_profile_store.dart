@@ -73,6 +73,7 @@ class SellerProfileStore extends ChangeNotifier {
   bool _profileComplete = false;
   bool _bankComplete = false;
   bool _verificationComplete = false;
+  bool _personalComplete = false;
 
   String get name => _name;
 
@@ -89,7 +90,7 @@ class SellerProfileStore extends ChangeNotifier {
   String get businessAddress => _businessAddress;
 
   /// The Supabase `user_id` for the currently logged-in seller. Drives
-  /// product queries and all user-scoped data lookups.
+  /// product queries and all user-scoped lookups.
   String get userId => _userId;
 
   set userId(String value) {
@@ -107,9 +108,12 @@ class SellerProfileStore extends ChangeNotifier {
   /// Whether the verification/KYC section is complete (documents submitted).
   bool get verificationComplete => _verificationComplete;
 
+  /// Whether the Personal Details section is complete (name, phone populated).
+  bool get personalComplete => _personalComplete;
+
   /// Whether all three onboarding sections are complete.
   bool get onboardingComplete =>
-      _profileComplete && _bankComplete && _verificationComplete;
+      _profileComplete && _bankComplete && _verificationComplete && _personalComplete;
 
   SellerType get sellerType => _sellerType;
 
@@ -123,6 +127,7 @@ class SellerProfileStore extends ChangeNotifier {
     _profileComplete = false;
     _bankComplete = false;
     _verificationComplete = false;
+    _personalComplete = false;
   }
 
   /// Sets completion flags from fetched Supabase data.
@@ -130,10 +135,12 @@ class SellerProfileStore extends ChangeNotifier {
     required bool profileComplete,
     required bool bankComplete,
     required bool verificationComplete,
+    required bool personalComplete,
   }) {
     _profileComplete = profileComplete;
     _bankComplete = bankComplete;
     _verificationComplete = verificationComplete;
+    _personalComplete = personalComplete;
     notifyListeners();
   }
 
@@ -155,6 +162,7 @@ class SellerProfileStore extends ChangeNotifier {
     _mobile = mobile.trim();
     _email = email.trim();
     _sellerType = sellerType;
+    _personalComplete = name.trim().isNotEmpty && mobile.trim().isNotEmpty;
     notifyListeners();
   }
 

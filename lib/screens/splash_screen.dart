@@ -10,6 +10,7 @@ import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
+import '../screens/personal_details_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
@@ -154,24 +155,28 @@ class _SplashScreenState extends State<SplashScreen> {
               _populateProfileStore(profile);
             }
 
-            final bool profileComplete =
-                profile != null && _isProfileComplete(profile);
-            final bool bankComplete =
-                bankDetails != null && _isBankComplete(bankDetails);
-            final bool verificationComplete = verificationDetails != null &&
-                _isVerificationComplete(verificationDetails);
+          final bool profileComplete =
+              profile != null && _isProfileComplete(profile);
+          final bool personalComplete =
+              profile != null && _isPersonalComplete(profile);
+          final bool bankComplete =
+              bankDetails != null && _isBankComplete(bankDetails);
+          final bool verificationComplete = verificationDetails != null &&
+              _isVerificationComplete(verificationDetails);
 
-            SellerProfileStore.instance.setCompletion(
-              profileComplete: profileComplete,
-              bankComplete: bankComplete,
-              verificationComplete: verificationComplete,
-            );
+          SellerProfileStore.instance.setCompletion(
+            profileComplete: profileComplete,
+            bankComplete: bankComplete,
+            verificationComplete: verificationComplete,
+            personalComplete: personalComplete,
+          );
 
-            _navigateBasedOnCompletion(
-              profileComplete: profileComplete,
-              bankComplete: bankComplete,
-              verificationComplete: verificationComplete,
-            );
+          _navigateBasedOnCompletion(
+            profileComplete: profileComplete,
+            bankComplete: bankComplete,
+            verificationComplete: verificationComplete,
+            personalComplete: personalComplete,
+          );
             return;
           }
         } catch (_) {
@@ -196,11 +201,21 @@ class _SplashScreenState extends State<SplashScreen> {
   /// required Supabase fields being non-empty.
   bool _isProfileComplete(Map<String, dynamic> profile) {
     final fields = <String>[
-      profile['display_name'] ?? '',
       profile['business_name'] ?? '',
-      profile['phone_number'] ?? '',
       profile['location'] ?? '',
       profile['business_address'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Determines whether the Personal Details section is complete based on
+  /// required Supabase fields being non-empty.
+  bool _isPersonalComplete(Map<String, dynamic> profile) {
+    final fields = <String>[
+      profile['display_name'] ?? '',
+      profile['phone_number'] ?? '',
     ];
     return fields.every(
       (value) => value.toString().trim().isNotEmpty,
@@ -234,20 +249,32 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Registration -> Bank Details), or to Home if all sections are complete.
+  /// Personal Details -> Registration -> Bank Details), or to Home if all
+  /// sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
     required bool verificationComplete,
+    required bool personalComplete,
   }) {
     if (!mounted) return;
 
-    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
-    // so verification is always the first section to check.
+    // Onboarding order is Verify -> Personal Details -> Registration
+    // (STEP 03) -> Bank -> Home, so verification is always the first section
+    // to check.
     if (!verificationComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => const VerifyDetaileScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!personalComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const PersonalDetailsScreen(),
         ),
       );
       return;

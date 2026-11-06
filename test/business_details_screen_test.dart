@@ -407,6 +407,7 @@ void main() {
       profileComplete: false,
       bankComplete: true,
       verificationComplete: true,
+      personalComplete: true,
     );
 
     await pumpScreen(tester);
@@ -425,6 +426,7 @@ void main() {
       profileComplete: false,
       bankComplete: false,
       verificationComplete: true,
+      personalComplete: true,
     );
 
     await pumpScreen(tester);

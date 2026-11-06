@@ -14,6 +14,7 @@ import '../widgets/continue_button.dart';
 import '../widgets/hover_press.dart';
 import 'bank_detaile.dart';
 import 'business_details_screen.dart';
+import 'personal_details_screen.dart';
 import 'seller_home_screen.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
@@ -184,20 +185,21 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
         profileComplete: profile.profileComplete,
         bankComplete: profile.bankComplete,
         verificationComplete: verificationComplete,
+        personalComplete: profile.personalComplete,
       );
 
-      // Verify -> Registration -> Bank -> Home: skip whatever is already
-      // done so a returning seller never re-enters completed pages.
-      if (profile.profileComplete && profile.bankComplete) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-          (Route<dynamic> route) => false,
+      // Verify -> Personal Details -> Registration -> Bank -> Home: skip
+      // whatever is already done so a returning seller never re-enters
+      // completed pages.
+      if (!profile.personalComplete) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const PersonalDetailsScreen(),
+          ),
         );
         return;
       }
 
-      // Registration is the second step — open it while the profile section
-      // is still missing, then Bank Details, then Home.
       if (!profile.profileComplete) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -207,10 +209,19 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
         return;
       }
 
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
+      if (!profile.bankComplete) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const BankDetaileScreen(),
+          ),
+        );
+        return;
+      }
+
+      // All sections complete — go to Home.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+        (Route<dynamic> route) => false,
       );
     } catch (e) {
       if (!mounted) return;

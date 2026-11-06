@@ -10,6 +10,10 @@ import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'bank_detaile.dart';
+import 'business_details_screen.dart';
+import 'seller_home_screen.dart';
+import 'verify_detaile.dart';
 
 /// Personal Details - editable replica of Zeplin "Android Compact - 159"
 /// (project 6a8d49709e27bd8b35213d35,
@@ -115,7 +119,27 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     );
     if (!mounted) return;
     _showMessage('Personal details saved');
-    Navigator.of(context).maybePop();
+
+    // Navigate forward based on completion status — skip already-completed
+    // pages so a returning seller never re-enters them.
+    final profile = SellerProfileStore.instance;
+    if (!profile.verificationComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+      );
+    } else if (!profile.profileComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const Step03BusinessDetailsScreen()),
+      );
+    } else if (!profile.bankComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
+    }
   }
 
   static Future<String> _saveToSupabase({
