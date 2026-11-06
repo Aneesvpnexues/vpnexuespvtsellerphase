@@ -718,7 +718,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                       // PAGE HEADER
 
                       Transform.translate(
-                        offset: const Offset(-16, 0),
+                        offset: const Offset(-19, 2),
                         child: const PageHeader(
                           title: 'Business & Farm',
                         ),
