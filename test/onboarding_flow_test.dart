@@ -4,6 +4,7 @@ import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
+import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
@@ -59,8 +60,21 @@ void main() {
       expect(SellerProfileStore.instance.mobile, '+91 9876543210');
 
       // No documents were picked (uploads need the network), so KYC stays
-      // incomplete and the flow moves on to Registration.
+      // incomplete and the flow moves on to Personal Details.
       await tester.tap(find.byKey(const Key('verify-continue')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PersonalDetailsScreen), findsOneWidget);
+
+      // Mark personal details as complete so the flow continues to Business
+      // Details.
+      SellerProfileStore.instance.setCompletion(
+        profileComplete: SellerProfileStore.instance.profileComplete,
+        bankComplete: SellerProfileStore.instance.bankComplete,
+        verificationComplete: SellerProfileStore.instance.verificationComplete,
+        personalComplete: true,
+      );
+
+      await tester.tap(find.byKey(const Key('save-personal-details')));
       await tester.pumpAndSettle();
       expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
 
@@ -70,6 +84,7 @@ void main() {
         profileComplete: SellerProfileStore.instance.profileComplete,
         bankComplete: SellerProfileStore.instance.bankComplete,
         verificationComplete: true,
+        personalComplete: true,
       );
 
       await tester.enterText(find.byKey(const Key('businessName')), 'Ravi');

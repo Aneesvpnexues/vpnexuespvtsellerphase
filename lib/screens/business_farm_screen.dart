@@ -50,11 +50,13 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
     final profile = SellerProfileStore.instance;
 
-    _businessNameController = TextEditingController(
-      text: profile.businessName.isNotEmpty
-          ? profile.businessName
-          : 'Kumar Organic Farm',
-    );
+    // Farm / Business Name: prefer the saved business name; fall back to the
+    // Personal Details name if no business name was saved yet.
+    final initialBusinessName = profile.businessName.isNotEmpty
+        ? profile.businessName
+        : (profile.name.isNotEmpty ? profile.name : 'Kumar Organic Farm');
+
+    _businessNameController = TextEditingController(text: initialBusinessName);
 
     // Load previously saved farm size
     _farmSizeController = TextEditingController(
@@ -70,6 +72,10 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     );
 
     _manualCropController = TextEditingController();
+
+    // Initialize delivery toggles from the shared store.
+    _buyerPickup = profile.buyerPickup;
+    _delivery = profile.delivery;
 
     _businessNameController.addListener(_refresh);
     _locationController.addListener(_refresh);
@@ -668,6 +674,10 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               setState(() {
                 _buyerPickup = value;
               });
+              SellerProfileStore.instance.setDeliveryOptions(
+                buyerPickup: value,
+                delivery: _delivery,
+              );
             },
           ),
 
@@ -682,6 +692,10 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               setState(() {
                 _delivery = value;
               });
+              SellerProfileStore.instance.setDeliveryOptions(
+                buyerPickup: _buyerPickup,
+                delivery: value,
+              );
             },
           ),
         ],

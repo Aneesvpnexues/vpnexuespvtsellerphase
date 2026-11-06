@@ -68,6 +68,10 @@ class SellerProfileStore extends ChangeNotifier {
   String _businessLocation = '';
   String _businessAddress = '';
 
+  /// Delivery preferences for "How buyers get orders"
+  bool _buyerPickup = true;
+  bool _delivery = false;
+
   /// Completion status of each onboarding section, populated from Supabase
   /// after Firebase OTP login. Used to skip already-completed pages.
   bool _profileComplete = false;
@@ -88,6 +92,12 @@ class SellerProfileStore extends ChangeNotifier {
   String get businessLocation => _businessLocation;
 
   String get businessAddress => _businessAddress;
+
+  /// Whether buyers can pick up from the seller's location.
+  bool get buyerPickup => _buyerPickup;
+
+  /// Whether the seller delivers to buyers.
+  bool get delivery => _delivery;
 
   /// The Supabase `user_id` for the currently logged-in seller. Drives
   /// product queries and all user-scoped lookups.
@@ -141,6 +151,16 @@ class SellerProfileStore extends ChangeNotifier {
     _bankComplete = bankComplete;
     _verificationComplete = verificationComplete;
     _personalComplete = personalComplete;
+    notifyListeners();
+  }
+
+  /// Sets delivery options (buyer pickup / delivery toggles).
+  void setDeliveryOptions({
+    required bool buyerPickup,
+    required bool delivery,
+  }) {
+    _buyerPickup = buyerPickup;
+    _delivery = delivery;
     notifyListeners();
   }
 

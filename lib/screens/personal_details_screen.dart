@@ -98,7 +98,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
         name: name,
         mobile: mobile,
         sellerType: _sellerType.dbValue,
-        businessName: '',
+        businessName: name,
         businessLocation: '',
         businessAddress: '',
       );

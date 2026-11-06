@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/screens/bank_detaile.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
+import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/verify_detaile.dart';
 import 'package:seller_app/theme/app_colors.dart';
@@ -352,9 +353,9 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    // Verify -> Registration -> Bank is the onboarding order, so the missing
-    // profile section comes next.
-    expect(find.byType(Step03BusinessDetailsScreen), findsOneWidget);
+    // Verify -> Personal Details -> Registration -> Bank is the onboarding
+    // order, so the missing personal details section comes next.
+    expect(find.byType(PersonalDetailsScreen), findsOneWidget);
     expect(find.text('Fill Your Bank Details'), findsNothing);
   });
 
@@ -364,6 +365,7 @@ void main() {
       profileComplete: true,
       bankComplete: false,
       verificationComplete: false,
+      personalComplete: true,
     );
 
     await pumpScreen(tester);
@@ -381,6 +383,7 @@ void main() {
       profileComplete: true,
       bankComplete: true,
       verificationComplete: false,
+      personalComplete: true,
     );
 
     await pumpScreen(tester);

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/product_store.dart';
+import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -73,6 +74,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   bool _isSaving = false;
   final PageController _photoController = PageController(viewportFraction: 0.6);
 
+  /// Delivery preference toggles, synced with SellerProfileStore.
+  bool _buyerPickup = true;
+  bool _delivery = false;
+
   static const _categories = ['Vegetables', 'Fruits', 'Grains & pulses'];
   static const _units = ['kg', 'g', 'pc', 'dozen', 'bundle', 'L', 'ml'];
 
@@ -83,6 +88,12 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     _name.addListener(_onFormChanged);
     _price.addListener(_onFormChanged);
     _description.addListener(_onFormChanged);
+
+    // Initialize delivery toggles from the shared store so the product form
+    // reflects the seller's global preference.
+    final store = SellerProfileStore.instance;
+    _buyerPickup = store.buyerPickup;
+    _delivery = store.delivery;
   }
 
   void _onFormChanged() {
@@ -381,6 +392,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       quantity: _quantity,
       description: _description.text.trim(),
       status: ProductStatus.values[_status],
+      buyerPickupEnabled: _buyerPickup,
+      deliveryEnabled: _delivery,
     );
 
     try {
@@ -873,10 +886,81 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                               ),
                             ),
                           ),
-                          // Continue Button
+                          // Delivery Options card.
                           Positioned(
                             left: 24,
                             top: 1296,
+                            child: SizedBox(
+                              width: 364,
+                              height: 88,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(
+                                      icon: Icons.shopping_cart,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'How buyers get orders',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Choose how you want to sell.',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 90,
+                                    child: _DeliveryToggle(
+                                      title: 'Buyer Pickup',
+                                      subtitle: 'Buyers collect from your location',
+                                      value: _buyerPickup,
+                                      onChanged: (value) {
+                                        setState(() => _buyerPickup = value);
+                                        SellerProfileStore.instance.setDeliveryOptions(
+                                          buyerPickup: value,
+                                          delivery: _delivery,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    top: 122,
+                                    child: _DeliveryToggle(
+                                      title: 'Delivery',
+                                      subtitle: 'You deliver to the buyer',
+                                      value: _delivery,
+                                      onChanged: (value) {
+                                        setState(() => _delivery = value);
+                                        SellerProfileStore.instance.setDeliveryOptions(
+                                          buyerPickup: _buyerPickup,
+                                          delivery: value,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Continue Button
+                          Positioned(
+                            left: 24,
+                            top: 1396,
                             child: SizedBox(
                               width: 364,
                               height: 54,
@@ -997,6 +1081,78 @@ class _UnitSelector extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DeliveryToggle extends StatelessWidget {
+  const _DeliveryToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          margin: const EdgeInsets.only(top: 4),
+          decoration: BoxDecoration(
+            color: value ? AppColors.darkGreenInk : Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: value ? AppColors.darkGreenInk : Colors.grey.shade400,
+              width: 2,
+            ),
+          ),
+          child: value
+              ? const Icon(
+                  Icons.check,
+                  size: 12,
+                  color: Colors.white,
+                )
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          activeColor: AppColors.darkGreenInk,
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }
