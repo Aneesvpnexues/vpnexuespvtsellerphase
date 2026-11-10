@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../widgets/profile_shell.dart';
 import 'bank_details_screen.dart';
 import 'business_farm_screen.dart';
@@ -36,31 +37,34 @@ class ProfileScreen extends StatelessWidget {
         rows: [
           ProfileListRow(
             icon: Icons.person_outline,
-            title: 'Personal Details',
-            subtitle: 'Name, phone, email',
+            title: AppStrings.trOf(context, 'Personal Details'),
+            subtitle: AppStrings.trOf(context, 'Name, phone, email'),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PersonalDetailsScreen()),
             ),
           ),
           ProfileListRow(
             icon: Icons.eco_outlined,
-            title: 'Business & Farm',
-            subtitle: 'Farm details, location, pickup & delivery',
+            title: AppStrings.trOf(context, 'Business & Farm'),
+            subtitle: AppStrings.trOf(
+              context,
+              'Farm details, location, pickup & delivery',
+            ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BusinessFarmScreen()),
             ),
           ),
           ProfileListRow(
             icon: Icons.verified_user_outlined,
-            title: 'Verification (KYC)',
-            subtitle: 'Aadhaar, PAN, farm proof',
+            title: AppStrings.trOf(context, 'Verification (KYC)'),
+            subtitle: AppStrings.trOf(context, 'Aadhaar, PAN, farm proof'),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const VerificationKycScreen()),
             ),
           ),
           ProfileListRow(
             icon: Icons.account_balance_outlined,
-            title: 'Bank Details',
+            title: AppStrings.trOf(context, 'Bank Details'),
             subtitle: 'SBI •••• 3421',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BankDetailsScreen()),

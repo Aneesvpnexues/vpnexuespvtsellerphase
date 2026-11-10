@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../widgets/profile_shell.dart';
 import 'help_support_screen.dart';
@@ -52,7 +53,7 @@ class _AppListCard extends StatelessWidget {
     color: AppColors.textPrimary,
   );
   static const _subtitle = TextStyle(
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: FontWeight.w400,
     height: 1.0,
     color: AppColors.listSubtitle,
@@ -61,7 +62,7 @@ class _AppListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 364,
-      height: 136,
+      height: 156,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
@@ -81,13 +82,13 @@ class _AppListCard extends StatelessWidget {
             left: 16,
             top: 14,
             width: 332,
-            height: 48,
+            height: 63,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(
                 context,
               ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-              child: const Stack(
+              child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
@@ -102,26 +103,32 @@ class _AppListCard extends StatelessWidget {
                   Positioned(
                     left: 52,
                     top: 9,
-                    child: Text('Settings', style: _title),
+                    child: Text(
+                      AppStrings.trOf(context, 'Settings'),
+                      style: _title,
+                    ),
                   ),
                   Positioned(
                     left: 52,
                     top: 26,
-                    child: Text('Language, notifications', style: _subtitle),
+                    child: Text(
+                      AppStrings.trOf(context, 'Language, notifications'),
+                      style: _subtitle,
+                    ),
                   ),
-                  Positioned(left: 316, top: 15, child: _AppChevron()),
+                  Positioned(left: 316, top: 34, child: _AppChevron()),
                 ],
               ),
             ),
           ),
-          const Positioned(left: 16, right: 16, top: 66, child: _Divider()),
+          const Positioned(left: 16, right: 16, top: 78, child: _Divider()),
 
           // Help & Support (design: cap top y706.5, title only).
           Positioned(
             left: 16,
-            top: 66,
+            top: 80,
             width: 332,
-            height: 56,
+            height: 63,
             child: GestureDetector(
               key: const Key('profile-help'),
               behavior: HitTestBehavior.opaque,
@@ -130,7 +137,7 @@ class _AppListCard extends StatelessWidget {
                   builder: (_) => const HelpSupportScreen(),
                 ),
               ),
-              child: const Stack(
+              child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
@@ -145,9 +152,12 @@ class _AppListCard extends StatelessWidget {
                   Positioned(
                     left: 52,
                     top: 23,
-                    child: Text('Help & Support', style: _title),
+                    child: Text(
+                      AppStrings.trOf(context, 'Help & Support'),
+                      style: _title,
+                    ),
                   ),
-                  Positioned(left: 316, top: 21, child: _AppChevron()),
+                  Positioned(left: 316, top: 100, child: _AppChevron()),
                 ],
               ),
             ),
@@ -172,13 +182,13 @@ class _AppIconTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: tileColor,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, size: 13, color: ink),
+      child: Icon(icon, size: 20, color: ink),
     );
   }
 }
@@ -190,7 +200,7 @@ class _AppChevron extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Icon(
       Icons.chevron_right,
-      size: 16,
+      size: 22,
       color: AppColors.chevronGray,
     );
   }

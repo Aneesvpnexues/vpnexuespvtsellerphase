@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/api_error.dart';
 import '../data/product_store.dart';
+import '../data/seller_product_repository.dart';
+import '../data/seller_profile_store.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -44,9 +48,10 @@ class AddProductsScreen extends StatefulWidget {
   static const String tomatoAsset = 'assets/products/tomato.png';
   static const double designWidth = 412;
 
-  /// Extended height so the Continue button sits comfortably above the bottom
-  /// navigation bar and provides extra room when scrolling with the keyboard.
-  static const double designHeight = 1460;
+  /// Extended height so the Continue button can scroll fully above the pinned
+  /// bottom navigation bar (which covers the last [BottomNavBar.barHeight]
+  /// design-px of the viewport) and provides extra room for the keyboard.
+  static const double designHeight = 1680;
 
   @override
   State<AddProductsScreen> createState() => _AddProductsScreenState();
@@ -73,6 +78,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   bool _isSaving = false;
   final PageController _photoController = PageController(viewportFraction: 0.6);
 
+  /// Delivery preference toggles, synced with SellerProfileStore.
+  bool _buyerPickup = true;
+  bool _delivery = false;
+
   static const _categories = ['Vegetables', 'Fruits', 'Grains & pulses'];
   static const _units = ['kg', 'g', 'pc', 'dozen', 'bundle', 'L', 'ml'];
 
@@ -83,6 +92,12 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     _name.addListener(_onFormChanged);
     _price.addListener(_onFormChanged);
     _description.addListener(_onFormChanged);
+
+    // Initialize delivery toggles from the shared store so the product form
+    // reflects the seller's global preference.
+    final store = SellerProfileStore.instance;
+    _buyerPickup = store.buyerPickup;
+    _delivery = store.delivery;
   }
 
   void _onFormChanged() {
@@ -124,7 +139,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     if (_isPicking || _isPhotoAnimating) return;
     if (_photos.length >= AddProductsScreen.maxPhotos) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You can add up to 5 photos.')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'You can add up to 5 photos.'))),
       );
       return;
     }
@@ -151,7 +166,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the photo picker.')),
+          SnackBar(content: Text(AppStrings.trOf(context, 'Could not open the photo picker.'))),
         );
       }
     }
@@ -285,49 +300,13 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   }
 
   Future<void> _editQuantityDialog() async {
-    final controller = TextEditingController(text: '$_quantity');
-    final result = await showDialog<int>(
+    final int? result = await showDialog<int>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Enter Available Quantity',
-          style: AppTextStyles.sectionHeader,
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(
-            suffixText: _selectedUnit,
-            hintText: 'e.g. 50',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.darkGreenInk,
-              foregroundColor: AppColors.cardWhite,
-            ),
-            onPressed: () {
-              final parsed = int.tryParse(controller.text.trim());
-              Navigator.of(context).pop(parsed);
-            },
-            child: const Text('Set'),
-          ),
-        ],
+      builder: (dialogContext) => _QuantityDialog(
+        initialQuantity: _quantity,
+        unit: _selectedUnit,
       ),
     );
-    controller.dispose();
     if (result != null && result >= 0 && mounted) {
       setState(() => _quantity = result);
     }
@@ -339,13 +318,13 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     if (name.isEmpty) {
       _nameFocus.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a product name.')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'Please enter a product name.'))),
       );
       return;
     }
     if (_category < 0 || _category >= _categories.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a product category.')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'Please select a product category.'))),
       );
       return;
     }
@@ -357,15 +336,15 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     if (price == null || !price.isFinite || price <= 0) {
       _priceFocus.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid price greater than 0.')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'Please enter a valid price greater than 0.'))),
       );
       return;
     }
     if (_quantity <= 0 && _status == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Quantity must be greater than 0 for Active products.'),
-        ),
+        SnackBar(
+           content: Text(AppStrings.trOf(context, 'Quantity must be greater than 0 for Active products.')),
+         ),
       );
       return;
     }
@@ -381,6 +360,8 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       quantity: _quantity,
       description: _description.text.trim(),
       status: ProductStatus.values[_status],
+      buyerPickupEnabled: _buyerPickup,
+      deliveryEnabled: _delivery,
     );
 
     try {
@@ -388,28 +369,28 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
           widget.productSaver ?? AddProductsScreen.debugProductSaver;
       if (saver != null) {
         await saver(draft, _photos);
-        if (!mounted) return;
       } else {
-        ProductStore.instance.addProduct(
-          name: draft.name,
-          category: draft.category,
-          price: draft.price,
-          unit: draft.unit,
-          quantity: draft.quantity,
-          description: draft.description,
-          status: draft.status,
-          photos: _photos,
+        // Persist to Supabase (photos first via Cloudinary) so the product
+        // survives an app restart; the repository also upserts the store.
+        await SellerProductRepository().addProduct(
+          draft,
+          _photos,
+          userId: ProductStore.instance.userId,
         );
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added successfully!')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'Product added successfully!'))),
       );
       Navigator.of(context).maybePop();
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
+        final String message = e is ApiException
+            ? e.message
+            : 'Failed to save product. Please try again.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save product. Please try again.')),
+          SnackBar(content: Text(message)),
         );
       }
     }
@@ -873,10 +854,83 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                               ),
                             ),
                           ),
-                          // Continue Button
+                          // Delivery Options card.
                           Positioned(
                             left: 24,
                             top: 1296,
+                            child: SizedBox(
+                              width: 364,
+                              height: 200,
+                              child: Stack(
+                                children: [
+                                  const Positioned.fill(
+                                    child: _CardBackground(),
+                                  ),
+                                  const Positioned(
+                                    left: 16,
+                                    top: 20,
+                                    child: _SectionIcon(
+                                      icon: Icons.shopping_cart,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 24,
+                                    child: Text(
+                                      'How buyers get orders',
+                                      style: AppTextStyles.sectionHeader,
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 72,
+                                    top: 50,
+                                    child: Text(
+                                      'Choose how you want to sell.',
+                                      style: AppTextStyles.dashboardSubtitle,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    right: 16,
+                                    top: 90,
+                                    child: _DeliveryToggle(
+                                      title: 'Buyer Pickup',
+                                      subtitle: 'Buyers collect from your location',
+                                      value: _buyerPickup,
+                                      onChanged: (value) {
+                                        setState(() => _buyerPickup = value);
+                                        SellerProfileStore.instance.setDeliveryOptions(
+                                          buyerPickup: value,
+                                          delivery: _delivery,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 16,
+                                    right: 16,
+                                    top: 148,
+                                    child: _DeliveryToggle(
+                                      title: 'Delivery',
+                                      subtitle: 'You deliver to the buyer',
+                                      value: _delivery,
+                                      onChanged: (value) {
+                                        setState(() => _delivery = value);
+                                        SellerProfileStore.instance.setDeliveryOptions(
+                                          buyerPickup: _buyerPickup,
+                                          delivery: value,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Continue Button
+                          Positioned(
+                            left: 24,
+                            top: 1520,
                             child: SizedBox(
                               width: 364,
                               height: 54,
@@ -1001,6 +1055,78 @@ class _UnitSelector extends StatelessWidget {
   }
 }
 
+class _DeliveryToggle extends StatelessWidget {
+  const _DeliveryToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          margin: const EdgeInsets.only(top: 4),
+          decoration: BoxDecoration(
+            color: value ? AppColors.darkGreenInk : Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: value ? AppColors.darkGreenInk : Colors.grey.shade400,
+              width: 2,
+            ),
+          ),
+          child: value
+              ? const Icon(
+                  Icons.check,
+                  size: 12,
+                  color: Colors.white,
+                )
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          activeColor: AppColors.darkGreenInk,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
 class _ContinueButton extends StatelessWidget {
   const _ContinueButton({required this.onTap});
 
@@ -1030,7 +1156,10 @@ class _ContinueButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text('Continue', style: AppTextStyles.button),
+            child: Text(
+              AppStrings.trOf(context, 'Continue'),
+              style: AppTextStyles.button,
+            ),
       ),
     );
   }
@@ -1690,6 +1819,85 @@ class _Chip extends StatelessWidget {
   }
 }
 
+class _QuantityDialog extends StatefulWidget {
+  const _QuantityDialog({required this.initialQuantity, required this.unit});
+
+  final int initialQuantity;
+  final String unit;
+
+  @override
+  State<_QuantityDialog> createState() => _QuantityDialogState();
+}
+
+class _QuantityDialogState extends State<_QuantityDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.initialQuantity}');
+  }
+
+  @override
+  void dispose() {
+    // Disposed with the dialog's own State, i.e. only after the route has
+    // fully unmounted. Disposing right after `showDialog` returns runs while
+    // the exit animation is still rebuilding the TextField and corrupts the
+    // element tree ("_dependents.isEmpty" red screen).
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('qty-dialog'),
+      backgroundColor: AppColors.cardWhite,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        'Enter Available Quantity',
+        style: AppTextStyles.sectionHeader,
+      ),
+      content: TextField(
+        key: const Key('qty-dialog-input'),
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          suffixText: widget.unit,
+          hintText: 'e.g. 50',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('qty-dialog-cancel'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          key: const Key('qty-dialog-set'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.darkGreenInk,
+            foregroundColor: AppColors.cardWhite,
+          ),
+          onPressed: () {
+            final parsed = int.tryParse(_controller.text.trim());
+            // Dismiss the keyboard before popping so the viewInsets change
+            // does not interleave with the route's exit animation.
+            FocusScope.of(context).unfocus();
+            Navigator.of(context).pop(parsed);
+          },
+          child: const Text('Set'),
+        ),
+      ],
+    );
+  }
+}
+
 class _QtyStepper extends StatefulWidget {
   const _QtyStepper({
     required this.quantity,
@@ -1767,6 +1975,7 @@ class _QtyStepperState extends State<_QtyStepper> {
           ),
           Expanded(
             child: GestureDetector(
+              key: const Key('qty-display'),
               onTap: widget.onTapValue,
               behavior: HitTestBehavior.opaque,
               child: Center(

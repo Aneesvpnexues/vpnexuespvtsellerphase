@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/seller_profile_store.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_navigation.dart';
@@ -71,7 +72,7 @@ class ProfileShell extends StatelessWidget {
                 left: -2,
                 top: 25,
                 child: PageHeader(
-                  title: 'Profile',
+                  title: AppStrings.trOf(context, 'Profile'),
                   onBack: () => goToHome(context),
                 ),
               ),
@@ -135,11 +136,11 @@ class _BalanceCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
+          Positioned(
             left: 24,
             top: 23,
             child: Text(
-              'Withdrawal balance',
+              AppStrings.trOf(context, 'Withdrawal balance'),
               style: AppTextStyles.balanceLabel,
             ),
           ),
@@ -155,10 +156,13 @@ class _BalanceCard extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   _Dot(color: AppColors.limeAccent, size: 7),
                   SizedBox(width: 6),
-                  Text('This month', style: AppTextStyles.monthPill),
+                  Text(
+                    AppStrings.trOf(context, 'This month'),
+                    style: AppTextStyles.monthPill,
+                  ),
                 ],
               ),
             ),
@@ -168,11 +172,11 @@ class _BalanceCard extends StatelessWidget {
             top: 52,
             child: Text('₹12,480', style: AppTextStyles.balanceAmount),
           ),
-          const Positioned(
+          Positioned(
             left: 24,
             top: 110,
             child: Text(
-              '₹23,480 earned from 12 orders',
+              AppStrings.trOf(context, '₹23,480 earned from 12 orders'),
               style: AppTextStyles.balanceSub,
             ),
           ),
@@ -197,14 +201,17 @@ class _BalanceCard extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(
                     Icons.north_east,
                     size: 14,
                     color: AppColors.withdrawText,
                   ),
                   SizedBox(width: 6),
-                  Text('Withdraw', style: AppTextStyles.withdrawBtn),
+                  Text(
+                    AppStrings.trOf(context, 'Withdraw'),
+                    style: AppTextStyles.withdrawBtn,
+                  ),
                 ],
               ),
             ),
@@ -225,10 +232,13 @@ class _BalanceCard extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(Icons.north_east, size: 14, color: AppColors.surface),
                     SizedBox(width: 6),
-                    Text('Transactions', style: AppTextStyles.transactionsBtn),
+                    Text(
+                      AppStrings.trOf(context, 'Transactions'),
+                      style: AppTextStyles.transactionsBtn,
+                    ),
                   ],
                 ),
               ),
@@ -367,11 +377,11 @@ class _SellerCard extends StatelessWidget {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         _Dot(color: AppColors.sellerVerifiedText, size: 6),
                         SizedBox(width: 6),
                         Text(
-                          'Verfiled Seller',
+                          AppStrings.trOf(context, 'Verfiled Seller'),
                           style: AppTextStyles.verifiedBadge,
                         ),
                       ],
@@ -393,12 +403,24 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
-        _StatCard(width: 104, value: '12', label: 'Orders'),
+      children: [
+        _StatCard(
+          width: 104,
+          value: '12',
+          label: AppStrings.trOf(context, 'Orders'),
+        ),
         SizedBox(width: 12),
-        _StatCard(width: 127, value: '₹2,480', label: 'This month'),
+        _StatCard(
+          width: 127,
+          value: '₹2,480',
+          label: AppStrings.trOf(context, 'This month'),
+        ),
         SizedBox(width: 12),
-        _StatCard(width: 104, value: '4.8 ★', label: 'Rating'),
+        _StatCard(
+          width: 104,
+          value: '4.8 ★',
+          label: AppStrings.trOf(context, 'Rating'),
+        ),
       ],
     );
   }
@@ -490,17 +512,17 @@ class _TabBar extends StatelessWidget {
           Row(
             children: [
               _TabLabel(
-                label: 'Account',
+                label: AppStrings.trOf(context, 'Account'),
                 selected: selectedTab == 0,
                 onTap: onAccountTab,
               ),
               _TabLabel(
-                label: 'Business',
+                label: AppStrings.trOf(context, 'Business'),
                 selected: selectedTab == 1,
                 onTap: onBusinessTab,
               ),
               _TabLabel(
-                label: 'App',
+                label: AppStrings.trOf(context, 'App'),
                 selected: selectedTab == 2,
                 onTap: onAppTab,
               ),
