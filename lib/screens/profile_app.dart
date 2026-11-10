@@ -61,7 +61,7 @@ class _AppListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 364,
+      width: 340,
       height: 156,
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
@@ -116,7 +116,7 @@ class _AppListCard extends StatelessWidget {
                       style: _subtitle,
                     ),
                   ),
-                  Positioned(left: 316, top: 29, child: _AppChevron()),
+                  Positioned(left: 300, top: 29, child: _AppChevron()),
                 ],
               ),
             ),
@@ -157,7 +157,7 @@ class _AppListCard extends StatelessWidget {
                       style: _title,
                     ),
                   ),
-                  Positioned(left: 316, top: 29, child: _AppChevron()),
+                  Positioned(left: 300, top: 29, child: _AppChevron()),
                 ],
               ),
             ),
