@@ -157,7 +157,7 @@ class _AppListCard extends StatelessWidget {
                       style: _title,
                     ),
                   ),
-                  Positioned(left: 316, top: 100, child: _AppChevron()),
+                  Positioned(left: 316, top: 34, child: _AppChevron()),
                 ],
               ),
             ),
