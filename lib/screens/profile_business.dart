@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/profile_shell.dart';
@@ -35,15 +36,15 @@ class ProfileBusinessScreen extends StatelessWidget {
         rows: [
           ProfileListRow(
             icon: Icons.account_balance_wallet_outlined,
-            title: 'Wallet & Transactions',
-            subtitle: 'Balance, withdrawals',
+            title: AppStrings.trOf(context, 'Wallet & Transactions'),
+            subtitle: AppStrings.trOf(context, 'Balance, withdrawals'),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const WalletPage())),
           ),
           ProfileListRow(
             icon: Icons.star_outline,
-            title: 'Review & Ratings',
-            subtitle: '125 reviews',
+            title: AppStrings.trOf(context, 'Review & Ratings'),
+            subtitle: AppStrings.trOf(context, '125 reviews'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
