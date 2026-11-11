@@ -75,11 +75,11 @@ void main() {
     expect(find.text('Spinach'), findsNothing);
     expect(find.text('Carrots'), findsNothing);
     expect(find.text('Sales Overview'), findsOneWidget);
-    expect(find.text('This Month'), findsOneWidget);
-    expect(find.text('\u20B924,850'), findsOneWidget);
-    expect(find.text('Needs Attention'), findsOneWidget);
-    expect(find.text('2 New orders'), findsOneWidget);
-    expect(find.text('Tomatoes low'), findsNothing);
+    expect(find.text('Weekly'), findsOneWidget);
+    expect(find.text('Monthly'), findsOneWidget);
+    expect(find.text('Yearly'), findsOneWidget);
+    expect(find.text('\u20B923,850'), findsOneWidget);
+    expect(find.text('+12% vs last week'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Products'), findsOneWidget);
     expect(find.text('Orders'), findsNWidgets(2));
@@ -98,10 +98,10 @@ void main() {
     expect(find.text('Spinach'), findsOneWidget);
     expect(find.text('Carrots'), findsOneWidget);
     expect(find.text('50 kg available'), findsNWidgets(3));
-    expect(find.text('Active'), findsNWidgets(3));
+    expect(find.text('Salem, TN'), findsNWidgets(3));
   });
 
-  testWidgets('layout matches the 412x1071 design geometry', (tester) async {
+  testWidgets('layout matches the 412x885 design geometry', (tester) async {
     await pumpScreen(tester);
 
     final origin = tester.getTopLeft(find.byType(MaterialApp));
@@ -114,7 +114,6 @@ void main() {
     expect(rectOf(find.text('ACTIVE ORDERS')).top, closeTo(117, 3));
     expect(rectOf(find.text('My Products')).left, closeTo(25, 2));
     expect(rectOf(find.text('Sales Overview')).left, closeTo(25, 2));
-    expect(rectOf(find.text('Needs Attention')).left, closeTo(25, 2));
   });
 
   testWidgets('header has the two 28px circular buttons of the design', (
@@ -226,23 +225,9 @@ void main() {
     Rect rectOf(Finder finder) =>
         tester.getRect(finder).translate(-origin.dx, -origin.dy);
 
-    expect(rectOf(find.text('12')).left, closeTo(47, 2));
-    expect(rectOf(find.text('8')).left, closeTo(154, 2));
-    expect(rectOf(find.text('4')).left, closeTo(273, 2));
-  });
-
-  testWidgets('attention rows match the design box', (tester) async {
-    await pumpScreen(tester);
-
-    final origin = tester.getTopLeft(find.byType(MaterialApp));
-    Rect rectOf(Finder finder) =>
-        tester.getRect(finder).translate(-origin.dx, -origin.dy);
-
-    final row = rectOf(find.byKey(const Key('home-attention-orders')));
-    expect(row.left, closeTo(25, 1));
-    expect(row.top, closeTo(775, 1));
-    expect(row.width, closeTo(362, 1));
-    expect(row.height, closeTo(62, 1));
+    expect(rectOf(find.text('12')).left, closeTo(39, 2));
+    expect(rectOf(find.text('8')).left, closeTo(157, 2));
+    expect(rectOf(find.text('4')).left, closeTo(264, 2));
   });
 
   testWidgets('renders products added to the store', (tester) async {
@@ -262,7 +247,7 @@ void main() {
     expect(find.byKey(const ValueKey('home-empty-products')), findsNothing);
     expect(find.text('Brinjal'), findsOneWidget);
     expect(find.text('50 kg available'), findsOneWidget);
-    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Salem, TN'), findsOneWidget);
     expect(find.byKey(const ValueKey('home-product-P1')), findsOneWidget);
 
     final image = tester.widget<Image>(
@@ -316,42 +301,6 @@ void main() {
 
     expect(find.text('No products yet'), findsNothing);
     expect(find.text('Okra'), findsOneWidget);
-  });
-
-  testWidgets('shows a low stock attention row from store data', (
-    tester,
-  ) async {
-    ProductStore.instance.addProduct(
-      name: 'Spinach',
-      category: 'Vegetables',
-      price: 25,
-      unit: 'kg',
-      quantity: 5,
-      description: '',
-      status: ProductStatus.active,
-    );
-
-    await pumpScreen(tester);
-
-    expect(find.text('Spinach low'), findsOneWidget);
-    expect(find.text('Only 5kg remaining'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('home-attention-low-stock')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ProductDetailsScreen), findsOneWidget);
-    expect(find.text('Spinach'), findsOneWidget);
-  });
-
-  testWidgets('the Needs Attention order row opens My Orders', (tester) async {
-    await pumpScreen(tester);
-
-    expect(find.byType(MyOrdersScreen), findsNothing);
-
-    await tester.tap(find.byKey(const Key('home-attention-orders')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(MyOrdersScreen), findsOneWidget);
   });
 
   testWidgets('the bottom nav is pinned with Home selected', (tester) async {

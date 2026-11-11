@@ -1263,7 +1263,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
       setState(() => _knobX = _end);
-      goToOrderReady(context);
+      goToOrderPickupCode(context);
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -1274,7 +1274,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   Widget build(BuildContext context) {
     return HoverPress.slide(
       child: SlideDragDetector(
-        onTap: () => goToOrderReady(context),
+        onTap: () => goToOrderPickupCode(context),
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(

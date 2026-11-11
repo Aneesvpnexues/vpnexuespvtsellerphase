@@ -6,9 +6,7 @@ import 'package:seller_app/screens/bank_details_screen.dart';
 import 'package:seller_app/screens/business_farm_screen.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
-import 'package:seller_app/screens/order_delivery_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
-import 'package:seller_app/screens/order_ready_screen.dart';
 import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
@@ -56,8 +54,6 @@ void main() {
       'MyProductsScreen': const MyProductsScreen(),
       'MyOrdersScreen': const MyOrdersScreen(),
       'OrderDetailsScreen': const OrderDetailsScreen(),
-      'OrderReadyScreen': const OrderReadyScreen(),
-      'OrderDeliveryScreen': const OrderDeliveryScreen(),
       'PersonalDetailsScreen': const PersonalDetailsScreen(),
       'BusinessFarmScreen': const BusinessFarmScreen(),
       'VerificationKycScreen': const VerificationKycScreen(),

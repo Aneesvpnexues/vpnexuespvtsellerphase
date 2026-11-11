@@ -151,7 +151,7 @@ void main() {
     expect(title.left, closeTo(68 * scale, 1.5));
   });
 
-  testWidgets('continue button opens the pickup success screen', (
+  testWidgets('continue button opens the order confirmation screen', (
     tester,
   ) async {
     await pumpPickupCode(tester);
@@ -159,12 +159,12 @@ void main() {
 
     await tester.tap(find.text('Enter the code to continus'));
     await tester.pumpAndSettle();
-    expect(find.text('Back to orders'), findsOneWidget);
-    expect(find.text('Total Amount'), findsOneWidget);
+    expect(find.text('Order completed'), findsOneWidget);
+    expect(find.text('Added to your wallet'), findsOneWidget);
 
     await tester.tap(find.text('Back to orders'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter pickup code'), findsOneWidget);
+    expect(find.text('My Orders'), findsOneWidget);
   });
 
 

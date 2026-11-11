@@ -61,7 +61,7 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
   bool _submit() {
     if (!_complete) return false;
     if (_code.text == OrderPickupCodeScreen.demoCode) {
-      goToOrderPickupSuccess(context);
+      goToOrderConfirmation(context);
       return true;
     }
     _code.clear();

@@ -18,15 +18,15 @@ import 'my_products_screen.dart';
 /// "Android Compact - 117" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1adaf148b8bf14a899c54).
 ///
-/// Built against a 412x1071 artboard. Every offset below is taken from the
-/// Zeplin latest-version layers, so on a matching viewport the layout renders
-/// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// The product strip reads the shared in-memory [ProductStore].
+/// Built against a trimmed 412x885 artboard. Every offset below is taken
+/// from the Zeplin latest-version layers, so on a matching viewport the
+/// layout renders 1:1; on other sizes it scales down uniformly instead of
+/// overflowing. The product strip reads the shared in-memory [ProductStore].
 class SellerHomeScreen extends StatelessWidget {
   const SellerHomeScreen({super.key});
 
   static const double designWidth = 412;
-  static const double designHeight = 1071;
+  static const double designHeight = 885;
   static const double trimTop = 44;
 
   @override
@@ -35,13 +35,6 @@ class SellerHomeScreen extends StatelessWidget {
       animation: ProductStore.instance,
       builder: (context, _) {
         final products = ProductStore.instance.products;
-        Product? lowStock;
-        for (final product in products) {
-          if (product.quantity <= 10) {
-            lowStock = product;
-            break;
-          }
-        }
         return Scaffold(
           backgroundColor: AppColors.homeBg,
           body: SafeArea(
@@ -110,58 +103,19 @@ class SellerHomeScreen extends StatelessWidget {
                           left: 25,
                           right: 0,
                           top: 389,
-                          height: 188,
+                          height: 204,
                           child: _HomeProducts(products: products),
                         ),
                         const Positioned(
                           left: 25,
-                          top: 597,
+                          top: 613,
                           child: _SectionTitle('Sales Overview'),
                         ),
                         const Positioned(
-                          left: 318,
-                          top: 594,
-                          child: _MonthChip(),
-                        ),
-                        const Positioned(
                           left: 25,
-                          top: 628,
+                          top: 644,
                           child: _SalesCard(),
                         ),
-                        const Positioned(
-                          left: 25,
-                          top: 793,
-                          child: _SectionTitle('Needs Attention'),
-                        ),
-                        Positioned(
-                          left: 25,
-                          top: 819,
-                          child: _AttentionRow(
-                            key: const Key('home-attention-orders'),
-                            title: '2 New orders',
-                            subtitle: 'Hurry up',
-                            barColor: AppColors.attentionAmber,
-                            boxColor: AppColors.attentionAmberBg,
-                            onTap: () => goToOrders(context),
-                          ),
-                        ),
-                        if (lowStock != null)
-                          Positioned(
-                            left: 25,
-                            top: 893,
-                            child: _AttentionRow(
-                              key: const Key('home-attention-low-stock'),
-                              title: '${lowStock.name} low',
-                              subtitle:
-                                  'Only ${lowStock.quantity}${lowStock.unit} remaining',
-                              barColor: AppColors.attentionRed,
-                              boxColor: AppColors.attentionRedBg,
-                              onTap: () => goToProductDetails(
-                                context,
-                                product: lowStock,
-                              ),
-                            ),
-                          ),
                         Positioned(
                           left: 330,
                           top: 358,
@@ -627,7 +581,7 @@ class _ProductCard extends StatelessWidget {
       onTap: () => goToProductDetails(context, product: product),
       child: Container(
         width: 144,
-        height: 188,
+        height: 204,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: _categoryColor(product.category),
@@ -641,27 +595,41 @@ class _ProductCard extends StatelessWidget {
               placeholder: const SizedBox.expand(),
             ),
             Positioned(
-              right: 12,
+              right: 10,
               top: 8,
               child: Container(
-                width: 44,
-                height: 16.5,
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(30)),
-                  border: Border.all(color: const Color(0x12000000)),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    product.status.label,
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      color: _statusColor(product.status),
+                height: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: const BoxDecoration(
+                  color: Color(0xD6CDEB6B),
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
                     ),
-                  ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 11,
+                      color: Color(0xFF144326),
+                    ),
+                    SizedBox(width: 3),
+                    Text(
+                      'Salem, TN',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        height: 1.0,
+                        color: Color(0xFF144326),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -670,12 +638,12 @@ class _ProductCard extends StatelessWidget {
               right: 0,
               bottom: 0,
               child: Container(
-                height: 52,
+                height: 68,
                 padding: const EdgeInsets.only(
                   left: 13,
                   right: 6,
                   top: 4,
-                  bottom: 2,
+                  bottom: 10,
                 ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -737,62 +705,125 @@ Color _categoryColor(String category) {
   }
 }
 
-Color _statusColor(ProductStatus status) {
-  switch (status) {
-    case ProductStatus.active:
-      return AppColors.primary;
-    case ProductStatus.outOfStock:
-      return AppColors.attentionRed;
-    case ProductStatus.draft:
-      return AppColors.tabGray;
-  }
+
+
+enum _SalesPeriod { weekly, monthly, yearly }
+
+class _SalesSnapshot {
+  const _SalesSnapshot({
+    required this.label,
+    required this.total,
+    required this.delta,
+    required this.deltaLabel,
+    required this.orders,
+    required this.complete,
+    required this.progress,
+    required this.percent,
+  });
+
+  final String label;
+  final String total;
+  final String delta;
+  final String deltaLabel;
+  final String orders;
+  final String complete;
+  final String progress;
+  final double percent;
 }
 
-class _MonthChip extends StatelessWidget {
-  const _MonthChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 69,
-      height: 20,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.chipBg,
-        borderRadius: BorderRadius.all(Radius.circular(5)),
+const Map<_SalesPeriod, _SalesSnapshot> _salesData =
+    <_SalesPeriod, _SalesSnapshot>{
+      _SalesPeriod.weekly: _SalesSnapshot(
+        label: 'Total sales this week',
+        total: '\u20B96,200',
+        delta: '+8%',
+        deltaLabel: 'vs last week',
+        orders: '5',
+        complete: '3',
+        progress: '2',
+        percent: 0.58,
       ),
-      child: const Text(
-        'This Month',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF104526),
-        ),
+      _SalesPeriod.monthly: _SalesSnapshot(
+        label: 'Total sales this month',
+        total: '\u20B923,850',
+        delta: '+12%',
+        deltaLabel: 'vs last week',
+        orders: '12',
+        complete: '8',
+        progress: '4',
+        percent: 0.72,
       ),
-    );
-  }
-}
+      _SalesPeriod.yearly: _SalesSnapshot(
+        label: 'Total sales this year',
+        total: '\u20B91,43,820',
+        delta: '+12%',
+        deltaLabel: 'vs last week',
+        orders: '148',
+        complete: '138',
+        progress: '8',
+        percent: 0.64,
+      ),
+    };
 
-class _SalesCard extends StatelessWidget {
+class _SalesCard extends StatefulWidget {
   const _SalesCard();
 
   @override
+  State<_SalesCard> createState() => _SalesCardState();
+}
+
+class _SalesCardState extends State<_SalesCard> {
+  _SalesPeriod _period = _SalesPeriod.monthly;
+
+  @override
   Widget build(BuildContext context) {
+    final _SalesSnapshot data = _salesData[_period]!;
+
     return Container(
       width: 362,
-      height: 146,
+      height: 185,
       decoration: const BoxDecoration(
         color: AppColors.darkCard,
         borderRadius: BorderRadius.all(Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Stack(
         children: [
-          const Positioned(
-            left: 21,
-            top: 20,
+          Positioned(
+            right: -40,
+            bottom: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x2ECDEB6B), Color(0x00CDEB6B)],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 14,
+            right: 14,
+            top: 12,
+            child: _SalesSegmentTrack(
+              period: _period,
+              onChanged: (value) => setState(() => _period = value),
+            ),
+          ),
+          Positioned(
+            left: 14,
+            top: 52,
             child: Text(
-              'Total sales this month',
-              style: TextStyle(
+              data.label,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: Color(0xA1FFFFFF),
@@ -800,74 +831,62 @@ class _SalesCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
-            left: 20,
-            top: 37,
+          Positioned(
+            left: 13,
+            top: 66,
             child: Text(
-              '\u20B924,850',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
+              data.total,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
                 color: AppColors.limeLight,
                 height: 1.0,
               ),
             ),
           ),
           Positioned(
-            right: 13,
-            top: 22,
-            child: Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF10462A),
-                border: Border.all(color: AppColors.limeLight, width: 5),
-              ),
-              child: const Center(
-                child: Text(
-                  '72%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.0,
-                  ),
-                ),
-              ),
-            ),
+            left: 14,
+            top: 104,
+            child: _SalesTrendPill(delta: data.delta, label: data.deltaLabel),
           ),
           Positioned(
-            left: 21,
-            right: 21,
-            top: 87,
+            right: 14,
+            top: 52,
+            child: _ProgressRing(percent: data.percent, size: 56),
+          ),
+          Positioned(
+            left: 14,
+            right: 14,
+            top: 136,
             child: Container(height: 1, color: const Color(0x26CDEB6B)),
           ),
-          const Positioned(
-            left: 22,
-            top: 101,
+          Positioned(
+            left: 14,
+            top: 146,
             child: _SalesStat(
-              number: '12',
+              number: data.orders,
               label: 'Orders',
               dot: Colors.white,
             ),
           ),
-          const Positioned(
-            left: 129,
-            top: 101,
+          Positioned(
+            left: 121,
+            top: 146,
             child: _SalesStat(
-              number: '8',
+              number: data.complete,
               label: 'Complete',
               dot: AppColors.limeLight,
+              leadingBar: true,
             ),
           ),
-          const Positioned(
-            left: 246,
-            top: 101,
+          Positioned(
+            left: 228,
+            top: 146,
             child: _SalesStat(
-              number: '4',
+              number: data.progress,
               label: 'Progress',
-              dot: Color(0xFFE9B949),
+              dot: const Color(0xFFE9B949),
+              leadingBar: true,
             ),
           ),
         ],
@@ -876,20 +895,231 @@ class _SalesCard extends StatelessWidget {
   }
 }
 
+class _SalesSegmentTrack extends StatelessWidget {
+  const _SalesSegmentTrack({required this.period, required this.onChanged});
+
+  final _SalesPeriod period;
+  final ValueChanged<_SalesPeriod> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 334,
+      height: 30,
+      decoration: const BoxDecoration(
+        color: Color(0xFF184E2C),
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+      ),
+      child: Row(
+        children: [
+          _SalesSegment(
+            label: 'Weekly',
+            selected: period == _SalesPeriod.weekly,
+            onTap: () => onChanged(_SalesPeriod.weekly),
+          ),
+          _SalesSegment(
+            label: 'Monthly',
+            selected: period == _SalesPeriod.monthly,
+            onTap: () => onChanged(_SalesPeriod.monthly),
+          ),
+          _SalesSegment(
+            label: 'Yearly',
+            selected: period == _SalesPeriod.yearly,
+            onTap: () => onChanged(_SalesPeriod.yearly),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SalesSegment extends StatelessWidget {
+  const _SalesSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: HoverPress.chip(
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected ? AppColors.limeLight : Colors.transparent,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                boxShadow: selected
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x40000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.0,
+                  color: selected
+                      ? const Color(0xFF144326)
+                      : const Color(0xC2FFFFFF),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SalesTrendPill extends StatelessWidget {
+  const _SalesTrendPill({required this.delta, required this.label});
+
+  final String delta;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: const BoxDecoration(
+        color: Color(0x33CDEB6B),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.trending_up,
+            size: 11,
+            color: AppColors.limeLight,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$delta $label',
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+              color: AppColors.limeLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRing extends StatelessWidget {
+  const _ProgressRing({required this.percent, this.size = 56});
+
+  final double percent;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ring = AppColors.limeLight;
+    return SizedBox(
+      key: const ValueKey('home-sales-ring'),
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _ProgressRingPainter(percent: percent, color: ring),
+        child: Center(
+          child: Container(
+            width: size - 16,
+            height: size - 16,
+            decoration: const BoxDecoration(
+              color: Color(0xFF184E2C),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '${(percent * 100).round()}%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                  color: AppColors.limeLight,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  const _ProgressRingPainter({required this.percent, required this.color});
+
+  final double percent;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = size.width / 2 - 4;
+
+    final Paint track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..color = const Color(0x3DCDEB6B);
+    canvas.drawCircle(center, radius, track);
+
+    final Paint arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    const double start = -1.57079632679; // -90 degrees
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      start,
+      6.28318530718 * percent.clamp(0.0, 1.0),
+      false,
+      arc,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressRingPainter oldDelegate) =>
+      oldDelegate.percent != percent || oldDelegate.color != color;
+}
+
 class _SalesStat extends StatelessWidget {
   const _SalesStat({
     required this.number,
     required this.label,
     required this.dot,
+    this.leadingBar = false,
   });
 
   final String number;
   final String label;
   final Color dot;
+  final bool leadingBar;
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
+    final Widget stat = FittedBox(
       fit: BoxFit.scaleDown,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,111 +1157,20 @@ class _SalesStat extends StatelessWidget {
         ],
       ),
     );
-  }
-}
 
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.barColor,
-    required this.boxColor,
-    required this.onTap,
-  });
+    if (!leadingBar) return stat;
 
-  final String title;
-  final String subtitle;
-  final Color barColor;
-  final Color boxColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 362,
-        height: 62,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.all(Radius.circular(17)),
-          border: Border.all(color: const Color(0x12000000)),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 1,
+          height: 30,
+          child: ColoredBox(color: Color(0x33FFFFFF)),
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0,
-              top: 14,
-              child: Container(
-                width: 4,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: barColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(2)),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 21,
-              top: 14,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: boxColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(10)),
-                ),
-                child: const Icon(
-                  Icons.inventory_2_outlined,
-                  size: 23,
-                  color: Color(0xFF5A4A1A),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 76,
-              top: 11,
-              width: 260,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0x8A000000),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Positioned(
-              right: 12,
-              top: 23,
-              child: Icon(
-                Icons.chevron_right,
-                size: 16,
-                color: Color(0xFF8A8A8A),
-              ),
-            ),
-          ],
-        ),
-      ),
+        const SizedBox(width: 10),
+        stat,
+      ],
     );
   }
 }
-

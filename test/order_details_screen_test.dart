@@ -4,7 +4,7 @@ import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/my_orders_screen.dart';
 import 'package:seller_app/screens/my_products_screen.dart';
 import 'package:seller_app/screens/order_details_screen.dart';
-import 'package:seller_app/screens/order_ready_screen.dart';
+import 'package:seller_app/screens/order_pickup_code_screen.dart';
 import 'package:seller_app/widgets/bottom_nav_bar.dart';
 
 Future<void> pumpDetails(WidgetTester tester) async {
@@ -95,7 +95,7 @@ void main() {
     expect(rectOf(find.text('Slide to accept order')).top, closeTo(1386, 5));
   });
 
-  testWidgets('the slide to accept button opens the ready order screen', (
+  testWidgets('the slide to accept button opens the pickup code screen', (
     tester,
   ) async {
     await pumpDetails(tester);
@@ -105,11 +105,11 @@ void main() {
     await tester.tapAt(const Offset(203, 1400));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsOneWidget);
-    expect(find.text('Packing checklist'), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
+    expect(find.text('Enter pickup code'), findsOneWidget);
   });
 
-  testWidgets('sliding the knob across opens the ready order screen', (
+  testWidgets('sliding the knob across opens the pickup code screen', (
     tester,
   ) async {
     await pumpDetails(tester);
@@ -117,11 +117,11 @@ void main() {
     await tester.dragFrom(const Offset(50, 1400), const Offset(300, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsOneWidget);
-    expect(find.text('Packing checklist'), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
+    expect(find.text('Enter pickup code'), findsOneWidget);
   });
 
-  testWidgets('swiping anywhere on the bar opens the ready order screen', (
+  testWidgets('swiping anywhere on the bar opens the pickup code screen', (
     tester,
   ) async {
     await pumpDetails(tester);
@@ -129,11 +129,11 @@ void main() {
     await tester.dragFrom(const Offset(200, 1400), const Offset(300, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsOneWidget);
-    expect(find.text('Packing checklist'), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
+    expect(find.text('Enter pickup code'), findsOneWidget);
   });
 
-  testWidgets('a short left to right swipe opens the ready order screen', (
+  testWidgets('a short left to right swipe opens the pickup code screen', (
     tester,
   ) async {
     await pumpDetails(tester);
@@ -141,7 +141,7 @@ void main() {
     await tester.dragFrom(const Offset(60, 1400), const Offset(100, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
   });
 
   testWidgets('a diagonal swipe that starts vertical still slides the bar', (
@@ -166,7 +166,7 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsOneWidget);
+    expect(find.byType(OrderPickupCodeScreen), findsOneWidget);
   });
 
   testWidgets('a short slide springs back and does not accept the order', (
@@ -177,7 +177,7 @@ void main() {
     await tester.dragFrom(const Offset(50, 1400), const Offset(30, 0));
     await tester.pumpAndSettle();
 
-    expect(find.byType(OrderReadyScreen), findsNothing);
+    expect(find.byType(OrderPickupCodeScreen), findsNothing);
     expect(find.text('Slide to accept order'), findsOneWidget);
   });
 

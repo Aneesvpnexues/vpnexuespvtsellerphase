@@ -12,6 +12,10 @@ abstract final class StorageKeys {
   static const String sellerProfileKey = 'seller_profile';
   static const String productsKey = 'products';
 
+  /// Selected UI language code (en, ta, hi, ...). Not session data, so it
+  /// survives logout and splash re-display.
+  static const String languageKey = 'language';
+
   /// Set once the one-time splash screen has been dismissed. Uninstalling
   /// the app clears the preferences, so a fresh install shows the splash
   /// exactly once again.

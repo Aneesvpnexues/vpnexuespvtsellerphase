@@ -39,6 +39,7 @@ class WelcomeSellerScreen extends StatefulWidget {
   static const String leafAsset = 'assets/welcome/leaf.png';
   static const String heroAsset = 'assets/welcome/hero.png';
   static const String flagAsset = 'assets/welcome/flag.png';
+  static const String waveAsset = 'assets/welcome/wave.png';
   static const String sendAsset = 'assets/welcome/send.png';
   static const double designWidth = 412;
   static const double designHeight = 917;
