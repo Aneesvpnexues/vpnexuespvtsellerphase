@@ -95,7 +95,7 @@ void main() {
     expect(buttonLabel.style?.fontSize, 16);
   });
 
-  testWidgets('location button opens the STEP 02 screen and back', (
+  testWidgets('location button opens the location confirm screen and back', (
     tester,
   ) async {
     await pumpScreen(tester);
@@ -103,10 +103,8 @@ void main() {
     await tester.tap(find.text('Use my current Location'));
     await tester.pumpAndSettle();
 
-    expect(find.text('STEP 02'), findsOneWidget);
-    expect(find.text('What best'), findsOneWidget);
-    expect(find.text('describes you?'), findsOneWidget);
-    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('Is this your location?'), findsOneWidget);
+    expect(find.text('Confirm location'), findsOneWidget);
     expect(find.text('Choose your location'), findsNothing);
 
     final navigator = tester.state<NavigatorState>(
@@ -116,19 +114,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose your location'), findsOneWidget);
-    expect(find.text('STEP 02'), findsNothing);
+    expect(find.text('Is this your location?'), findsNothing);
   });
 
-  testWidgets('manual link opens the STEP 02 screen and back', (tester) async {
+  testWidgets('manual link opens the location confirm screen and back', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byKey(const Key('manualLocationLink')));
     await tester.pumpAndSettle();
 
-    expect(find.text('STEP 02'), findsOneWidget);
-    expect(find.text('What best'), findsOneWidget);
-    expect(find.text('describes you?'), findsOneWidget);
-    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('Is this your location?'), findsOneWidget);
+    expect(find.text('Confirm location'), findsOneWidget);
     expect(find.text('Choose your location'), findsNothing);
 
     final navigator = tester.state<NavigatorState>(
@@ -138,7 +136,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose your location'), findsOneWidget);
-    expect(find.text('STEP 02'), findsNothing);
+    expect(find.text('Is this your location?'), findsNothing);
+  });
+
+  testWidgets('confirming the pin continues to STEP 02', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Use my current Location'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm location'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('STEP 02'), findsOneWidget);
+    expect(find.text('What best'), findsOneWidget);
+    expect(find.text('describes you?'), findsOneWidget);
+    expect(find.text('Is this your location?'), findsNothing);
+  });
+
+  testWidgets('change returns to the first location page', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Use my current Location'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your location'), findsOneWidget);
+    expect(find.text('Is this your location?'), findsNothing);
   });
 
   testWidgets('layout scales down instead of overflowing', (tester) async {

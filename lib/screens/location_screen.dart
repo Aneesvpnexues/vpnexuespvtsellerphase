@@ -1,13 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/keyboard_aware_canvas.dart';
-import 'seller_type_screen.dart';
+import 'location_confirm_screen.dart';
 
 /// "STEP 01 — Choose your location" — static replica of Zeplin
 /// "Android Compact - 51" (project 6a8d49709e27bd8b35213d35,
@@ -16,7 +13,7 @@ import 'seller_type_screen.dart';
 /// Built against a 412x917 artboard. Every offset below is taken straight from
 /// the design PNG, so on a matching viewport the layout renders 1:1; on other
 /// sizes it scales down uniformly instead of overflowing. Both the primary
-/// button and the "Select it Manually" link open the STEP 02 screen.
+/// button and the "Select it Manually" link open the location-confirm page.
 class Step01LocationScreen extends StatelessWidget {
   const Step01LocationScreen({super.key});
 
@@ -117,18 +114,17 @@ class _Description extends StatelessWidget {
 class _LocationButton extends StatelessWidget {
   const _LocationButton();
 
-  void _openSellerTypePage(BuildContext context) {
+  void _openConfirmPage(BuildContext context) {
     FocusScope.of(context).unfocus();
-    unawaited(SellerBackendSync.saveLocation());
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
+      MaterialPageRoute<void>(builder: (_) => const LocationConfirmScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _openSellerTypePage(context),
+      onTap: () => _openConfirmPage(context),
       behavior: HitTestBehavior.opaque,
       child: HoverPress.button(
         child: Container(
@@ -152,10 +148,9 @@ class _LocationButton extends StatelessWidget {
 class _ManualLink extends StatelessWidget {
   const _ManualLink();
 
-  void _openSellerTypePage(BuildContext context) {
-    unawaited(SellerBackendSync.saveLocation());
+  void _openConfirmPage(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
+      MaterialPageRoute<void>(builder: (_) => const LocationConfirmScreen()),
     );
   }
 
@@ -164,7 +159,7 @@ class _ManualLink extends StatelessWidget {
     return GestureDetector(
       key: const Key('manualLocationLink'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => _openSellerTypePage(context),
+      onTap: () => _openConfirmPage(context),
       child: const Text(
         'Select it Manually',
         textAlign: TextAlign.center,

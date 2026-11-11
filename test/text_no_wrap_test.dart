@@ -11,6 +11,7 @@ import 'package:seller_app/screens/otp_screen.dart';
 import 'package:seller_app/screens/personal_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
 import 'package:seller_app/screens/settings_screen.dart';
+import 'package:seller_app/screens/location_confirm_screen.dart';
 import 'package:seller_app/screens/location_screen.dart';
 import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/screens/verification_kyc_screen.dart';
@@ -49,6 +50,7 @@ void main() {
       'WelcomeSellerScreen': const WelcomeSellerScreen(),
       'OtpScreen': const OtpScreen(phone: '+91 1234567890'),
       'Step01LocationScreen': const Step01LocationScreen(),
+      'LocationConfirmScreen': const LocationConfirmScreen(),
       'Step02SellerTypeScreen': const Step02SellerTypeScreen(),
       'SellerHomeScreen': const SellerHomeScreen(),
       'MyProductsScreen': const MyProductsScreen(),
