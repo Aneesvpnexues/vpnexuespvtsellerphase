@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/profile_shell.dart';
 import 'profile_app.dart';
 import 'profile_screen.dart';
 import 'review_ratings_page.dart';
-import 'wallet_page.dart';
 
 /// "Profile / Business" — replica of Zeplin "Android Compact - 152"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af88e56f84490aa13696).
@@ -38,8 +38,7 @@ class ProfileBusinessScreen extends StatelessWidget {
             icon: Icons.account_balance_wallet_outlined,
             title: AppStrings.trOf(context, 'Wallet & Transactions'),
             subtitle: AppStrings.trOf(context, 'Balance, withdrawals'),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const WalletPage())),
+            onTap: () => goToWallet(context),
           ),
           ProfileListRow(
             icon: Icons.star_outline,

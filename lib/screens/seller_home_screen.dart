@@ -1,40 +1,40 @@
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:seller_app/screens/notifications_screen.dart';
 
 import '../data/product_store.dart';
-import '../data/sales_store.dart';
 import '../data/seller_profile_store.dart';
-import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
+import '../widgets/product_image_view.dart';
 import 'my_products_screen.dart';
 
-/// Seller Home dashboard — updated Zeplin replica.
+/// Seller Home dashboard — static replica of Zeplin
+/// "Android Compact - 117" (project 6a8d49709e27bd8b35213d35,
+/// screen 6ad1adaf148b8bf14a899c54).
+///
+/// Built against a trimmed 412x885 artboard. Every offset below is taken
+/// from the Zeplin latest-version layers, so on a matching viewport the
+/// layout renders 1:1; on other sizes it scales down uniformly instead of
+/// overflowing. The product strip reads the shared in-memory [ProductStore].
 class SellerHomeScreen extends StatelessWidget {
   const SellerHomeScreen({super.key});
 
   static const double designWidth = 412;
-  static const double designHeight = 1071;
+  static const double designHeight = 885;
   static const double trimTop = 44;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([ProductStore.instance, SalesStore.instance]),
+      animation: ProductStore.instance,
       builder: (context, _) {
         final products = ProductStore.instance.products;
-
-        Product? lowStock;
-        for (final product in products) {
-          if (product.quantity <= 10) {
-            lowStock = product;
-            break;
-          }
-        }
-
         return Scaffold(
           backgroundColor: AppColors.homeBg,
           body: SafeArea(
@@ -48,57 +48,44 @@ class SellerHomeScreen extends StatelessWidget {
                     trimTop: trimTop,
                     child: Stack(
                       children: [
-                        const Positioned(
-                          left: 24,
-                          top: 68,
-                          child: _Greeting(),
+                        const Positioned(left: 22, top: 74, child: _Greeting()),
+                        Positioned(
+                          left: 327.5,
+                          top: 73.5,
+                          child: _HeaderButton(
+                            key: const Key('home-notifications'),
+                            icon: Icons.notifications,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            ),
+                          ),
                         ),
-
-                        // Notification button
-const Positioned(
-  left: 295,
-  top: 65,
-  child: _HeaderIcon(
-    icon: Icons.notifications_outlined,
-  ),
-),
-
-// Settings button
-Positioned(
-  left: 350,
-  top: 65,
-  child: _HeaderIcon(
-    icon: Icons.settings_outlined,
-    onTap: () => goToSettings(context),
-  ),
-),
-
-                        // Active Orders
+                        Positioned(
+                          left: 358.5,
+                          top: 73.5,
+                          child: _HeaderButton(
+                            key: const Key('home-settings'),
+                            icon: Icons.settings_outlined,
+                            onTap: () => goToSettings(context),
+                          ),
+                        ),
                         const Positioned(
                           left: 25,
                           top: 143,
                           child: _ActiveOrdersCard(),
                         ),
-
-                        // My Products section
-                        Positioned(
+                        const Positioned(
                           left: 25,
                           top: 361,
-                          child: _SectionTitle(AppStrings.trOf(context, 'My Products')),
+                          child: _SectionTitle('My Products'),
                         ),
-
-                        Positioned(
-                          left: 349,
-                          top: 365,
-                          child: _ViewAll(),
-                        ),
-
-                        // View all products tap area
                         Positioned(
                           left: 25,
                           top: 355,
-                          width: 362,
-                          height: 34,
+                          width: 130,
+                          height: 30,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: () => Navigator.of(context).push(
@@ -112,52 +99,23 @@ Positioned(
                             child: const SizedBox.expand(),
                           ),
                         ),
-
-                        // Product strip
                         Positioned(
                           left: 25,
+                          right: 0,
                           top: 389,
-                          width: 362,
-                          height: 188,
-                          child: _HomeProducts(
-                            products: products,
-                          ),
+                          height: 204,
+                          child: _HomeProducts(products: products),
                         ),
-
-                        // Sales Overview
-                        Positioned(
-                          left: 25,
-                          top: 597,
-                          child: _SectionTitle(AppStrings.trOf(context, 'Sales Overview')),
-                        ),
-
-                        const Positioned(
-                          left: 318,
-                          top: 594,
-                          child: _MonthChip(),
-                        ),
-
                         const Positioned(
                           left: 25,
-                          top: 628,
+                          top: 613,
+                          child: _SectionTitle('Sales Overview'),
+                        ),
+                        const Positioned(
+                          left: 25,
+                          top: 644,
                           child: _SalesCard(),
                         ),
-
-                        // Dynamic low-stock notification
-                        if (lowStock != null)
-                          Positioned(
-                            left: 24,
-                            top: 892,
-                            child: _AttentionRow(
-                              title: '${lowStock.name} low',
-                              subtitle:
-                                  'Only ${lowStock.quantity}${lowStock.unit} remaining',
-                              barColor: AppColors.attentionRed,
-                              boxColor: AppColors.attentionRedBg,
-                            ),
-                          ),
-
-                        // Additional View All tap area
                         Positioned(
                           left: 330,
                           top: 358,
@@ -173,15 +131,23 @@ Positioned(
                                 builder: (_) => const MyProductsScreen(),
                               ),
                             ),
-                            child: const SizedBox.expand(),
+                            child: HoverPress.chip(
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: 19,
+                                    top: 7,
+                                    child: _ViewAll(),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                // Fixed bottom navigation
                 Positioned(
                   left: 0,
                   right: 0,
@@ -204,35 +170,22 @@ Positioned(
   }
 }
 
- // ------------------------------------------------------------
- // GREETING
- // ------------------------------------------------------------
-
 class _Greeting extends StatelessWidget {
   const _Greeting();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 275,
+      width: 280,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          const Text('Hello,', style: AppTextStyles.homeHello),
+          const SizedBox(height: 2),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                AppStrings.trOf(context, 'Hello,'),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.darkGreenInk,
-                ),
-              ),
-
-              const SizedBox(width: 6),
-
               Flexible(
                 child: AnimatedBuilder(
                   animation: SellerProfileStore.instance,
@@ -240,102 +193,53 @@ class _Greeting extends StatelessWidget {
                     SellerProfileStore.instance.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.darkGreenInk,
-                    ),
+                    style: AppTextStyles.homeName,
                   ),
                 ),
               ),
-
-              const SizedBox(width: 6),
-
+              const SizedBox(width: 9),
               Container(
-                width: 19,
-                height: 19,
+                width: 21,
+                height: 21,
                 decoration: const BoxDecoration(
                   color: Color(0xFF2E8B4B),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.check, size: 10, color: Colors.white),
               ),
             ],
           ),
-
-          const SizedBox(height: 5),
-
-          Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    const Icon(
-      Icons.location_on_outlined,
-      size: 14,
-      color: AppColors.tabGray,
-    ),
-    const SizedBox(width: 4),
-    const Text(
-      'Salem, Tamil Nadu',
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: AppColors.tabGray,
-      ),
-    ),
-  ],
-),
+          const SizedBox(height: 2),
+          const Text('Salem, Tamil Nadu', style: AppTextStyles.homeLocation),
         ],
       ),
     );
   }
 }
 
-// ------------------------------------------------------------
-// HEADER ICONS
-// ------------------------------------------------------------
-
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({
-    required this.icon,
-    this.onTap,
-  });
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({super.key, required this.icon, this.onTap});
 
   final IconData icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: AppColors.iconCircle,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 25,
-            color: AppColors.iconDark,
-          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(
+          color: AppColors.iconCircle,
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, size: 17, color: AppColors.iconDark),
       ),
     );
   }
 }
-
-// ------------------------------------------------------------
-// ACTIVE ORDERS CARD
-// ------------------------------------------------------------
 
 class _ActiveOrdersCard extends StatelessWidget {
   const _ActiveOrdersCard();
@@ -344,22 +248,19 @@ class _ActiveOrdersCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 362,
-      height: 210,
+      height: 205,
       decoration: const BoxDecoration(
         color: AppColors.limeCard,
-        borderRadius: BorderRadius.all(
-          Radius.circular(22),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(22)),
       ),
       child: Stack(
         children: [
-          // Decorative background
           Positioned(
             left: 190,
             top: 0,
             child: Container(
               width: 172,
-              height: 160,
+              height: 156,
               decoration: const BoxDecoration(
                 color: Color(0xFFD4EE96),
                 borderRadius: BorderRadius.only(
@@ -369,240 +270,155 @@ class _ActiveOrdersCard extends StatelessWidget {
               ),
             ),
           ),
-
-          Positioned(
+          const Positioned(
             left: 20,
             top: 18,
-            child: Text(
-              AppStrings.trOf(context, 'ACTIVE ORDERS'),
-              style: AppTextStyles.homeCardLabel,
-            ),
+            child: Text('ACTIVE ORDERS', style: AppTextStyles.homeCardLabel),
           ),
-
-          Positioned(
+          const Positioned(
             left: 20,
             top: 42,
-            child: Text(
-              AppStrings.trOf(context, 'You have'),
-              style: AppTextStyles.homeHeroSmall,
-            ),
+            child: Text('You have', style: AppTextStyles.homeHeroSmall),
           ),
-
           Positioned(
             left: 20,
             top: 75,
             child: Text(
-              '${ProductStore.instance.count} ${AppStrings.trOf(context, 'New orders')}',
+              '${ProductStore.instance.count} new orders',
               style: AppTextStyles.homeHeroBig,
             ),
           ),
-
-          // Corrected grammar
-          
-
-          // Larger View Orders button with arrow inside
+          Positioned(
+            left: 23,
+            top: 113,
+            right: 23,
+            child: Text(
+              'Review and accept to keep\nyour business growing',
+              style: AppTextStyles.homeHeroDesc.copyWith(height: 1.25),
+            ),
+          ),
           Positioned(
             left: 20,
-            top: 161,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(22),
-                onTap: () => goToOrders(context),
-                child: Container(
-                  width: 126,
-                  height: 36,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: AppColors.darkCard,
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(22),
-                    ),
-                  ),
-                  // FittedBox keeps the pill layout intact with real font
-                  // metrics and scales the label+arrow down instead of
-                  // overflowing when the test font renders text wider.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          AppStrings.trOf(context, 'View orders'),
+            top: 162,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => goToOrders(context),
+              child: Container(
+                width: 102,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.all(Radius.circular(19)),
+                ),
+                child: Stack(
+                  children: [
+                    const Positioned(
+                      left: 9,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Text(
+                          'View orders',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 7),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
-                          color: AppColors.limeLight,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-// Decorative half-circle behind waiting status
-Positioned(
-  right: 5,
-  bottom: -140,
-  child: Container(
-    width: 200,
-    height: 200,
-    decoration: const BoxDecoration(
-      color: Color(0xFFB8D77C),
-      shape: BoxShape.circle,
-    ),
-  ),
-),
-          // Enlarged waiting status pill
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: Container(
-              width: 166,
-              height: 27,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 9,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xC2DAEFB8),
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(16),
-                ),
-                border: Border.all(
-                  color: const Color(0x63CDEB6B),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _WaitingDot(),
-                  SizedBox(width: 7),
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            AppStrings.trOf(context, 'Waiting for your response'),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF030302),
-                            ),
-                          ),
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: AppColors.limeLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          size: 12,
+                          color: AppColors.darkCard,
                         ),
                       ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-
-          // Order illustrations
-          // Overlapping tilted order cards
-// Properly overlapping tilted order cards
-Positioned(
-  right: 30,
-  top: 15,
-  child: SizedBox(
-    width: 115,
-    height: 95,
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // 1. Back card (Dark Green Card - positioned at top-right)
-        Positioned(
-          right: 0,
-          top: 0,
-          child: Transform.rotate(
-            angle: 0.25, // Adjust rotation angle to match reference
+          Positioned(
+            right: 10,
+            bottom: 17,
             child: Container(
-              width: 52,
-              height: 52,
+              width: 126,
+              height: 21,
+              padding: const EdgeInsets.only(left: 8, right: 6),
               decoration: BoxDecoration(
-                color: AppColors.darkCard,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 7,
-                    offset: const Offset(2, 3),
-                  ),
-                ],
+                color: const Color(0xC2DAEFB8),
+                borderRadius: const BorderRadius.all(Radius.circular(14)),
+                border: Border.all(color: const Color(0x63CDEB6B)),
               ),
-              child: const Icon(
-                Icons.view_in_ar,
-                size: 28,
-                color: AppColors.limeLight,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-            left: -195,
-            top: 99,
-            // right: 20,
-            child: Text(
-              AppStrings.trOf(context, 'Review and accept orders to\ngrow your business.'),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.darkGreenInk,
-                height: 1.4,
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _WaitingDot(),
+                    SizedBox(width: 5),
+                    Text(
+                      'Waiting for your response',
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF030302),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        // 2. Front card (White Card - positioned at bottom-left overlapping the green card)
-        Positioned(
-          right: 25,
-          top: 15,
-          child: Transform.rotate(
-            angle: 0.25, // Matching rotation angle
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 6,
-                    offset: const Offset(2, 3),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.view_in_ar,
-                size: 28,
-                color: AppColors.darkCard,
+          Positioned(
+            left: 281,
+            top: 30,
+            child: Transform.rotate(
+              angle: 20 * math.pi / 180,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image.asset(
+                  'assets/order/ic_hero_box_dark.png',
+                  key: const Key('home-hero-tile-dark'),
+                  width: 48,
+                  height: 48,
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  ),
-),
-      
+          Positioned(
+            left: 261,
+            top: 52,
+            child: Transform.rotate(
+              angle: -12 * math.pi / 180,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: Image.asset(
+                  'assets/order/ic_hero_box_white.png',
+                  key: const Key('home-hero-tile-white'),
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
-// ------------------------------------------------------------
-// WAITING DOT
-// ------------------------------------------------------------
 
 class _WaitingDot extends StatelessWidget {
   const _WaitingDot();
@@ -610,8 +426,8 @@ class _WaitingDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 7,
-      height: 7,
+      width: 6,
+      height: 6,
       decoration: const BoxDecoration(
         color: AppColors.attentionRed,
         shape: BoxShape.circle,
@@ -620,10 +436,6 @@ class _WaitingDot extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// SECTION TITLE
-// ------------------------------------------------------------
-
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
 
@@ -631,37 +443,21 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTextStyles.homeSection,
-    );
+    return Text(text, style: AppTextStyles.homeSection);
   }
 }
 
-// ------------------------------------------------------------
-// VIEW ALL
-// ------------------------------------------------------------
-
 class _ViewAll extends StatelessWidget {
-  _ViewAll();
+  const _ViewAll();
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      AppStrings.trOf(context, 'View all'),
-      style: AppTextStyles.homeViewAll,
-    );
+    return const Text('View all', style: AppTextStyles.homeViewAll);
   }
 }
 
-// ------------------------------------------------------------
-// HOME PRODUCTS
-// ------------------------------------------------------------
-
 class _HomeProducts extends StatelessWidget {
-  const _HomeProducts({
-    required this.products,
-  });
+  const _HomeProducts({required this.products});
 
   final List<Product> products;
 
@@ -670,26 +466,16 @@ class _HomeProducts extends StatelessWidget {
     if (products.isEmpty) {
       return const _EmptyHomeProducts();
     }
-
     return ListView.separated(
       key: const ValueKey('home-products'),
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       itemCount: products.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(width: 18),
-      itemBuilder: (context, index) {
-        return _ProductCard(
-          product: products[index],
-        );
-      },
+      separatorBuilder: (context, index) => const SizedBox(width: 18),
+      itemBuilder: (context, index) => _ProductCard(product: products[index]),
     );
   }
 }
-
-// ------------------------------------------------------------
-// EMPTY PRODUCTS
-// ------------------------------------------------------------
 
 class _EmptyHomeProducts extends StatelessWidget {
   const _EmptyHomeProducts();
@@ -700,17 +486,11 @@ class _EmptyHomeProducts extends StatelessWidget {
       key: const ValueKey('home-empty-products'),
       width: 362,
       height: 144,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.all(
-          Radius.circular(22),
-        ),
-        border: Border.all(
-          color: AppColors.cardBorder,
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
@@ -727,10 +507,8 @@ class _EmptyHomeProducts extends StatelessWidget {
               color: AppColors.iconDark,
             ),
           ),
-
           const SizedBox(width: 14),
-
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -738,62 +516,53 @@ class _EmptyHomeProducts extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                    child: Text(
-                      AppStrings.trOf(context, 'No products yet'),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.darkGreenInk,
-                      ),
+                  child: Text(
+                    'No products yet',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.darkGreenInk,
                     ),
+                  ),
                 ),
-
                 SizedBox(height: 4),
-
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                    child: Text(
-                      AppStrings.trOf(context, 'Start selling today'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.tabGray,
-                      ),
-                    ),
+                  child: Text(
+                    'Start selling today',
+                    style: TextStyle(fontSize: 11, color: AppColors.tabGray),
+                  ),
                 ),
               ],
             ),
           ),
-
           const SizedBox(width: 8),
-
           GestureDetector(
             key: const ValueKey('home-empty-add'),
             onTap: () => goToAddProduct(context),
-            child: Container(
-              width: 92,
-              height: 36,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 6,
-              ),
-              decoration: const BoxDecoration(
-                color: AppColors.darkCard,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(18),
+            child: HoverPress.button(
+              child: Container(
+                width: 92,
+                height: 34,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.all(Radius.circular(17)),
                 ),
-              ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      AppStrings.trOf(context, 'Add product'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.limeLight,
-                      ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Add product',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.limeLight,
                     ),
                   ),
+                ),
+              ),
             ),
           ),
         ],
@@ -802,105 +571,89 @@ class _EmptyHomeProducts extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// PRODUCT CARD
-// ------------------------------------------------------------
-
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({
-    required this.product,
-  });
+  const _ProductCard({required this.product});
 
   final Product product;
 
   @override
   Widget build(BuildContext context) {
-    final String? networkUrl = product.coverImageUrl;
-    final ProductPhoto? photo = product.coverPhoto;
-
     return GestureDetector(
       key: ValueKey('home-product-${product.id}'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => goToProductDetails(
-        context,
-        product: product,
-      ),
+      onTap: () => goToProductDetails(context, product: product),
       child: Container(
         width: 144,
-        height: 188,
+        height: 204,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: _categoryColor(product.category),
-          borderRadius: const BorderRadius.all(
-            Radius.circular(26),
-          ),
+          borderRadius: const BorderRadius.all(Radius.circular(26)),
         ),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (networkUrl != null && networkUrl.isNotEmpty)
-              Image.network(
-                networkUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox.shrink(),
-              )
-            else if (photo != null)
-              Image.memory(
-                photo.bytes,
-                fit: BoxFit.cover,
-              ),
-
-            // Product status
+            ProductImageView(
+              product: product,
+              placeholder: const SizedBox.expand(),
+            ),
             Positioned(
-              right: 8,
-              top: 7,
+              right: 10,
+              top: 8,
               child: Container(
-                width: 58,
-                height: 17,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(30),
-                  ),
-                  border: Border.all(
-                    color: const Color(0x12000000),
-                  ),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    SellerProfileStore.instance.businessLocation.isNotEmpty
-                        ? SellerProfileStore.instance.businessLocation
-                        : product.status.label,
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                height: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: const BoxDecoration(
+                  color: Color(0xD6CDEB6B),
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
                     ),
-                  ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 11,
+                      color: Color(0xFF144326),
+                    ),
+                    SizedBox(width: 3),
+                    Text(
+                      'Salem, TN',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        height: 1.0,
+                        color: Color(0xFF144326),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
-            // Product name and quantity
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: Container(
-                height: 52,
+                height: 68,
                 padding: const EdgeInsets.only(
                   left: 13,
                   right: 6,
-                  top: 2,
-                  bottom: 2,
+                  top: 4,
+                  bottom: 10,
                 ),
                 decoration: const BoxDecoration(
-                  color: Color(0x66000000),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x1A000000), Color(0xB3000000)],
+                  ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(26),
                     bottomRight: Radius.circular(26),
@@ -922,9 +675,7 @@ class _ProductCard extends StatelessWidget {
                           height: 1.0,
                         ),
                       ),
-
                       const SizedBox(height: 2),
-
                       Text(
                         product.quantityLabel,
                         style: const TextStyle(
@@ -946,276 +697,200 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// PRODUCT CATEGORY COLORS
-// ------------------------------------------------------------
-
 Color _categoryColor(String category) {
   switch (category) {
     case 'Fruits':
       return const Color(0xFFE2A84B);
-
     case 'Grains & pulses':
       return const Color(0xFFB89B5E);
-
     default:
       return const Color(0xFF7BAE5A);
   }
 }
 
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// MONTH CHIP
-// ------------------------------------------------------------
 
-class _MonthChip extends StatelessWidget {
-  const _MonthChip();
 
-  Future<void> _showPeriodPicker(BuildContext context) async {
-    final SalesPeriod? picked = await showModalBottomSheet<SalesPeriod>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-          ),
-          padding: const EdgeInsets.fromLTRB(21, 20, 21, 34),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppStrings.trOf(context, 'Select time period'),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 14),
-              for (final SalesPeriod p in SalesPeriod.values)
-                _PeriodOption(
-                  period: p,
-                  selected: SalesStore.instance.period == p,
-                  onTap: () => Navigator.of(ctx).pop(p),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-    if (picked != null) {
-      SalesStore.instance.period = picked;
-    }
-  }
+enum _SalesPeriod { weekly, monthly, yearly }
 
-  @override
-  Widget build(BuildContext context) {
-    final String label = SalesStore.instance.period.chipLabel;
-    final bool narrow = label.length > 10;
-
-    return GestureDetector(
-      key: const ValueKey('month-chip'),
-      onTap: () => _showPeriodPicker(context),
-      child: Container(
-        width: narrow ? 80 : 69,
-        height: 24,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: AppColors.chipBg,
-          borderRadius: BorderRadius.all(
-            Radius.circular(6),
-          ),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF104526),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PeriodOption extends StatelessWidget {
-  const _PeriodOption({
-    required this.period,
-    required this.selected,
-    required this.onTap,
+class _SalesSnapshot {
+  const _SalesSnapshot({
+    required this.label,
+    required this.total,
+    required this.delta,
+    required this.deltaLabel,
+    required this.orders,
+    required this.complete,
+    required this.progress,
+    required this.percent,
   });
 
-  final SalesPeriod period;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                period.chipLabel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            if (selected)
-              const Icon(
-                Icons.check_circle,
-                size: 20,
-                color: AppColors.primary,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  final String label;
+  final String total;
+  final String delta;
+  final String deltaLabel;
+  final String orders;
+  final String complete;
+  final String progress;
+  final double percent;
 }
 
-// ------------------------------------------------------------
-// SALES CARD
-// ------------------------------------------------------------
+const Map<_SalesPeriod, _SalesSnapshot> _salesData =
+    <_SalesPeriod, _SalesSnapshot>{
+      _SalesPeriod.weekly: _SalesSnapshot(
+        label: 'Total sales this week',
+        total: '\u20B96,200',
+        delta: '+8%',
+        deltaLabel: 'vs last week',
+        orders: '5',
+        complete: '3',
+        progress: '2',
+        percent: 0.58,
+      ),
+      _SalesPeriod.monthly: _SalesSnapshot(
+        label: 'Total sales this month',
+        total: '\u20B923,850',
+        delta: '+12%',
+        deltaLabel: 'vs last week',
+        orders: '12',
+        complete: '8',
+        progress: '4',
+        percent: 0.72,
+      ),
+      _SalesPeriod.yearly: _SalesSnapshot(
+        label: 'Total sales this year',
+        total: '\u20B91,43,820',
+        delta: '+12%',
+        deltaLabel: 'vs last week',
+        orders: '148',
+        complete: '138',
+        progress: '8',
+        percent: 0.64,
+      ),
+    };
 
-class _SalesCard extends StatelessWidget {
+class _SalesCard extends StatefulWidget {
   const _SalesCard();
 
-  String _formatCurrency(double amount) {
-    final int rounded = amount.round();
-    final String s = rounded.toString();
-    final StringBuffer buf = StringBuffer();
-    int count = 0;
-    for (int i = s.length - 1; i >= 0; i--) {
-      buf.write(s[i]);
-      count++;
-      if (count % 3 == 0 && i > 0) {
-        buf.write(',');
-      }
-    }
-    return '\u20B9${buf.toString().split('').reversed.join()}';
-  }
+  @override
+  State<_SalesCard> createState() => _SalesCardState();
+}
+
+class _SalesCardState extends State<_SalesCard> {
+  _SalesPeriod _period = _SalesPeriod.monthly;
 
   @override
   Widget build(BuildContext context) {
-    final SalesStore sales = SalesStore.instance;
+    final _SalesSnapshot data = _salesData[_period]!;
 
     return Container(
       width: 362,
-      height: 146,
+      height: 185,
       decoration: const BoxDecoration(
         color: AppColors.darkCard,
-        borderRadius: BorderRadius.all(
-          Radius.circular(22),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(
-        21,
-        14,
-        21,
-        10,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          Text(
-            sales.totalSalesLabel,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Color(0xA1FFFFFF),
-              height: 1.0,
+          Positioned(
+            right: -40,
+            bottom: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x2ECDEB6B), Color(0x00CDEB6B)],
+                ),
+              ),
             ),
           ),
-
-          const SizedBox(height: 4),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                _formatCurrency(sales.totalSales),
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.limeLight,
-                  height: 1.0,
-                ),
-              ),
-
-              const Spacer(),
-
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF10462A),
-                  border: Border.all(
-                    color: AppColors.limeLight,
-                    width: 5,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '${sales.progress}%',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          Positioned(
+            left: 14,
+            right: 14,
+            top: 12,
+            child: _SalesSegmentTrack(
+              period: _period,
+              onChanged: (value) => setState(() => _period = value),
+            ),
           ),
-
-          Container(
-            height: 1,
-            margin: const EdgeInsets.only(top: 6),
-            color: const Color(0x26CDEB6B),
+          Positioned(
+            left: 14,
+            top: 52,
+            child: Text(
+              data.label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Color(0xA1FFFFFF),
+                height: 1.0,
+              ),
+            ),
           ),
-
-          const SizedBox(height: 6),
-
-          Row(
-            children: [
-              _SalesStat(
-                number: '${sales.orders}',
-                label: AppStrings.trOf(context, 'Orders'),
-                dot: Colors.white,
+          Positioned(
+            left: 13,
+            top: 66,
+            child: Text(
+              data.total,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: AppColors.limeLight,
+                height: 1.0,
               ),
-
-              const SizedBox(width: 28),
-
-              _SalesStat(
-                number: '${sales.complete}',
-                label: AppStrings.trOf(context, 'Complete'),
-                dot: AppColors.limeLight,
-              ),
-
-              const SizedBox(width: 28),
-
-              _SalesStat(
-                number: '${sales.progressCount}',
-                label: AppStrings.trOf(context, 'Progress'),
-                dot: const Color(0xFFE9B949),
-              ),
-            ],
+            ),
+          ),
+          Positioned(
+            left: 14,
+            top: 104,
+            child: _SalesTrendPill(delta: data.delta, label: data.deltaLabel),
+          ),
+          Positioned(
+            right: 14,
+            top: 52,
+            child: _ProgressRing(percent: data.percent, size: 56),
+          ),
+          Positioned(
+            left: 14,
+            right: 14,
+            top: 136,
+            child: Container(height: 1, color: const Color(0x26CDEB6B)),
+          ),
+          Positioned(
+            left: 14,
+            top: 146,
+            child: _SalesStat(
+              number: data.orders,
+              label: 'Orders',
+              dot: Colors.white,
+            ),
+          ),
+          Positioned(
+            left: 121,
+            top: 146,
+            child: _SalesStat(
+              number: data.complete,
+              label: 'Complete',
+              dot: AppColors.limeLight,
+              leadingBar: true,
+            ),
+          ),
+          Positioned(
+            left: 228,
+            top: 146,
+            child: _SalesStat(
+              number: data.progress,
+              label: 'Progress',
+              dot: const Color(0xFFE9B949),
+              leadingBar: true,
+            ),
           ),
         ],
       ),
@@ -1223,24 +898,231 @@ class _SalesCard extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// SALES STATISTICS
-// ------------------------------------------------------------
+class _SalesSegmentTrack extends StatelessWidget {
+  const _SalesSegmentTrack({required this.period, required this.onChanged});
+
+  final _SalesPeriod period;
+  final ValueChanged<_SalesPeriod> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 334,
+      height: 30,
+      decoration: const BoxDecoration(
+        color: Color(0xFF184E2C),
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+      ),
+      child: Row(
+        children: [
+          _SalesSegment(
+            label: 'Weekly',
+            selected: period == _SalesPeriod.weekly,
+            onTap: () => onChanged(_SalesPeriod.weekly),
+          ),
+          _SalesSegment(
+            label: 'Monthly',
+            selected: period == _SalesPeriod.monthly,
+            onTap: () => onChanged(_SalesPeriod.monthly),
+          ),
+          _SalesSegment(
+            label: 'Yearly',
+            selected: period == _SalesPeriod.yearly,
+            onTap: () => onChanged(_SalesPeriod.yearly),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SalesSegment extends StatelessWidget {
+  const _SalesSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: HoverPress.chip(
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected ? AppColors.limeLight : Colors.transparent,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                boxShadow: selected
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x40000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.0,
+                  color: selected
+                      ? const Color(0xFF144326)
+                      : const Color(0xC2FFFFFF),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SalesTrendPill extends StatelessWidget {
+  const _SalesTrendPill({required this.delta, required this.label});
+
+  final String delta;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: const BoxDecoration(
+        color: Color(0x33CDEB6B),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.trending_up,
+            size: 11,
+            color: AppColors.limeLight,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$delta $label',
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+              color: AppColors.limeLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRing extends StatelessWidget {
+  const _ProgressRing({required this.percent, this.size = 56});
+
+  final double percent;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ring = AppColors.limeLight;
+    return SizedBox(
+      key: const ValueKey('home-sales-ring'),
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _ProgressRingPainter(percent: percent, color: ring),
+        child: Center(
+          child: Container(
+            width: size - 16,
+            height: size - 16,
+            decoration: const BoxDecoration(
+              color: Color(0xFF184E2C),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '${(percent * 100).round()}%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                  color: AppColors.limeLight,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  const _ProgressRingPainter({required this.percent, required this.color});
+
+  final double percent;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = size.width / 2 - 4;
+
+    final Paint track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..color = const Color(0x3DCDEB6B);
+    canvas.drawCircle(center, radius, track);
+
+    final Paint arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    const double start = -1.57079632679; // -90 degrees
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      start,
+      6.28318530718 * percent.clamp(0.0, 1.0),
+      false,
+      arc,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressRingPainter oldDelegate) =>
+      oldDelegate.percent != percent || oldDelegate.color != color;
+}
 
 class _SalesStat extends StatelessWidget {
   const _SalesStat({
     required this.number,
     required this.label,
     required this.dot,
+    this.leadingBar = false,
   });
 
   final String number;
   final String label;
   final Color dot;
+  final bool leadingBar;
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
+    final Widget stat = FittedBox(
       fit: BoxFit.scaleDown,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1255,27 +1137,20 @@ class _SalesStat extends StatelessWidget {
               height: 1.0,
             ),
           ),
-
           const SizedBox(height: 2),
-
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 5,
                 height: 5,
-                decoration: BoxDecoration(
-                  color: dot,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
               ),
-
               const SizedBox(width: 4),
-
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: Color(0xC2FFFFFF),
                   height: 1.0,
                 ),
@@ -1285,124 +1160,20 @@ class _SalesStat extends StatelessWidget {
         ],
       ),
     );
-  }
-}
 
-// ------------------------------------------------------------
-// NEEDS ATTENTION ROW
-// ------------------------------------------------------------
+    if (!leadingBar) return stat;
 
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({
-    required this.title,
-    required this.subtitle,
-    required this.barColor,
-    required this.boxColor,
-  });
-
-  final String title;
-  final String subtitle;
-  final Color barColor;
-  final Color boxColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 364,
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(
-          Radius.circular(17),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 1,
+          height: 30,
+          child: ColoredBox(color: Color(0x33FFFFFF)),
         ),
-        border: Border.all(
-          color: const Color(0x12000000),
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Colored indicator
-          Positioned(
-            left: 1,
-            top: 15,
-            child: Container(
-              width: 4,
-              height: 34,
-              decoration: BoxDecoration(
-                color: barColor,
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(2),
-                ),
-              ),
-            ),
-          ),
-
-          // Icon background
-          Positioned(
-            left: 22,
-            top: 15,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: boxColor,
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(10),
-                ),
-              ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                size: 23,
-                color: Color(0xFF5A4A1A),
-              ),
-            ),
-          ),
-
-          // Attention details
-          Positioned(
-            left: 76,
-            top: 12,
-            width: 260,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0x8A000000),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Forward indicator
-          const Positioned(
-            right: 12,
-            top: 24,
-            child: Icon(
-              Icons.chevron_right,
-              size: 16,
-              color: Color(0xFF8A8A8A),
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(width: 10),
+        stat,
+      ],
     );
   }
 }

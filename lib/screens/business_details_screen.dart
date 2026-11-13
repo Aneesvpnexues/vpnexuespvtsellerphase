@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
 import '../widgets/continue_button.dart';
 import 'bank_detaile.dart';
+import 'location_confirm_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
 
@@ -48,9 +50,7 @@ class _Step03BusinessDetailsScreenState
   final TextEditingController _phone = TextEditingController(
     text: SellerProfileStore.instance.mobile,
   );
-  final TextEditingController _location = TextEditingController(
-    text: 'Salem, Tamil Nadu',
-  );
+  final TextEditingController _location = TextEditingController();
   final TextEditingController _address = TextEditingController();
 
   bool get _allFilled =>
@@ -63,9 +63,33 @@ class _Step03BusinessDetailsScreenState
   @override
   void initState() {
     super.initState();
+    _seedLocationFromStore();
     for (final controller in _controllers) {
       controller.addListener(_onChanged);
     }
+  }
+
+  /// The STEP 01 location-confirm map and this field share one source of
+  /// truth ([SellerProfileStore]); seed from whatever the seller picked.
+  void _seedLocationFromStore() {
+    final SellerProfileStore store = SellerProfileStore.instance;
+    _location.text =
+        store.pickedLocation.isNotEmpty
+            ? store.pickedLocation
+            : (store.businessLocation.isNotEmpty
+                ? store.businessLocation
+                : 'Salem, Tamil Nadu');
+  }
+
+  /// "Change" next to Business Location: open the map screen directly and
+  /// refresh the field with whatever the seller picks there.
+  Future<void> _openLocationMap() async {
+    FocusScope.of(context).unfocus();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const LocationConfirmScreen()),
+    );
+    if (!mounted) return;
+    _seedLocationFromStore();
   }
 
   Iterable<TextEditingController> get _controllers => [
@@ -113,7 +137,7 @@ class _Step03BusinessDetailsScreenState
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save business profile. Please try again.')),
+        SnackBar(content: Text(AppStrings.trOf(context, 'Could not save business profile. Please try again.'))),
       );
       return;
     }
@@ -212,7 +236,7 @@ class _Step03BusinessDetailsScreenState
                     fieldKey: const Key('businessName'),
                     width: 299,
                     controller: _name,
-                    hint: 'Enter your name..',
+                    hint: AppStrings.trOf(context, 'Enter your name..'),
                   ),
                 ),
                 const Positioned(left: 22, top: 457.5, child: _TileBusiness()),
@@ -230,7 +254,7 @@ class _Step03BusinessDetailsScreenState
                     fieldKey: const Key('businessFarm'),
                     width: 299,
                     controller: _business,
-                    hint: 'Enter Business name',
+                    hint: AppStrings.trOf(context, 'Enter Business name'),
                   ),
                 ),
                 const Positioned(left: 22, top: 533.5, child: _TilePhone()),
@@ -267,9 +291,18 @@ class _Step03BusinessDetailsScreenState
                     fieldKey: const Key('businessLocation'),
                     width: 240,
                     controller: _location,
+                    onChanged: (value) {
+                      SellerProfileStore.instance.setPickedLocation(
+                        label: value,
+                      );
+                    },
                   ),
                 ),
-                const Positioned(right: 24.5, top: 636.5, child: _ChangeLink()),
+                Positioned(
+                  right: 24.5,
+                  top: 636.5,
+                  child: _ChangeLink(onTap: _openLocationMap),
+                ),
                 const Positioned(left: 22, top: 688.5, child: _TileAddress()),
                 const Positioned(left: 89, top: 691.81, child: _LabelAddress()),
                 Positioned(
@@ -279,7 +312,7 @@ class _Step03BusinessDetailsScreenState
                     fieldKey: const Key('businessAddress'),
                     width: 299,
                     controller: _address,
-                    hint: 'Enter your full address....',
+                    hint: AppStrings.trOf(context, 'Enter your full address....'),
                   ),
                 ),
               ],
@@ -315,7 +348,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 03', style: AppTextStyles.stepLabelMuted);
+    return Text(AppStrings.trOf(context, 'STEP 03'), style: AppTextStyles.stepLabelMuted);
   }
 }
 
@@ -360,7 +393,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Tell us about', style: AppTextStyles.headingLarge);
+    return Text(AppStrings.trOf(context, 'Tell us about'), style: AppTextStyles.headingLarge);
   }
 }
 
@@ -369,7 +402,7 @@ class _TitleYour extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('your', style: AppTextStyles.headingLarge);
+    return Text(AppStrings.trOf(context, 'your'), style: AppTextStyles.headingLarge);
   }
 }
 
@@ -383,7 +416,7 @@ class _TitleAccent extends StatelessWidget {
       shaderCallback: (bounds) => const LinearGradient(
         colors: [AppColors.stepPageAccent, AppColors.stepPageHeadingEnd],
       ).createShader(bounds),
-      child: const Text('business', style: AppTextStyles.headingLarge),
+      child: Text(AppStrings.trOf(context, 'business'), style: AppTextStyles.headingLarge),
     );
   }
 }
@@ -393,8 +426,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      "Let's create your profile",
+    return Text(
+      AppStrings.trOf(context, "Let's create your profile"),
       style: AppTextStyles.stepSubtitleAlt,
     );
   }
@@ -405,7 +438,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Business Details', style: AppTextStyles.sectionTitle);
+    return Text(AppStrings.trOf(context, 'Business Details'), style: AppTextStyles.sectionTitle);
   }
 }
 
@@ -425,10 +458,10 @@ class _PillNote extends StatelessWidget {
       ),
       // Scales the note down under the Ahem test font (glyphs render one em
       // wide there); with bundled Roboto on device it renders 1:1.
-      child: const FittedBox(
+      child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fields are required',
+          AppStrings.trOf(context, 'All fields are required'),
           style: AppTextStyles.pillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -626,7 +659,7 @@ class _LabelName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Your name', style: AppTextStyles.fieldLabel);
+    return Text(AppStrings.trOf(context, 'Your name'), style: AppTextStyles.fieldLabel);
   }
 }
 
@@ -639,6 +672,7 @@ class _FieldInput extends StatelessWidget {
     required this.controller,
     this.hint,
     this.keyboardType,
+    this.onChanged,
   });
 
   final Key fieldKey;
@@ -646,6 +680,7 @@ class _FieldInput extends StatelessWidget {
   final TextEditingController controller;
   final String? hint;
   final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -655,6 +690,7 @@ class _FieldInput extends StatelessWidget {
         key: fieldKey,
         controller: controller,
         keyboardType: keyboardType,
+        onChanged: onChanged,
         style: AppTextStyles.fieldValue,
         cursorColor: AppColors.inputCaret,
         cursorWidth: 2,
@@ -676,7 +712,7 @@ class _LabelBusiness extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Business / Farm Name', style: AppTextStyles.fieldLabel);
+    return Text(AppStrings.trOf(context, 'Business / Farm Name'), style: AppTextStyles.fieldLabel);
   }
 }
 
@@ -685,7 +721,7 @@ class _LabelPhone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Phone number', style: AppTextStyles.fieldLabelMuted);
+    return Text(AppStrings.trOf(context, 'Phone number'), style: AppTextStyles.fieldLabelMuted);
   }
 }
 
@@ -694,8 +730,8 @@ class _LabelLocation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Business Location',
+    return Text(
+      AppStrings.trOf(context, 'Business Location'),
       style: AppTextStyles.fieldLabelMuted,
     );
   }
@@ -706,7 +742,7 @@ class _LabelAddress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Business Address', style: AppTextStyles.fieldLabel);
+    return Text(AppStrings.trOf(context, 'Business Address'), style: AppTextStyles.fieldLabel);
   }
 }
 
@@ -725,10 +761,10 @@ class _VerifiedBadge extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Text('Verified', style: AppTextStyles.verifiedText),
-          SizedBox(width: 8),
-          Icon(Icons.check_circle, size: 14, color: AppColors.verifiedText),
+        children: [
+          Text(AppStrings.trOf(context, 'Verified'), style: AppTextStyles.verifiedText),
+          const SizedBox(width: 8),
+          const Icon(Icons.check_circle, size: 14, color: AppColors.verifiedText),
         ],
       ),
     );
@@ -736,10 +772,19 @@ class _VerifiedBadge extends StatelessWidget {
 }
 
 class _ChangeLink extends StatelessWidget {
-  const _ChangeLink();
+  const _ChangeLink({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Change', style: AppTextStyles.changeLink);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Text(
+        AppStrings.trOf(context, 'Change'),
+        style: AppTextStyles.changeLink,
+      ),
+    );
   }
 }

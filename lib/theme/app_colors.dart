@@ -177,6 +177,9 @@ abstract final class AppColors {
   static const Color verifiedBg = Color(0xFFD9F8DF);
   static const Color verifiedBorder = Color(0xFFCAE6CF);
   static const Color verifiedText = Color(0xFF42A84D);
+  static const Color verifyUnderReviewBg = Color(0xFFFDF3E0);
+  static const Color verifyUnderReviewBorder = Color(0xFFE8C87A);
+  static const Color verifyUnderReviewText = Color(0xFFB46A1E);
   static const Color changeText = Color(0xFF42A84D);
   static const Color continueGradientStart = Color(0xFF57C663);
   static const Color continueGradientEnd = Color(0xFF088F16);

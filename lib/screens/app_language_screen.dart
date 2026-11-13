@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_languages.dart';
+import '../l10n/app_strings.dart';
+import '../l10n/locale_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -12,7 +15,8 @@ import '../widgets/label_text.dart';
 /// Built against a 412x917 artboard. Every offset below is taken from the
 /// Zeplin latest-version layers, so on a matching viewport the layout renders
 /// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Visual only — no localisation is applied.
+/// Section labels translate with the active language; the Apply button hands
+/// the selection to `LocaleService`, which switches the whole app.
 class AppLanguageScreen extends StatefulWidget {
   const AppLanguageScreen({super.key});
 
@@ -175,6 +179,16 @@ class _AppLanguageScreenState extends State<AppLanguageScreen> {
   _LanguageRow get _selectedRow => _rows.firstWhere((r) => r.code == _selected);
 
   @override
+  void initState() {
+    super.initState();
+    // Reopening the screen highlights the language currently in use.
+    final String code = LocaleService.instance.locale.value.languageCode;
+    if (AppLanguages.codes.contains(code)) {
+      _selected = code;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.homeBg,
@@ -209,31 +223,31 @@ class _AppLanguageScreenState extends State<AppLanguageScreen> {
                   ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 47,
                 top: 140,
                 child: LabelText(
-                  'Suggested',
+                  AppStrings.trOf(context, 'Suggested'),
                   AppTextStyles.orderCardTitle,
                   width: 77,
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 47,
                 top: 324,
                 child: LabelText(
-                  'All languages',
+                  AppStrings.trOf(context, 'All languages'),
                   AppTextStyles.orderCardTitle,
                   width: 97,
                 ),
               ),
               for (final row in _rows) ..._rowWidgets(row),
               const Positioned(left: 22, top: 73, child: _BackCircle()),
-              const Positioned(
+              Positioned(
                 left: 68,
                 top: 73,
                 child: LabelText(
-                  'Language',
+                  AppStrings.trOf(context, 'Language'),
                   AppTextStyles.productsTitle,
                   width: 97,
                 ),
@@ -242,7 +256,12 @@ class _AppLanguageScreenState extends State<AppLanguageScreen> {
                 left: 25,
                 top: 850,
                 child: _ApplyButton(
-                  onTap: () => Navigator.of(context).maybePop(),
+                  onTap: () {
+                    // Switches MaterialApp's locale first, then leaves the
+                    // screen; the settings subtitle follows automatically.
+                    LocaleService.instance.apply(_selected);
+                    Navigator.of(context).maybePop();
+                  },
                 ),
               ),
             ],
@@ -485,9 +504,9 @@ class _ApplyButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Text(
-            'Apply language',
-            style: TextStyle(
+          child: Text(
+            AppStrings.trOf(context, 'Apply language'),
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.limeAccent,

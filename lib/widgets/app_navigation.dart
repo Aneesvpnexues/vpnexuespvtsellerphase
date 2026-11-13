@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
+import '../data/sales_store.dart';
 import '../screens/add_products_screen.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
 import '../screens/my_orders_screen.dart';
 import '../screens/my_products_screen.dart';
-import '../screens/order_delivery_screen.dart';
+import '../screens/order_confirmation_screen.dart';
 import '../screens/order_pickup_code_screen.dart';
-import '../screens/order_pickup_success_screen.dart';
 import '../screens/order_privew.dart';
-import '../screens/order_ready_screen.dart';
 import '../screens/product_details_screen.dart';
 import '../screens/review_ratings_page.dart';
 import '../screens/verify_detaile.dart';
@@ -34,12 +33,10 @@ abstract final class AppRoutes {
   static const String bankDetails = '/bank-details';
   static const String settings = '/settings';
   static const String addProduct = '/add-product';
-  static const String orderReady = '/order-ready';
-  static const String orderDelivery = '/order-delivery';
   static const String orderPrivew = '/order-privew';
   static const String productDetails = '/product-details';
   static const String orderPickupCode = '/order-pickup-code';
-  static const String orderPickupSuccess = '/order-pickup-success';
+  static const String orderConfirmation = '/order-confirmation';
   static const String reviewRatings = '/review-ratings';
   static const String wallet = '/wallet';
   static const String businessDetails = '/business-details';
@@ -105,7 +102,7 @@ void goToOrders(BuildContext context) {
 }
 
 /// Returns to the My Orders tab after the order flow finishes, dropping the
-/// completed detail/ready/delivery/pickup states from the stack.
+/// completed detail/pickup/confirmation states from the stack.
 void goToOrdersRoot(BuildContext context) {
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute<void>(
@@ -141,26 +138,6 @@ void goToAddProduct(BuildContext context) {
   );
 }
 
-/// Opens the ready-to-pickup state (every item packed) from the accepted order.
-void goToOrderReady(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: AppRoutes.orderReady),
-      builder: (_) => const OrderReadyScreen(),
-    ),
-  );
-}
-
-/// Opens the out-for-delivery state from the ready order's slide CTA.
-void goToOrderDelivery(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: AppRoutes.orderDelivery),
-      builder: (_) => const OrderDeliveryScreen(),
-    ),
-  );
-}
-
 /// Opens the product-live preview (Zeplin 172).
 void goToOrderPrivew(BuildContext context) {
   Navigator.of(context).push(
@@ -191,12 +168,26 @@ void goToOrderPickupCode(BuildContext context) {
   );
 }
 
-/// Opens the pickup confirmed state (Zeplin 165).
-void goToOrderPickupSuccess(BuildContext context) {
+/// Opens the completed confirmation state (Zeplin 259) after the correct
+/// pickup code has been entered, recording the sale into [SalesStore] so
+/// the home Sales Overview reflects the purchase.
+void goToOrderConfirmation(
+  BuildContext context, {
+  double amount = 2840,
+  int itemsCount = 3,
+  String orderId = '#NX4582',
+  DateTime? dateTime,
+}) {
+  SalesStore.instance.recordSale(
+    amount: amount,
+    itemsCount: itemsCount,
+    orderId: orderId,
+    dateTime: dateTime ?? DateTime.now(),
+  );
   Navigator.of(context).push(
     MaterialPageRoute<void>(
-      settings: const RouteSettings(name: AppRoutes.orderPickupSuccess),
-      builder: (_) => const OrderPickupSuccessScreen(),
+      settings: const RouteSettings(name: AppRoutes.orderConfirmation),
+      builder: (_) => const OrderConfirmationScreen(),
     ),
   );
 }

@@ -60,6 +60,7 @@ class SellerProfileStore extends ChangeNotifier {
   String _mobile = defaultMobile;
   String _email = '';
   String _userId = '';
+  String? _avatarUrl;
   SellerType _sellerType = SellerType.farmer;
 
   /// Business & Farm details
@@ -67,6 +68,14 @@ class SellerProfileStore extends ChangeNotifier {
   String _farmSize = '';
   String _businessLocation = '';
   String _businessAddress = '';
+
+  /// Location picked on the STEP 01 location-confirm map (Zeplin 261).
+  /// Shared with Business Details so the map, the "Business Location"
+  /// field and the backend always show the same place.
+  String _pickedLocation = '';
+  String _pickedAddress = '';
+  double? _pickedLatitude;
+  double? _pickedLongitude;
 
   /// Delivery preferences for "How buyers get orders"
   bool _buyerPickup = true;
@@ -90,6 +99,8 @@ class SellerProfileStore extends ChangeNotifier {
 
   String get email => _email;
 
+  String? get avatarUrl => _avatarUrl;
+
   String get businessName => _businessName;
 
   String get farmSize => _farmSize;
@@ -97,6 +108,39 @@ class SellerProfileStore extends ChangeNotifier {
   String get businessLocation => _businessLocation;
 
   String get businessAddress => _businessAddress;
+
+  /// Label picked on the location-confirm map (e.g. "Salem, Tamil Nadu").
+  String get pickedLocation => _pickedLocation;
+
+  /// Second address line picked on the map (e.g. "Fairlands, Salem · 636016").
+  String get pickedAddress => _pickedAddress;
+
+  /// Coordinates picked on the location-confirm map, if known.
+  double? get pickedLatitude => _pickedLatitude;
+  double? get pickedLongitude => _pickedLongitude;
+
+  /// Saves the map-picked location. Passing only [label] (a typed address)
+  /// clears the coordinates so the map re-geocodes the new text on open;
+  /// passing [latitude]/[longitude] together with the label keeps them in
+  /// lock-step.
+  void setPickedLocation({
+    String? label,
+    String? address,
+    double? latitude,
+    double? longitude,
+  }) {
+    if (label != null) {
+      _pickedLocation = label.trim();
+      if (latitude == null && longitude == null) {
+        _pickedLatitude = null;
+        _pickedLongitude = null;
+      }
+    }
+    if (address != null) _pickedAddress = address.trim();
+    if (latitude != null) _pickedLatitude = latitude;
+    if (longitude != null) _pickedLongitude = longitude;
+    notifyListeners();
+  }
 
   /// Whether buyers can pick up from the seller's location.
   bool get buyerPickup => _buyerPickup;
@@ -225,10 +269,12 @@ class SellerProfileStore extends ChangeNotifier {
     required String mobile,
     required String email,
     required SellerType sellerType,
+    String? avatarUrl,
   }) {
     _name = name.trim();
     _mobile = mobile.trim();
     _email = email.trim();
+    _avatarUrl = avatarUrl;
     _sellerType = sellerType;
     _personalComplete = name.trim().isNotEmpty && mobile.trim().isNotEmpty;
     notifyListeners();
@@ -256,6 +302,7 @@ class SellerProfileStore extends ChangeNotifier {
     _name = defaultName;
     _mobile = defaultMobile;
     _email = '';
+    _avatarUrl = null;
     _userId = '';
     _sellerType = SellerType.farmer;
     _bankAccounts = [];

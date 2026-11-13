@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -55,6 +56,56 @@ class _BankDetailsViewScreenState extends State<BankDetailsViewScreen> {
     }
   }
 
+  Future<void> _deleteBankAccount(int index) async {
+    final accounts = SellerProfileStore.instance.bankAccounts;
+    if (index >= accounts.length) return;
+
+    final acc = accounts[index];
+    final bankName = _getBankName(acc);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(AppStrings.trOf(dialogContext, 'Delete bank account')),
+        content: Text('Are you sure you want to remove "$bankName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppStrings.trOf(dialogContext, 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(true);
+            },
+            child: Text(AppStrings.trOf(dialogContext, 'Delete')),
+          ),
+        ],
+      ),
+    ).then((value) {
+      if (value != true) return;
+
+      SellerProfileStore.instance.setBankAccounts(
+        accounts.where((acc) => _getBankName(acc) != bankName).toList(),
+      );
+      if (mounted) setState(() {});
+      if (!mounted) return;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppStrings.trOf(context, 'Bank account removed successfully'))),
+        );
+      }
+    });
+  }
+
+  String _getBankName(dynamic acc) {
+    if (acc is! Map) return '';
+    final v = acc['bank_name'];
+    if (v == null) return '';
+    return v.toString().trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final accounts = SellerProfileStore.instance.bankAccounts;
@@ -73,7 +124,7 @@ class _BankDetailsViewScreenState extends State<BankDetailsViewScreen> {
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: 'Bank Details'),
+                child: PageHeader(title: AppStrings.trOf(context, 'Bank Details')),
               ),
 
               if (_isLoading || accounts.isEmpty)
@@ -96,15 +147,18 @@ class _BankDetailsViewScreenState extends State<BankDetailsViewScreen> {
                         (index) {
                           final acc = accounts[index];
                           final isActive = index == activeIndex;
-                          return _BankAccountRow(
-                            account: acc,
-                            isActive: isActive,
-                            onTap: () {
-                              SellerProfileStore.instance
-                                  .setActiveBankIndex(index);
-                              setState(() {});
-                            },
-                          );
+return _BankAccountRow(
+                              account: acc,
+                              isActive: isActive,
+                              onTap: () {
+                                SellerProfileStore.instance
+                                    .setActiveBankIndex(index);
+                                setState(() {});
+                              },
+                              onDelete: () {
+                                _deleteBankAccount(index);
+                              },
+                            );
                         },
                       ),
                     ),
@@ -126,13 +180,13 @@ class _EmptyState extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Bank Details',
+        Text(
+          AppStrings.trOf(context, 'Bank Details'),
           style: AppTextStyles.orderCardTitle,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'No bank accounts added yet.',
+        Text(
+          AppStrings.trOf(context, 'No bank accounts added yet.'),
           style: AppTextStyles.profileMenuSub,
         ),
         const SizedBox(height: 24),
@@ -152,9 +206,9 @@ class _EmptyState extends StatelessWidget {
                 color: AppColors.orderDark,
                 borderRadius: BorderRadius.circular(26),
               ),
-              child: const Text(
-                'Add another bank account',
-                style: TextStyle(
+              child: Text(
+                AppStrings.trOf(context, 'Add another bank account'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -173,11 +227,13 @@ class _BankAccountRow extends StatelessWidget {
     required this.account,
     required this.isActive,
     required this.onTap,
+    required this.onDelete,
   });
 
   final Map<String, dynamic> account;
   final bool isActive;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   String _get(String key, [String defaultValue = '']) {
     final v = account[key];
@@ -224,12 +280,12 @@ class _BankAccountRow extends StatelessWidget {
             Positioned(
               left: isActive ? 72 : 60,
               top: 14,
-              right: 16,
+              right: 48,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    bankName.isNotEmpty ? bankName : 'Bank Account',
+                    bankName.isNotEmpty ? bankName : AppStrings.trOf(context, 'Bank Account'),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -247,9 +303,9 @@ class _BankAccountRow extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Text(
-                        'A/C: ',
-                        style: TextStyle(
+                      Text(
+                        AppStrings.trOf(context, 'A/C: '),
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.white70,
@@ -263,10 +319,19 @@ class _BankAccountRow extends StatelessWidget {
                           color: Colors.white70,
                         ),
                       ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        onPressed: onDelete,
+                      ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'IFSC: ',
-                        style: TextStyle(
+                      Text(
+                        AppStrings.trOf(context, 'IFSC: '),
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.white70,
@@ -304,9 +369,9 @@ class _ActiveBadge extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
-        'Active',
-        style: TextStyle(
+      child: Text(
+        AppStrings.trOf(context, 'Active'),
+        style: const TextStyle(
           color: AppColors.darkGreenInk,
           fontSize: 10,
           fontWeight: FontWeight.w700,

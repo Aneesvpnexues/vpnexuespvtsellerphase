@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import 'help_article_screen.dart';
 
 /// Article "How do I add a product?" - Zeplin "Android Compact - 210"
@@ -9,29 +10,37 @@ class AddProductHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Products & stock',
-      title: 'How do I add a product?',
-      intro:
-          'Add your product once and it stays available to buyers until you '
-          'change it.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Products & stock'),
+      title: AppStrings.trOf(context, 'How do I add a product?'),
+      intro: AppStrings.trOf(
+        context,
+        'Add your product once and it stays available to buyers until you '
+            'change it.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'Open My Products',
-          body:
-              'Tap Products in the bottom bar, then tap the + button to start '
-              'a new listing.',
+          title: AppStrings.trOf(context, 'Open My Products'),
+          body: AppStrings.trOf(
+            context,
+            'Tap Products in the bottom bar, then tap the + button to start '
+                'a new listing.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Add the details',
-          body:
-              'Enter the name, category, price, unit and available stock. Add '
-              'a clear photo.',
+          title: AppStrings.trOf(context, 'Add the details'),
+          body: AppStrings.trOf(
+            context,
+            'Enter the name, category, price, unit and available stock. Add '
+                'a clear photo.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Publish the product',
-          body:
-              'Tap Save. Your product goes live and buyers can start ordering.',
+          title: AppStrings.trOf(context, 'Publish the product'),
+          body: AppStrings.trOf(
+            context,
+            'Tap Save. Your product goes live and buyers can start ordering.',
+          ),
         ),
       ],
     );
@@ -45,27 +54,36 @@ class UpdateStockHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Products & stock',
-      title: 'How do I update stock?',
-      intro:
-          'Keep stock counts accurate so buyers do not order items you cannot '
-          'deliver.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Products & stock'),
+      title: AppStrings.trOf(context, 'How do I update stock?'),
+      intro: AppStrings.trOf(
+        context,
+        'Keep stock counts accurate so buyers do not order items you cannot '
+            'deliver.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'Open the product',
-          body: 'Go to My Products and select the item you want to update.',
+          title: AppStrings.trOf(context, 'Open the product'),
+          body: AppStrings.trOf(
+            context,
+            'Go to My Products and select the item you want to update.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Edit the stock',
-          body:
-              'Tap Edit, update the available quantity and save your changes.',
+          title: AppStrings.trOf(context, 'Edit the stock'),
+          body: AppStrings.trOf(
+            context,
+            'Tap Edit, update the available quantity and save your changes.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Out of stock',
-          body:
-              'When the count reaches zero, the product is marked Out of stock '
-              'and hidden from new orders.',
+          title: AppStrings.trOf(context, 'Out of stock'),
+          body: AppStrings.trOf(
+            context,
+            'When the count reaches zero, the product is marked Out of stock '
+                'and hidden from new orders.',
+          ),
         ),
       ],
     );
@@ -79,28 +97,37 @@ class ProductVisibilityHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Products & stock',
-      title: 'Why is my product not visible?',
-      intro:
-          'A product may be hidden if it is incomplete, out of stock or '
-          'waiting for review.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Products & stock'),
+      title: AppStrings.trOf(context, 'Why is my product not visible?'),
+      intro: AppStrings.trOf(
+        context,
+        'A product may be hidden if it is incomplete, out of stock or '
+            'waiting for review.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'Check the status',
-          body: 'Open My Products and look at the badge on the product card.',
+          title: AppStrings.trOf(context, 'Check the status'),
+          body: AppStrings.trOf(
+            context,
+            'Open My Products and look at the badge on the product card.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Complete the listing',
-          body:
-              'Missing photos, price or category can keep a product hidden. '
-              'Fill every required field.',
+          title: AppStrings.trOf(context, 'Complete the listing'),
+          body: AppStrings.trOf(
+            context,
+            'Missing photos, price or category can keep a product hidden. '
+                'Fill every required field.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Still hidden?',
-          body:
-              'If everything looks correct, contact support so we can check '
-              'the review status.',
+          title: AppStrings.trOf(context, 'Still hidden?'),
+          body: AppStrings.trOf(
+            context,
+            'If everything looks correct, contact support so we can check '
+                'the review status.',
+          ),
         ),
       ],
     );

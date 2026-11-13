@@ -322,8 +322,8 @@
         "name":  "Android Compact - 135",
         "id":  "6ad1ae16aa9fda71b12bf121",
         "width":  412,
-        "height":  1501,
-        "versions":  1,
+        "height":  1567,
+        "versions":  2,
         "notes":  0,
         "annotations":  0,
         "file":  "design/screens/Android_Compact_-_135.png",
@@ -432,8 +432,8 @@
         "name":  "Android Compact - 141",
         "id":  "6ad1ae10ae8ab8b653609477",
         "width":  412,
-        "height":  917,
-        "versions":  1,
+        "height":  1098,
+        "versions":  2,
         "notes":  0,
         "annotations":  0,
         "file":  "design/screens/Android_Compact_-_141.png",
@@ -515,5 +515,27 @@
         "annotations": 0,
         "file": "design/screens/Android_Compact_-_221.png",
         "link": "https://app.zeplin.io/project/6a8d49709e27bd8b35213d35/screen/6ae08b9ddd49d8928d7ca4cd"
+    },
+    {
+        "name": "Android Compact - 259",
+        "id": "6af409e8a261dbc388c54374",
+        "width": 412,
+        "height": 917,
+        "versions": 1,
+        "notes": 0,
+        "annotations": 0,
+        "file": "design/screens/Android_Compact_-_259.png",
+        "link": "https://app.zeplin.io/project/6a8d49709e27bd8b35213d35/screen/6af409e8a261dbc388c54374"
+    },
+    {
+        "name": "Android Compact - 261",
+        "id": "6af40ea0e4740b7c546c8d18",
+        "width": 412,
+        "height": 917,
+        "versions": 1,
+        "notes": 0,
+        "annotations": 0,
+        "file": "design/screens/Android_Compact_-_261.png",
+        "link": "https://app.zeplin.io/project/6a8d49709e27bd8b35213d35/screen/6af40ea0e4740b7c546c8d18"
     }
 ]

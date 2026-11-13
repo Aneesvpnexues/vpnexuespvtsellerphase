@@ -1,7 +1,14 @@
 
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
 import '../data/seller_profile_store.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/page_header.dart';
@@ -24,6 +31,14 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   late final TextEditingController _farmSizeController;
   late final TextEditingController _locationController;
   late final TextEditingController _manualCropController;
+
+  final MapController _mapController = MapController();
+  List<Marker> _markers = [];
+  LatLng _center = const LatLng(12.9716, 77.5946);
+  Timer? _geocodeDebounce;
+  bool _syncingFromMap = false;
+  int _geocodeSeq = 0;
+  DateTime? _lastNominatimCall;
 
   bool _isEditingCrops = false;
   bool _buyerPickup = true;
@@ -79,6 +94,11 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
     _businessNameController.addListener(_refresh);
     _locationController.addListener(_refresh);
+    _locationController.addListener(_onLocationEdited);
+
+    // Place a pin at the saved address on first build.
+    _geocodeDebounce =
+        Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
   }
 
   void _refresh() {
@@ -89,12 +109,179 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
   @override
   void dispose() {
+    _geocodeDebounce?.cancel();
     _businessNameController.dispose();
     _farmSizeController.dispose();
     _locationController.dispose();
     _manualCropController.dispose();
-
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Location <-> map two-way sync (Nominatim — free OSM geocoder)
+  // ---------------------------------------------------------------------------
+
+  void _onLocationEdited() {
+    if (_syncingFromMap) return;
+    _geocodeSeq++; // invalidate any in-flight lookup for older text
+    _geocodeDebounce?.cancel();
+    _geocodeDebounce =
+        Timer(const Duration(milliseconds: 800), _geocodeTypedAddress);
+  }
+
+  // Nominatim usage policy: max 1 request/second.
+  Future<void> _waitNominatimSlot() async {
+    final DateTime? last = _lastNominatimCall;
+    if (last != null) {
+      final Duration elapsed = DateTime.now().difference(last);
+      final Duration minGap = const Duration(milliseconds: 1100);
+      if (elapsed < minGap) {
+        await Future<void>.delayed(minGap - elapsed);
+      }
+    }
+    _lastNominatimCall = DateTime.now();
+  }
+
+
+  void _placePin(LatLng point) {
+    setState(() {
+      _center = point;
+      _markers = [
+        Marker(
+          point: point,
+          child: const Icon(Icons.location_on, size: 36, color: Colors.red),
+        ),
+      ];
+    });
+  }
+
+  Future<void> _geocodeTypedAddress() async {
+    final String query = _locationController.text.trim();
+    if (query.length < 3) return;
+    final int seq = ++_geocodeSeq;
+    try {
+      final (double, double)? hit = await _searchWithFallback(query);
+      if (seq != _geocodeSeq || !mounted) return;
+      if (hit == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.trOf(
+                context,
+                "Couldn't find this address on the map",
+              ),
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      final LatLng point = LatLng(hit.$1, hit.$2);
+      _placePin(point);
+      _mapController.move(point, 14);
+    } catch (_) {
+      // Geocoding is best-effort; ignore network/parse failures.
+    }
+  }
+
+  /// Queries Nominatim with progressively shorter forms of [query]:
+  /// full address first, then fewer comma segments, then the longest
+  /// individual segment — so a partly-typed or slightly-off address
+  /// still lands a pin somewhere sensible.
+  Future<(double, double)?> _searchWithFallback(String query) async {
+    final Set<String> tried = <String>{};
+
+    Future<(double, double)?> attempt(String q) async {
+      final String norm = q.trim().toLowerCase();
+      if (norm.length < 3 || tried.contains(norm)) return null;
+      tried.add(norm);
+      return _searchPlace(q.trim());
+    }
+
+    final (double, double)? exact = await attempt(query);
+    if (exact != null) return exact;
+
+    final List<String> parts =
+        query
+            .split(',')
+            .map((String p) => p.trim())
+            .where((String p) => p.length >= 3)
+            .toList();
+
+    // Drop trailing segments: "a, b, c" → "a, b" → "a".
+    for (int keep = parts.length - 1; keep >= 1; keep--) {
+      final (double, double)? hit = await attempt(parts.take(keep).join(', '));
+      if (hit != null) return hit;
+    }
+
+    // Then each segment on its own, longest first (most specific).
+    final List<String> byLength =
+        List<String>.from(parts)..sort((a, b) => b.length.compareTo(a.length));
+    for (final String part in byLength) {
+      final (double, double)? hit = await attempt(part);
+      if (hit != null) return hit;
+    }
+
+    return null;
+  }
+
+  Future<(double, double)?> _searchPlace(String query) async {
+    await _waitNominatimSlot();
+    final http.Response res = await http
+        .get(
+          Uri.https('nominatim.openstreetmap.org', '/search', {
+            'q': query,
+            'format': 'json',
+            'limit': '1',
+          }),
+          headers: const {'User-Agent': 'seller_app/1.0'},
+        )
+        .timeout(const Duration(seconds: 8));
+    if (res.statusCode != 200) return null;
+    final List<dynamic> results = jsonDecode(res.body) as List<dynamic>;
+    if (results.isEmpty) return null;
+    return (
+      (results[0]['lat'] as num).toDouble(),
+      (results[0]['lon'] as num).toDouble(),
+    );
+  }
+
+  Future<void> _reverseGeocodePin(LatLng point) async {
+    _geocodeSeq++; // the pin now wins over any in-flight typed lookup
+    _geocodeDebounce?.cancel();
+    final String textAtStart = _locationController.text;
+    String? name;
+    try {
+      await _waitNominatimSlot();
+      final http.Response res = await http
+          .get(
+            Uri.https('nominatim.openstreetmap.org', '/reverse', {
+              'lat': '${point.latitude}',
+              'lon': '${point.longitude}',
+              'format': 'json',
+            }),
+            headers: const {'User-Agent': 'seller_app/1.0'},
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(res.body) as Map<String, dynamic>;
+        name = json['display_name']?.toString();
+      }
+    } catch (_) {
+      // Fall through to raw coordinates below.
+    }
+    if (!mounted) return;
+    // Don't overwrite the field if the user kept typing meanwhile.
+    if (_locationController.text != textAtStart) return;
+    _syncingFromMap = true;
+    _locationController.text =
+        (name != null && name.isNotEmpty)
+            ? name
+            : '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+    _syncingFromMap = false;
+    _refresh();
   }
 
   // SAVE BUSINESS AND FARM DETAILS
@@ -116,9 +303,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Business & Farm details saved successfully!',
+          AppStrings.trOf(context, 'Business & Farm details saved successfully!'),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -314,8 +501,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Farm / Business Name',
+          Text(
+            AppStrings.trOf(context, 'Farm / Business Name'),
             style: AppTextStyles.businessLabel,
           ),
 
@@ -328,8 +515,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
           const SizedBox(height: 16),
 
-          const Text(
-            'Farm Size',
+          Text(
+            AppStrings.trOf(context, 'Farm Size'),
             style: AppTextStyles.businessLabel,
           ),
 
@@ -339,8 +526,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             asset: 'assets/profile/ic_leaf.png',
             controller: _farmSizeController,
             keyboardType: TextInputType.number,
-            suffix: const Text(
-              'acres',
+            suffix: Text(
+              AppStrings.trOf(context, 'acres'),
               style: AppTextStyles.businessUnit,
             ),
           ),
@@ -353,8 +540,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 12,
             children: [
-              const Text(
-                'What you grow',
+              Text(
+                AppStrings.trOf(context, 'What you grow'),
                 style: AppTextStyles.businessLabel,
               ),
 
@@ -365,7 +552,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                   });
                 },
                 child: Text(
-                  _isEditingCrops ? 'Done' : 'Edit Crops',
+                  _isEditingCrops
+                      ? AppStrings.trOf(context, 'Done')
+                      : AppStrings.trOf(context, 'Edit Crops'),
                   style: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -386,7 +575,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             children: _allCrops.map((crop) {
               final isSelected = _selectedCrops.contains(crop);
               return Chip(
-                label: Text(crop),
+                label: Text(AppStrings.trOf(context, crop)),
                 backgroundColor:
                     isSelected ? AppColors.orderDark : Colors.white,
                 labelStyle: isSelected
@@ -423,9 +612,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
             const SizedBox(height: 10),
 
-            const Text(
-              'Add new crop:',
-              style: TextStyle(
+            Text(
+              AppStrings.trOf(context, 'Add new crop:'),
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Colors.black54,
@@ -451,12 +640,12 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                     child: TextField(
                       controller: _manualCropController,
                       style: AppTextStyles.personalValue,
-                      decoration: const InputDecoration(
-                        hintText: 'Type crop name...',
+                      decoration: InputDecoration(
+                        hintText: AppStrings.trOf(context, 'Type crop name...'),
                         hintStyle: AppTextStyles.fieldPlaceholder,
                         border: InputBorder.none,
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                           vertical: 11,
                         ),
                       ),
@@ -495,9 +684,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                         Radius.circular(10),
                       ),
                     ),
-                    child: const Text(
-                      'Add',
-                      style: TextStyle(
+                    child: Text(
+                      AppStrings.trOf(context, 'Add'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -520,8 +709,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Address & Location',
+          Text(
+            AppStrings.trOf(context, 'Address & Location'),
             style: AppTextStyles.orderCardTitle,
           ),
 
@@ -530,62 +719,60 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           _buildInput(
             asset: 'assets/business/ic_location.png',
             controller: _locationController,
-            hint: 'Enter location (e.g. Kochi)',
+            hint: AppStrings.trOf(context, 'Enter location (e.g. Kochi)'),
           ),
 
           const SizedBox(height: 12),
 
-          ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: SizedBox(
-              width: double.infinity,
-              height: 102,
-              child: Stack(
-                fit: StackFit.expand,
+          SizedBox(
+            width: double.infinity,
+            height: 180,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _center,
+                  initialZoom: 12,
+                  onTap: (tapPosition, point) {
+                    _placePin(point);
+                    _reverseGeocodePin(point);
+                  },
+                ),
                 children: [
-                  Image.asset(
-                    'assets/business/map.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      debugPrint('Map image error: $error');
-
-                      return Container(
-                        color: Colors.green.shade50,
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.map_outlined,
-                          size: 35,
-                          color: Colors.green,
-                        ),
-                      );
-                    },
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.seller_app.seller',
                   ),
-
-                  Center(
-                    child: Container(
-                      constraints: const BoxConstraints(
-                        maxWidth: 280,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _locationController.text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                  MarkerLayer(markers: _markers),
+                  const RichAttributionWidget(
+                    attributions: [
+                      TextSourceAttribution('OpenStreetMap contributors'),
+                    ],
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 280),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _locationController.text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -658,8 +845,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'How buyers get orders',
+          Text(
+            AppStrings.trOf(context, 'How buyers get orders'),
             style: AppTextStyles.orderCardTitle,
           ),
 
@@ -667,8 +854,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
           _buildDeliveryOption(
             asset: 'assets/business/ic_download.png',
-            title: 'Buyer Pickup',
-            subtitle: 'Buyers collect from your location',
+            title: AppStrings.trOf(context, 'Buyer Pickup'),
+            subtitle: AppStrings.trOf(context, 'Buyers collect from your location'),
             value: _buyerPickup,
             onChanged: (value) {
               setState(() {
@@ -685,8 +872,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
           _buildDeliveryOption(
             asset: 'assets/business/ic_truck.png',
-            title: 'Delivery',
-            subtitle: 'You deliver to the buyer',
+            title: AppStrings.trOf(context, 'Delivery'),
+            subtitle: AppStrings.trOf(context, 'You deliver to the buyer'),
             value: _delivery,
             onChanged: (value) {
               setState(() {
@@ -733,8 +920,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
                       Transform.translate(
                         offset: const Offset(-19, 2),
-                        child: const PageHeader(
-                          title: 'Business & Farm',
+                        child: PageHeader(
+                          title: AppStrings.trOf(context, 'Business & Farm'),
                         ),
                       ),
 
@@ -777,8 +964,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                               color: AppColors.orderDark,
                               borderRadius: BorderRadius.circular(26),
                             ),
-                            child: const Text(
-                              'Save changes',
+                            child: Text(
+                              AppStrings.trOf(context, 'Save changes'),
                               style: AppTextStyles.personalSave,
                             ),
                           ),

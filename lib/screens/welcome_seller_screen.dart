@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/country_codes.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../l10n/app_strings.dart';
+import '../widgets/design_canvas.dart';
 import 'otp_screen.dart';
 import 'seller_home_screen.dart';
 
@@ -31,6 +34,7 @@ class WelcomeSellerScreen extends StatefulWidget {
   static const String sendAsset = 'assets/welcome/send.png';
   static const double designWidth = 412;
   static const double designHeight = 917;
+  static const double trimTop = 0;
 
   @override
   State<WelcomeSellerScreen> createState() => _WelcomeSellerScreenState();
@@ -38,6 +42,7 @@ class WelcomeSellerScreen extends StatefulWidget {
 
 class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   bool _signUp = false;
+  bool _sending = false;
   CountryCode _country = CountryCode.india;
 
   final GlobalKey<_PhoneBoxState> _phoneBoxKey = GlobalKey<_PhoneBoxState>();
@@ -62,14 +67,74 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   }
 
   @override
+  void dispose() {
+    AuthFlow.instance.autoVerified = null;
+    super.dispose();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Validates the digits, composes the E.164 number and asks Firebase for
+  /// an SMS. The OTP screen opens only from the codeSent callback, so the
+  /// flow never advances before Firebase accepted the number.
+  Future<void> _sendOtp() async {
+    if (_sending) return;
+    final String digits = _phoneBoxKey.currentState?.phoneDigits ?? '';
+    if (digits.length != _country.maxDigits) {
+      _showError(AppStrings.trOf(context, 'Enter a valid {digits}-digit mobile number.').replaceAll('{digits}', _country.maxDigits.toString()));
+      return;
+    }
+    final String display = '${_country.dial} $digits';
+    AuthFlow.instance.autoVerified = _openStep01;
+    setState(() => _sending = true);
+    await AuthFlow.instance.sendOtp(
+      e164: '${_country.dial}$digits',
+      display: display,
+      onCodeSent: () {
+        // Instant verification can finish before codeSent; _openStep01 has
+        // already navigated in that case.
+        if (!mounted || AuthFlow.instance.verified) return;
+        setState(() => _sending = false);
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: display)),
+        );
+      },
+      onError: (String message) {
+        if (!mounted) return;
+        setState(() => _sending = false);
+        _showError(message);
+      },
+    );
+  }
+
+  /// Android instant verification / SMS auto-retrieval: the phone is
+  /// confirmed without a typed code. Open the OTP screen — its
+  /// [_routeAfterVerification]-equivalent runs on mount because the code is
+  /// already verified.
+  void _openStep01() {
+    AuthFlow.instance.autoVerified = null;
+    if (!mounted) return;
+    setState(() => _sending = false);
+    final String digits = _phoneBoxKey.currentState?.phoneDigits ?? '';
+    final String display = '${_country.dial} $digits';
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: display)),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.welcomeBg,
-      body: SingleChildScrollView(
-        child: SizedBox(
-          width: WelcomeSellerScreen.designWidth,
-          height: WelcomeSellerScreen.designHeight,
-          child: Stack(
+      body: DesignCanvas(
+        designWidth: WelcomeSellerScreen.designWidth,
+        designHeight: WelcomeSellerScreen.designHeight,
+        trimTop: WelcomeSellerScreen.trimTop,
+        child: Stack(
                 children: [
                   const Positioned(left: 0, top: 64, child: _Leaf()),
                   const Positioned(left: 0, top: 225, child: _Hero()),
@@ -105,14 +170,14 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                   Positioned(
                     left: 24,
                     width: 191,
-                    top: 522.6,
-                    child: _SegmentLabel('Login', active: !_signUp),
+                    top: 524,
+                    child: _SegmentLabel(AppStrings.trOf(context, 'Login'), active: !_signUp),
                   ),
                   Positioned(
                     left: 215,
                     width: 171,
-                    top: 522.6,
-                    child: _SegmentLabel('Sign Up', active: _signUp),
+                    top: 524,
+                    child: _SegmentLabel(AppStrings.trOf(context, 'Sign Up'), active: _signUp),
                   ),
                   Positioned(
                     left: 24,
@@ -139,23 +204,23 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     ),
                   ),
                   if (_signUp) ...[
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 574,
-                      child: _SignUpField(hint: 'Name'),
+                      child: _SignUpField(hint: AppStrings.trOf(context, 'Name')),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 644,
                       child: _SignUpField(
-                        hint: 'E-Mail',
+                        hint: AppStrings.trOf(context, 'E-Mail'),
                         keyboardType: TextInputType.emailAddress,
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       left: 24,
                       top: 714,
-                      child: _SignUpField(hint: 'Password', obscure: true),
+                      child: _SignUpField(hint: AppStrings.trOf(context, 'Password'), obscure: true),
                     ),
                     Positioned(
                       left: 24,
@@ -234,16 +299,8 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       left: 24,
                       top: 749,
                       child: _SendOtpButton(
-                        onTap: () {
-                          final String digits =
-                              _phoneBoxKey.currentState?.phoneDigits ?? '';
-                          final String display = '${_country.dial} $digits';
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => OtpScreen(phone: display),
-                            ),
-                          );
-                        },
+                        loading: _sending,
+                        onTap: _sendOtp,
                       ),
                     ),
                   ],
@@ -255,8 +312,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                   ),
                 ],
               ),
-          ),
-        ),
+            ),
     );
   }
 }
@@ -305,12 +361,12 @@ class _Title extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
-      text: const TextSpan(
+      text: TextSpan(
         style: AppTextStyles.welcomeTitle,
         children: [
-          TextSpan(text: 'Welcome '),
+          TextSpan(text: AppStrings.trOf(context, 'Welcome ')),
           TextSpan(
-            text: 'Seller!',
+            text: AppStrings.trOf(context, 'Seller!'),
             style: TextStyle(color: AppColors.sellerGreen),
           ),
         ],
@@ -324,8 +380,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Let\u2019s grow together.\nSell fresh. Reach further.',
+    return Text(
+      AppStrings.trOf(context, 'Let\u2019s grow together.\nSell fresh. Reach further.'),
       textAlign: TextAlign.center,
       style: AppTextStyles.welcomeSubtitle,
     );
@@ -392,7 +448,7 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Welcome back', style: AppTextStyles.welcomeBack);
+    return Text(AppStrings.trOf(context, 'Welcome back'), style: AppTextStyles.welcomeBack);
   }
 }
 
@@ -415,10 +471,7 @@ class _PhoneHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Enter your phone number to proceed',
-      style: AppTextStyles.phoneHint,
-    );
+    return Text(AppStrings.trOf(context, 'Enter your phone number to proceed'), style: AppTextStyles.phoneHint);
   }
 }
 
@@ -427,7 +480,7 @@ class _PhoneLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Phone Number', style: AppTextStyles.phoneLabel);
+    return Text(AppStrings.trOf(context, 'Phone Number'), style: AppTextStyles.phoneLabel);
   }
 }
 
@@ -542,8 +595,8 @@ class _PhoneBoxState extends State<_PhoneBox> {
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
         cursorColor: AppColors.inputCaret,
         cursorWidth: 2,
-        decoration: const InputDecoration(
-          hintText: 'Mobile number',
+        decoration: InputDecoration(
+          hintText: AppStrings.trOf(context, 'Mobile number'),
           hintStyle: AppTextStyles.signUpField,
           counterText: '',
           border: InputBorder.none,
@@ -557,15 +610,19 @@ class _PhoneBoxState extends State<_PhoneBox> {
 }
 
 class _SendOtpButton extends StatelessWidget {
-  const _SendOtpButton({required this.onTap});
+  const _SendOtpButton({required this.onTap, this.loading = false});
 
   final VoidCallback onTap;
+
+  /// While Firebase is sending the SMS the label swaps for a spinner and
+  /// taps are ignored.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       child: Container(
         width: 364,
         height: 52,
@@ -581,15 +638,24 @@ class _SendOtpButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Send OTP', style: AppTextStyles.sendOtp),
-              SizedBox(width: 12),
-              _SendIcon(),
-            ],
-          ),
+        child: Center(
+          child: loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.surface,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(AppStrings.trOf(context, 'Send OTP'), style: AppTextStyles.sendOtp),
+                    SizedBox(width: 12),
+                    _SendIcon(),
+                  ],
+                ),
         ),
       ),
     );
@@ -617,12 +683,12 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
-      text: const TextSpan(
+      text: TextSpan(
         style: AppTextStyles.footer,
         children: [
-          TextSpan(text: 'By continuing, you agree to '),
+          TextSpan(text: AppStrings.trOf(context, 'By continuing, you agree to ')),
           TextSpan(
-            text: 'Terms & Privacy Policy.',
+            text: AppStrings.trOf(context, 'Terms & Privacy Policy.'),
             style: AppTextStyles.footerLink,
           ),
         ],
@@ -692,7 +758,7 @@ class _SignUpFieldState extends State<_SignUpField> {
               ? IconButton(
                   key: const Key('passwordToggle'),
                   onPressed: _toggleVisible,
-                  tooltip: _visible ? 'Hide password' : 'Show password',
+                  tooltip: _visible ? AppStrings.trOf(context, 'Hide password') : AppStrings.trOf(context, 'Show password'),
                   icon: Icon(
                     _visible ? Icons.visibility : Icons.visibility_off,
                     size: 22,
@@ -736,7 +802,7 @@ class _CreateAccountButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text('Create account', style: AppTextStyles.sendOtp),
+        child: Text(AppStrings.trOf(context, 'Create account'), style: AppTextStyles.sendOtp),
       ),
     );
   }
@@ -784,9 +850,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
-            child: Text('Select country', style: AppTextStyles.welcomeBack),
+            child: Text(AppStrings.trOf(context, 'Select country'), style: AppTextStyles.welcomeBack),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -800,7 +866,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               ),
               cursorColor: AppColors.inputCaret,
               decoration: InputDecoration(
-                hintText: 'Search country or code',
+                hintText: AppStrings.trOf(context, 'Search country or code'),
                 hintStyle: AppTextStyles.signUpField,
                 prefixIcon: const Icon(
                   Icons.search,
@@ -838,9 +904,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           const SizedBox(height: 4),
           Expanded(
             child: results.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No country found',
+                      AppStrings.trOf(context, 'No country found'),
                       style: AppTextStyles.phoneHint,
                     ),
                   )

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
+import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
@@ -103,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // Clear any stale data from a previous login session.
       SellerProfileStore.instance.resetCompletionFlags();
       ProductStore.instance.clear();
+      WalletStore.instance.reset();
 
       // Set the user_id for product queries and all user-scoped lookups.
       ProductStore.instance.userId = uid;
@@ -115,6 +118,9 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (_) {
         // Home still opens with whatever products are cached locally.
       }
+
+      // Pull the wallet ledger in the background — Profile reads it later.
+      unawaited(WalletStore.instance.refresh());
 
       // Look up this seller's Supabase rows by the verified phone number.
       // Number-agnostic: exact E.164 -> last 10 digits -> Firebase UID, and

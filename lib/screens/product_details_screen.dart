@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/api_error.dart';
 import '../data/product_store.dart';
 import '../data/seller_product_repository.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
@@ -190,7 +191,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       if (!mounted) return;
       ProductStore.instance.removeProduct(product.id);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Product deleted')));
+          .showSnackBar(SnackBar(content: Text(AppStrings.trOf(context, 'Product deleted'))));
       Navigator.of(context).maybePop();
     } on ApiException catch (error) {
       if (mounted) _showError(error.message);
@@ -791,10 +792,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 isOn: _deliveryEnabled,
                 onTap: _toggleDelivery,
               ),
-              const Positioned(
+              Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: 'Product Details'),
+                child: PageHeader(title: AppStrings.trOf(context, 'Product Details')),
               ),
             ],
           ),

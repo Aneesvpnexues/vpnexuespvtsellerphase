@@ -4,12 +4,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Android 13+ runtime notification permission (FCM + local display). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Location permissions for country detection (GeoIP fallback). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="seller_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- Notifications arrive on this channel; NotificationService
-             creates it with the same id (kNotificationChannelId). -->
+        <!-- Notifications -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="seller_app_default" />
@@ -50,6 +52,29 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher: canLaunchUrl() returns false on Android 11+ unless
+             the scheme is declared here, so the About screen's Call / Visit /
+             HQ / Email buttons would silently do nothing. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="mailto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="geo"/>
         </intent>
     </queries>
 </manifest>

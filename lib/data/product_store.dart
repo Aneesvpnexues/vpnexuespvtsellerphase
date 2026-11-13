@@ -97,7 +97,7 @@ class Product {
     final String amount = price == price.roundToDouble()
         ? price.toStringAsFixed(0)
         : price.toStringAsFixed(2);
-    return '\u20B9$amount';
+    return '₹$amount';
   }
 
   Product copyWith({

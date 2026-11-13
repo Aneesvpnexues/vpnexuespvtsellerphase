@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import 'help_topic_screen.dart';
 import 'order_help_article_screen.dart';
 
@@ -28,12 +29,19 @@ class OrdersDeliveryHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpTopicScreen(
-      header: 'Orders & delivery',
-      heroTitle: 'Delivery help',
-      heroSubtitle: 'Track, change or fix an order.',
+    return HelpTopicScreen(
+      header: AppStrings.trOf(context, 'Orders & delivery'),
+      heroTitle: AppStrings.trOf(context, 'Delivery help'),
+      heroSubtitle: AppStrings.trOf(context, 'Track, change or fix an order.'),
       icon: 'assets/help/tile_orders.png',
-      articles: _articles,
+      articles: <HelpTopicArticle>[
+        for (final HelpTopicArticle article in _articles)
+          HelpTopicArticle(
+            title: AppStrings.trOf(context, article.title),
+            subtitle: AppStrings.trOf(context, article.subtitle),
+            page: article.page,
+          ),
+      ],
     );
   }
 }

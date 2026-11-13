@@ -7,6 +7,7 @@ import '../data/cloudinary_upload_api.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -72,7 +73,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the file picker.')),
+          SnackBar(content: Text(AppStrings.trOf(context, 'Could not open the file picker.'))),
         );
       }
     }
@@ -87,7 +88,7 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
   Future<PickedDocument?> _pickDocumentFromDevice() async {
     // file_picker 13 exposes static methods (there is no `.platform`).
     final List<PlatformFile> files = await FilePicker.pickFiles(
-      dialogTitle: 'Select document',
+      dialogTitle: AppStrings.trOf(context, 'Select document'),
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
     );
@@ -281,15 +282,15 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                   top: 532.94,
                   width: 246,
                   child: _DocSubtitle(
-                    defaultText: 'For individual farmers',
+                    defaultText: AppStrings.trOf(context, 'For individual farmers'),
                     document: _documents[_DocumentSlot.aadhaar],
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 519,
-                  child: _Chevron(
-                    selected: _documents.containsKey(_DocumentSlot.aadhaar),
+                  child: _DocStatusBadge(
+                    verified: _documents.containsKey(_DocumentSlot.aadhaar),
                   ),
                 ),
                 const Positioned(left: 23, top: 573, child: _CardPan()),
@@ -300,15 +301,15 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                   top: 609.81,
                   width: 246,
                   child: _DocSubtitle(
-                    defaultText: 'For businesses / traders',
+                    defaultText: AppStrings.trOf(context, 'For businesses / traders'),
                     document: _documents[_DocumentSlot.pan],
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 595,
-                  child: _Chevron(
-                    selected: _documents.containsKey(_DocumentSlot.pan),
+                  child: _DocStatusBadge(
+                    verified: _documents.containsKey(_DocumentSlot.pan),
                   ),
                 ),
                 const Positioned(left: 23, top: 650, child: _CardBusiness()),
@@ -323,15 +324,15 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                   top: 686.49,
                   width: 246,
                   child: _DocSubtitle(
-                    defaultText: 'FSSAI / Udyam / GST (if available)',
+                    defaultText: AppStrings.trOf(context, 'FSSAI / Udyam / GST (if available)'),
                     document: _documents[_DocumentSlot.business],
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 672,
-                  child: _Chevron(
-                    selected: _documents.containsKey(_DocumentSlot.business),
+                  child: _DocStatusBadge(
+                    verified: _documents.containsKey(_DocumentSlot.business),
                   ),
                 ),
                 // Transparent hit targets covering each full card so taps on
@@ -440,7 +441,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 03', style: AppTextStyles.stepLabel);
+    return Text(AppStrings.trOf(context, 'STEP 03'), style: AppTextStyles.stepLabel);
   }
 }
 
@@ -449,7 +450,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Verify your', style: AppTextStyles.headingLarge);
+    return Text(AppStrings.trOf(context, 'Verify your'), style: AppTextStyles.headingLarge);
   }
 }
 
@@ -458,7 +459,7 @@ class _TitleAccent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('details', style: AppTextStyles.headingMint);
+    return Text(AppStrings.trOf(context, 'details'), style: AppTextStyles.headingMint);
   }
 }
 
@@ -467,8 +468,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'A quick verification',
+    return Text(
+      AppStrings.trOf(context, 'A quick verification'),
       style: AppTextStyles.verifySubtitle,
     );
   }
@@ -556,7 +557,7 @@ class _PcLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Profile Completion', style: AppTextStyles.pcLabel);
+    return Text(AppStrings.trOf(context, 'Profile Completion'), style: AppTextStyles.pcLabel);
   }
 }
 
@@ -565,7 +566,7 @@ class _PcPercent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('75%', style: AppTextStyles.pcPercent);
+    return Text(AppStrings.trOf(context, '75%'), style: AppTextStyles.pcPercent);
   }
 }
 
@@ -623,8 +624,8 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Verification Details',
+    return Text(
+      AppStrings.trOf(context, 'Verification Details'),
       style: AppTextStyles.verifySectionTitle,
     );
   }
@@ -645,10 +646,10 @@ class _PillNote extends StatelessWidget {
       ),
       // Scales the note down under the Ahem test font (glyphs render one em
       // wide there); with bundled Roboto on device it renders 1:1.
-      child: const FittedBox(
+      child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fields are required',
+          AppStrings.trOf(context, 'All fields are required'),
           style: AppTextStyles.verifyPillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -864,7 +865,7 @@ class _TitleAadhaar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Aadhaar card', style: AppTextStyles.docCardTitle);
+    return Text(AppStrings.trOf(context, 'Aadhaar card'), style: AppTextStyles.docCardTitle);
   }
 }
 
@@ -895,7 +896,7 @@ class _TitlePan extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('PAN Card', style: AppTextStyles.docCardTitle);
+    return Text(AppStrings.trOf(context, 'PAN Card'), style: AppTextStyles.docCardTitle);
   }
 }
 
@@ -904,24 +905,50 @@ class _TitleBusiness extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Business Registration',
+    return Text(
+      AppStrings.trOf(context, 'Business Registration'),
       style: AppTextStyles.docCardTitle,
     );
   }
 }
 
-class _Chevron extends StatelessWidget {
-  const _Chevron({required this.selected});
+class _DocStatusBadge extends StatelessWidget {
+  const _DocStatusBadge({required this.verified});
 
-  final bool selected;
+  final bool verified;
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      selected ? Icons.check_circle : Icons.keyboard_arrow_down,
-      size: 18,
-      color: AppColors.verifiedText,
+    return Container(
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: verified ? AppColors.verifiedBg : AppColors.verifyUnderReviewBg,
+        border: Border.all(
+          color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            verified ? Icons.check_circle : Icons.hourglass_empty,
+            size: 14,
+            color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            verified ? AppStrings.trOf(context, 'Verified') : AppStrings.trOf(context, 'Under review'),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

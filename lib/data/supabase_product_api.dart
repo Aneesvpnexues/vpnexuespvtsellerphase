@@ -210,6 +210,67 @@ class SupabaseProductApi {
     }
   }
 
+  /// Reads every wallet ledger row for the signed-in seller, newest first.
+  ///
+  /// Requires `017_seller_transactions.sql` to have been run in Supabase.
+  Future<List<Map<String, dynamic>>> fetchTransactions() async {
+    _ensureConfigured();
+    _ensureSignedIn();
+    final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_transactions').replace(
+      queryParameters: <String, String>{
+        'select': '*',
+        'user_id': 'eq.${userId!.trim()}',
+        'order': 'created_at.desc',
+      },
+    );
+    final http.Response response = await _client.get(uri, headers: _readHeaders);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(
+        response,
+        'Could not load wallet transactions.',
+        migration: '017_seller_transactions.sql',
+      );
+    }
+    final Object? decoded = _decode(response.body);
+    if (decoded is! List) {
+      throw const ApiException('The transactions response was invalid.');
+    }
+    return decoded
+        .whereType<Map>()
+        .map((Map row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
+  /// Inserts one ledger row (credit or withdrawal). Prepared for future
+  /// writers (e.g. order pickup completing an earning) — not called yet.
+  Future<void> insertTransaction({
+    required String type,
+    required double amount,
+    required String title,
+    String? orderId,
+  }) async {
+    _ensureConfigured();
+    _ensureSignedIn();
+    final http.Response response = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_transactions'),
+      headers: _writeHeaders,
+      body: jsonEncode(<String, dynamic>{
+        'user_id': userId!.trim(),
+        'type': type,
+        'amount': amount,
+        'title': title,
+        if (orderId != null && orderId.trim().isNotEmpty) 'order_id': orderId.trim(),
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverError(
+        response,
+        'Could not save the transaction.',
+        migration: '017_seller_transactions.sql',
+      );
+    }
+  }
+
   void close() => _client.close();
 
   /// Headers for read requests: anon key only (no Supabase Auth JWT).
@@ -532,6 +593,25 @@ Future<String?> getActiveBankAccountId(String userId) async {
   return null;
 }
 
+/// Persists the active (primary) bank account pointer on seller_profiles.
+Future<void> updateActiveBankAccountId(String accountId) async {
+  _ensureConfigured();
+  _ensureSignedIn();
+  final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+    queryParameters: <String, String>{'user_id': 'eq.${userId!.trim()}'},
+  );
+  final http.Response response = await _client.patch(
+    uri,
+    headers: _writeHeaders,
+    body: jsonEncode(<String, dynamic>{
+      'active_bank_account_id': accountId.trim(),
+    }),
+  );
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw _serverError(response, 'Could not update the primary account.');
+  }
+}
+
 /// Fetches verification (KYC) details for a seller identified by [userId].
   ///
   /// Returns the row with the most uploaded documents, or null when the seller
@@ -645,6 +725,7 @@ Future<String?> getActiveBankAccountId(String userId) async {
     required String businessLocation,
     required String businessAddress,
     String? activeBankAccountId,
+    String? avatarUrl,
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
@@ -660,6 +741,8 @@ Future<String?> getActiveBankAccountId(String userId) async {
       'updated_at': now,
       if (activeBankAccountId != null && activeBankAccountId!.isNotEmpty)
         'active_bank_account_id': activeBankAccountId.trim(),
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+        'avatar_url': avatarUrl.trim(),
     };
 
     final String uid = userId!.trim();

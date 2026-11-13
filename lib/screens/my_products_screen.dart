@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -77,7 +78,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                           left: 0,
                           top: 68,
                           child: PageHeader(
-                            title: 'My Products',
+                            title: AppStrings.trOf(context, 'My Products'),
                             onBack: () => goToHome(context),
                           ),
                         ),
@@ -174,7 +175,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String countLabel = productCount == 1
-        ? '1 Product'
+        ? AppStrings.trOf(context, '1 Product')
         : '$productCount Products';
     return Container(
       width: 368,
@@ -203,10 +204,10 @@ class _SearchBar extends StatelessWidget {
                 textInputAction: TextInputAction.search,
                 style: const TextStyle(fontSize: 12),
                 cursorColor: AppColors.inputCaret,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: 'Search vegetables...',
+                  hintText: AppStrings.trOf(context, 'Search vegetables...'),
                   hintStyle: TextStyle(fontSize: 12, color: Color(0x8A000000)),
                 ),
               ),
@@ -301,10 +302,10 @@ class _FilterTabs extends StatelessWidget {
               onTap: () => onSelected(_ProductFilter.all),
               child: HoverPress.chip(
                 child: Center(
-                  child: Text(
-                    _ProductFilter.all.label,
-                    style: styleFor(_ProductFilter.all),
-                  ),
+                    child: Text(
+                      AppStrings.trOf(context, _ProductFilter.all.label),
+                      style: styleFor(_ProductFilter.all),
+                    ),
                 ),
               ),
             ),
@@ -320,10 +321,10 @@ class _FilterTabs extends StatelessWidget {
               onTap: () => onSelected(_ProductFilter.active),
               child: HoverPress.chip(
                 child: Center(
-                  child: Text(
-                    _ProductFilter.active.label,
-                    style: styleFor(_ProductFilter.active),
-                  ),
+                    child: Text(
+                      AppStrings.trOf(context, _ProductFilter.active.label),
+                      style: styleFor(_ProductFilter.active),
+                    ),
                 ),
               ),
             ),
@@ -339,10 +340,10 @@ class _FilterTabs extends StatelessWidget {
               onTap: () => onSelected(_ProductFilter.outOfStock),
               child: HoverPress.chip(
                 child: Center(
-                  child: Text(
-                    _ProductFilter.outOfStock.label,
-                    style: styleFor(_ProductFilter.outOfStock),
-                  ),
+                    child: Text(
+                      AppStrings.trOf(context, _ProductFilter.outOfStock.label),
+                      style: styleFor(_ProductFilter.outOfStock),
+                    ),
                 ),
               ),
             ),
@@ -358,10 +359,10 @@ class _FilterTabs extends StatelessWidget {
               onTap: () => onSelected(_ProductFilter.draft),
               child: HoverPress.chip(
                 child: Center(
-                  child: Text(
-                    _ProductFilter.draft.label,
-                    style: styleFor(_ProductFilter.draft),
-                  ),
+                    child: Text(
+                      AppStrings.trOf(context, _ProductFilter.draft.label),
+                      style: styleFor(_ProductFilter.draft),
+                    ),
                 ),
               ),
             ),
@@ -414,7 +415,9 @@ class _EmptyProductsState extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    filtered ? 'No products found' : 'No products yet',
+                    filtered
+                        ? AppStrings.trOf(context, 'No products found')
+                        : AppStrings.trOf(context, 'No products yet'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -428,8 +431,14 @@ class _EmptyProductsState extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     filtered
-                        ? 'Try another filter or search'
-                        : 'Your listings will appear here',
+                        ? AppStrings.trOf(
+                            context,
+                            'Try another filter or search',
+                          )
+                        : AppStrings.trOf(
+                            context,
+                            'Your listings will appear here',
+                          ),
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.tabGray,
@@ -453,10 +462,10 @@ class _EmptyProductsState extends StatelessWidget {
                   color: AppColors.darkCard,
                   borderRadius: BorderRadius.all(Radius.circular(16)),
                 ),
-                child: const FittedBox(
+                child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'Add product',
+                    AppStrings.trOf(context, 'Add product'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -554,7 +563,7 @@ class _ProductRow extends StatelessWidget {
                 color: Color(0xFF5A5A5A),
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 150,
               top: 80,
               child: Column(
@@ -562,7 +571,7 @@ class _ProductRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'This week',
+                    AppStrings.trOf(context, 'This week'),
                     style: TextStyle(
                       fontSize: 10,
                       color: Color(0x7A000000),
@@ -571,7 +580,7 @@ class _ProductRow extends StatelessWidget {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    '0 sold',
+                    AppStrings.trOf(context, '0 sold'),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -644,8 +653,8 @@ class _ProductRow extends StatelessWidget {
                     color: AppColors.darkCard,
                     borderRadius: BorderRadius.all(Radius.circular(14)),
                   ),
-                  child: const Text(
-                    'Publish',
+                  child: Text(
+                    AppStrings.trOf(context, 'Publish'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -733,7 +742,7 @@ class _StatusPill extends StatelessWidget {
         bg = AppColors.filterBg;
         dot = AppColors.primary;
       case ProductStatus.outOfStock:
-        label = 'Out of stock';
+        label = 'Out of Stock';
         bg = AppColors.outOfStockBg;
         dot = AppColors.attentionRed;
       case ProductStatus.draft:
@@ -762,7 +771,7 @@ class _StatusPill extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              label,
+              AppStrings.trOf(context, label),
               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ],
@@ -867,11 +876,11 @@ class _PromoCard extends StatelessWidget {
             top: 93,
             child: Icon(Icons.spa, size: 23, color: Color(0xFF388E3C)),
           ),
-          const Positioned(
+          Positioned(
             left: 19,
             top: 15,
             child: Text(
-              'List more fresh\nproducts',
+              AppStrings.trOf(context, 'List more fresh\nproducts'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -880,11 +889,14 @@ class _PromoCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 19,
             top: 54,
             child: Text(
-              'Reach more customers and \ngrow your farm business.',
+              AppStrings.trOf(
+                context,
+                'Reach more customers and \ngrow your farm business.',
+              ),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
@@ -932,7 +944,7 @@ class _PromoCard extends StatelessWidget {
                           color: Color(0xFF0D3B20),
                         ),
                       ),
-                      const Positioned(
+                      Positioned(
                         left: 25,
                         top: 0,
                         bottom: 0,
@@ -940,7 +952,7 @@ class _PromoCard extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              'Add product',
+                              AppStrings.trOf(context, 'Add product'),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,

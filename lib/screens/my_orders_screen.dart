@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -96,7 +97,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       left: 0,
                       top: 73,
                       child: PageHeader(
-                        title: 'My Orders',
+                        title: AppStrings.trOf(context, 'My Orders'),
                         backButtonKey: const ValueKey<String>('my-orders-back'),
                         titleKey: const ValueKey<String>('my-orders-title'),
                         onBack: () => goToHome(context),
@@ -329,7 +330,7 @@ class _SearchSort extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.all(Radius.circular(14)),
               ),
-              child: const Stack(
+              child: Stack(
                 children: [
                   Positioned(
                     left: 19,
@@ -347,7 +348,7 @@ class _SearchSort extends StatelessWidget {
                     bottom: 0,
                     child: Center(
                       child: Text(
-                        'Search vegetables...',
+                        AppStrings.trOf(context, 'Search vegetables...'),
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0x8A000000),
@@ -374,7 +375,7 @@ class _SearchSort extends StatelessWidget {
                     color: AppColors.darkCard,
                     borderRadius: BorderRadius.all(Radius.circular(14)),
                   ),
-                  child: const FittedBox(
+                  child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -382,7 +383,7 @@ class _SearchSort extends StatelessWidget {
                         Icon(Icons.filter_list, size: 14, color: Colors.white),
                         SizedBox(width: 6),
                         Text(
-                          'Sort by',
+                          AppStrings.trOf(context, 'Sort by'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -469,7 +470,7 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    _OrderFilter.all.label,
+                    AppStrings.trOf(context, _OrderFilter.all.label),
                     style: styleFor(_OrderFilter.all),
                   ),
                 ),
@@ -488,7 +489,7 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    _OrderFilter.active.label,
+                    AppStrings.trOf(context, _OrderFilter.active.label),
                     style: styleFor(_OrderFilter.active),
                   ),
                 ),
@@ -507,7 +508,7 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    _OrderFilter.pending.label,
+                    AppStrings.trOf(context, _OrderFilter.pending.label),
                     style: styleFor(_OrderFilter.pending),
                   ),
                 ),
@@ -526,7 +527,7 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    _OrderFilter.confirmed.label,
+                    AppStrings.trOf(context, _OrderFilter.confirmed.label),
                     style: styleFor(_OrderFilter.confirmed),
                   ),
                 ),
@@ -564,8 +565,8 @@ class _SortSheet extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text(
-                  'Sort by',
+                Text(
+                  AppStrings.trOf(context, 'Sort by'),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
@@ -601,7 +602,7 @@ class _SortSheet extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          option.label,
+                          AppStrings.trOf(context, option.label),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: option == selected
@@ -783,7 +784,7 @@ class _OrderBlock extends StatelessWidget {
               left: 20,
               top: 75,
               child: Text(
-                items,
+                AppStrings.trOf(context, items),
                 style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
@@ -859,8 +860,8 @@ class _OrderBlock extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    'Total Order',
+                  Text(
+                    AppStrings.trOf(context, 'Total Order'),
                     style: TextStyle(
                       fontSize: 12,
                       color: Color(0x59000000),
@@ -921,7 +922,7 @@ class _OrderStatusPill extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              status,
+              AppStrings.trOf(context, status),
               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ],

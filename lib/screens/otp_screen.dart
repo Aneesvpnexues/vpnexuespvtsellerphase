@@ -6,7 +6,9 @@ import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
+import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/bottom_deco.dart';
@@ -63,6 +65,13 @@ class _OtpScreenState extends State<OtpScreen> {
     AuthFlow.instance.autoVerified = () {
       _routeAfterVerification();
     };
+    // Instant verification can finish before this screen is pushed; the
+    // user is already signed in, so skip the code entry entirely.
+    if (AuthFlow.instance.verified) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _routeAfterVerification();
+      });
+    }
     _startResendCountdown();
   }
 
@@ -122,7 +131,7 @@ class _OtpScreenState extends State<OtpScreen> {
         setState(_startResendCountdown);
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('New code sent.')));
+          ..showSnackBar(SnackBar(content: Text(AppStrings.trOf(context, 'New code sent.'))));
       },
       onError: (String message) {
         if (!mounted) return;
@@ -143,6 +152,7 @@ class _OtpScreenState extends State<OtpScreen> {
     // Clear any stale data from a previous login session.
     SellerProfileStore.instance.resetCompletionFlags();
     ProductStore.instance.clear();
+    WalletStore.instance.reset();
 
     // Get the verified phone number from Firebase Auth (null-safe in tests).
     final String? firebasePhone = AuthFlow.instance.currentUserPhone;
@@ -159,6 +169,9 @@ class _OtpScreenState extends State<OtpScreen> {
     } catch (_) {
       // Home still opens with whatever products are cached locally.
     }
+
+    // Pull the wallet ledger in the background — Profile reads it later.
+    unawaited(WalletStore.instance.refresh());
 
     SellerProfileStore.instance.mobile = firebasePhone ?? widget.phone;
 
@@ -428,10 +441,10 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    const Text('Enter OTP', style: AppTextStyles.title),
+                    Text(AppStrings.trOf(context, 'Enter OTP'), style: AppTextStyles.title),
                     const SizedBox(height: 12),
-                    const Text(
-                      'We\u2019ve sent a 6-digit code to',
+                    Text(
+                      AppStrings.trOf(context, 'We\u2019ve sent a 6-digit code to'),
                       style: AppTextStyles.subtitle,
                       softWrap: false,
                       maxLines: 1,
@@ -450,13 +463,13 @@ class _OtpScreenState extends State<OtpScreen> {
                         key: const Key('otpResendLabel'),
                         behavior: HitTestBehavior.opaque,
                         onTap: _secondsLeft == 0 ? _resend : null,
-                        child: Text(
-                          _secondsLeft > 0
-                              ? 'Resent OTP in 00:'
-                                  '${_secondsLeft.toString().padLeft(2, '0')}'
-                              : 'Resend OTP',
-                          style: AppTextStyles.resend,
-                        ),
+                          child: Text(
+                            _secondsLeft > 0
+                                ? AppStrings.trOf(context, 'Resent OTP in 00:') +
+                                    '${_secondsLeft.toString().padLeft(2, '0')}'
+                                : AppStrings.trOf(context, 'Resend OTP'),
+                            style: AppTextStyles.resend,
+                          ),
                       ),
                     ),
                     const SizedBox(height: 112),
@@ -515,7 +528,7 @@ class _VerifyButton extends StatelessWidget {
                         color: AppColors.surface,
                       ),
                     )
-                  : const Text('Verify', style: AppTextStyles.button),
+                  : Text(AppStrings.trOf(context, 'Verify'), style: AppTextStyles.button),
             ),
           ),
         ),

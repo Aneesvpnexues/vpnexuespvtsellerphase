@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
@@ -674,8 +676,12 @@ class _ContactPanel extends StatelessWidget {
 
   static Future<void> _launch(String url) async {
     final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
+      // canLaunchUrl is unreliable on Android 11+ (package-visibility), so
+      // attempt the launch directly and only report genuine failures.
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // No app available to handle the scheme — nothing else to try.
     }
   }
 }
@@ -857,13 +863,45 @@ class _FarmsPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 13.5),
-          ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
-            child: Image.asset(
-              'assets/business/about_farms.png',
-              width: 326,
-              height: 166,
-              fit: BoxFit.cover,
+          SizedBox(
+            width: 326,
+            height: 166,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(16)),
+              child: FlutterMap(
+                options: const MapOptions(
+                  initialCenter: LatLng(11.1271, 78.6569),
+                  initialZoom: 7,
+                  interactionOptions: InteractionOptions(
+                    flags: InteractiveFlag.none,
+                  ),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.seller_app.seller',
+                  ),
+                  const MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(11.1271, 78.6569),
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          Icons.location_pin,
+                          size: 36,
+                          color: Color(0xFF1E7A37),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const RichAttributionWidget(
+                    attributions: [
+                      TextSourceAttribution('OpenStreetMap contributors'),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
