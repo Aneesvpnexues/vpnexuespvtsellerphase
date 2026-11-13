@@ -1,17 +1,19 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/app_storage.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
+import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
+import '../screens/location_screen.dart';
 import '../screens/personal_details_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/verify_detaile.dart';
@@ -21,20 +23,36 @@ import '../screens/welcome_seller_screen.dart';
 /// "Android Compact - 192" (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad7318de3f9d49c8cec78ca).
 ///
-/// The artwork is a single full-bleed export (the STEP lockup, smiley, tomato
-/// photo and arrow are all part of the illustration), with the design's
-/// status-bar strip trimmed off so the real platform status bar sits on the
-/// empty background instead. The image is anchored to the top and scaled to
-/// cover the area below the status bar, so the bottom of the photo still
-/// bleeds off the screen like the design.
+/// The artwork is a single full-bleed export (the STEP lockup, smiley and
+/// tomato photo are part of the illustration), with the design's status-bar
+/// strip trimmed off so the real platform status bar sits on the empty
+/// background instead. The image is anchored to the top and scaled to cover
+/// the area below the status bar, so the bottom of the photo still bleeds off
+/// the screen like the design.
+///
+/// The circular arrow button in the bottom-right is a real widget (a black
+/// disc with a white arrow) rather than a bare hit target: the artwork no
+/// longer paints an arrow, so the button has to be drawn by the app itself.
+///
+/// There is no auto-advance on a first run: the splash stays up until the
+/// seller taps that button, which continues to [WelcomeSellerScreen]. The
+/// navigation uses `pushReplacement`, so the splash never stays in the back
+/// stack.
 ///
 /// On cold start, [_SplashScreenState] checks whether a Firebase Auth session
-/// already exists. A signed-in seller resumes at the first incomplete
-/// onboarding section — or straight on the home page when every section is
-/// already saved — while a seller with no saved rows restarts onboarding at
-/// Step 01, exactly like the OTP and welcome login paths, so a pending page
-/// is never skipped in favour of Home. Without a session the splash remains
-/// and tapping the arrow opens the login flow.
+/// already exists. A session opened by **login** (OTP) resumes straight on the
+/// home page — the same destination the OTP flow uses — while a session opened
+/// by **sign-up** resumes at the first incomplete onboarding section (or STEP
+/// 01 when nothing has been saved yet), so a pending page is never skipped in
+/// favour of Home. Without a session the splash remains and tapping the arrow
+/// opens the login flow.
+///
+/// The splash is shown only once per install: the first launch after
+/// installing. Tapping the arrow (or an automatic session resume) persists
+/// [StorageKeys.splashSeenKey]; every later launch renders a plain background
+/// — no artwork, no tap required — and routes straight to the last reached
+/// destination. Uninstalling the app clears the preference, so the splash
+/// returns on the next fresh install.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -44,22 +62,46 @@ class SplashScreen extends StatefulWidget {
   static const double designWidth = 412;
   static const double designHeight = 873;
 
-  /// Design-space hit target around the arrow at the bottom-right of the
-  /// artwork. The visible disc is 36px, padded to a 56px tap target.
-  static const Rect arrowHitArea = Rect.fromLTWH(340, 794, 56, 56);
-
   /// Test seam: when set, the splash treats this seller as the signed-in
   /// session instead of asking Firebase Auth, so widget tests can exercise
   /// the session-restore routing without a Firebase app.
   @visibleForTesting
   static ({String uid, String phone})? debugSignedInSeller;
 
+  /// Whether the one-time splash has already been dismissed on this install.
+  ///
+  /// Read synchronously from the preferences hydrated in `main()`, so
+  /// [SellerApp] can decide at build time whether to show the splash at all.
+  static bool get hasSeenSplash =>
+      AppStorage.current?.readString(StorageKeys.splashSeenKey) == 'true';
+
+  /// Records that the splash has been shown, so the next launch skips it.
+  /// Fire-and-forget like the other stores; a failed write only means the
+  /// splash shows again on the next launch.
+  static void markSplashSeen() {
+    AppStorage.current
+        ?.writeString(StorageKeys.splashSeenKey, 'true')
+        .ignore();
+  }
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  /// True when this launch is the very first one after installing: only then
+  /// are the artwork and its arrow button painted. Later launches render a
+  /// plain background and route on their own, so the splash never reappears.
+  late final bool _firstRun = !SplashScreen.hasSeenSplash;
+
+  /// True while the cold-start Firebase session check runs; the arrow stays
+  /// hidden until the check decides whether to resume automatically.
   bool _checking = true;
+
+  /// Recovery flag: an unexpected error during the session check brings the
+  /// artwork and its button back — even on a later launch — so the seller can
+  /// always tap through instead of being stranded on a blank screen.
+  bool _holdForRetry = false;
 
   @override
   void initState() {
@@ -67,16 +109,30 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkSession();
   }
 
+  /// Guards the cold-start check: whatever happens while restoring the
+  /// session, the seller always ends up somewhere tappable.
+  Future<void> _checkSession() async {
+    try {
+      await _restoreSession();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _holdForRetry = true;
+      });
+    }
+  }
+
   /// On cold start, check whether a Firebase Auth session already exists.
   /// If signed in, restore [AuthFlow.instance.firebaseUid], re-fetch that
-  /// user's products from Supabase, check Supabase for an existing profile
-  /// matching the verified phone number, determine which onboarding sections
-  /// are complete, and route accordingly: the first incomplete section, or
-  /// Home when everything is already saved. A signed-in seller with no saved
-  /// rows restarts onboarding at Verify Your Details — never Home — so a
-  /// pending page cannot be skipped. Otherwise stay on the splash so the
-  /// user can tap to log in.
-  Future<void> _checkSession() async {
+  /// user's products from Supabase and check Supabase for an existing profile
+  /// matching the verified phone number. A session opened by login (OTP)
+  /// continues straight on Home — exactly like the OTP flow — while a
+  /// sign-up session resumes at the first incomplete onboarding section (or
+  /// STEP 01 when nothing has been saved yet), so a pending page cannot be
+  /// skipped. Without a session a first run stays on the splash so the user
+  /// can tap to log in; a later run skips the artwork and opens Welcome.
+  Future<void> _restoreSession() async {
     if (!mounted) return;
 
     String? uid;
@@ -101,6 +157,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (uid != null && uid.isNotEmpty) {
       AuthFlow.instance.firebaseUid = uid;
       AuthFlow.instance.verified = true;
+
+      // A resumed session means the one-time splash has been served, so the
+      // next launch goes straight to the destination instead of the artwork.
+      SplashScreen.markSplashSeen();
 
       // Clear any stale data from a previous login session.
       SellerProfileStore.instance.resetCompletionFlags();
@@ -188,13 +248,20 @@ class _SplashScreenState extends State<SplashScreen> {
             personalComplete: personalComplete,
           );
 
-          _navigateBasedOnCompletion(
-            profileComplete: profileComplete,
-            bankComplete: bankComplete,
-            verificationComplete: verificationComplete,
-            personalComplete: personalComplete,
-          );
-            return;
+          // A login session continues straight on Home (the OTP flow sends
+          // the seller to the same place); a sign-up session still walks the
+          // onboarding steps so no pending page is skipped.
+          if (SessionStore.instance.method == SessionStore.loginMethod) {
+            _openHome();
+          } else {
+            _navigateBasedOnCompletion(
+              profileComplete: profileComplete,
+              bankComplete: bankComplete,
+              verificationComplete: verificationComplete,
+              personalComplete: personalComplete,
+            );
+          }
+          return;
           }
         } catch (_) {
           // Supabase lookup failed — treat the seller as having no saved
@@ -202,15 +269,31 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
 
-      // No Supabase data found for this seller — resume at Verify Your
-      // Details exactly like the OTP and welcome login paths, so a pending
-      // onboarding page is never skipped in favour of Home.
+      // No Supabase data found for this seller. A login session lands on
+      // Home — the OTP flow sends the seller to the same place — while a
+      // sign-up session restarts the onboarding steps at STEP 01. A session
+      // with no recorded method (saved by an older build) keeps the original
+      // behavior and restarts at Verify Your Details, so a pending onboarding
+      // page is never skipped in favour of Home.
       if (!mounted) return;
+      final String method = SessionStore.instance.method;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => method == SessionStore.loginMethod
+              ? const SellerHomeScreen()
+              : method == SessionStore.signupMethod
+                  ? const Step01LocationScreen()
+                  : const VerifyDetaileScreen(),
+        ),
       );
-    } else {
+    } else if (_firstRun) {
+      // First run without a session: the artwork stays up and the arrow
+      // button opens the login flow.
       setState(() => _checking = false);
+    } else {
+      // Later launch without a session: no artwork at all — continue on the
+      // Welcome / login screen as soon as the first frame is on screen.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openWelcome());
     }
   }
 
@@ -350,55 +433,97 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  /// Used when the user taps the splash arrow while not signed in.
-  Future<void> _continueToLogin() async {
+  /// Records that the one-time splash has been served, then opens the
+  /// Welcome / login screen. This is the only place a tap dismisses the
+  /// splash, so it is also what makes later launches skip the artwork.
+  void _continueToLogin() {
+    SplashScreen.markSplashSeen();
+    _openWelcome();
+  }
+
+  /// Opens the Welcome / login screen, clearing the splash from the stack.
+  void _openWelcome() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const WelcomeSellerScreen()),
     );
   }
 
+  /// Opens the home page, clearing the splash from the stack.
+  void _openHome() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Later launches skip the artwork entirely: a plain background with a
+    // small spinner while the session check runs, so the splash itself is
+    // only ever seen once per install.
+    if (!_firstRun && !_holdForRetry) {
+      return Scaffold(
+        backgroundColor: AppColors.splashBg,
+        body: Center(
+          child: _checking
+              ? const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.primary,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.splashBg,
       body: SafeArea(
         bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double scale = math.max(
-              constraints.maxWidth / SplashScreen.designWidth,
-              constraints.maxHeight / SplashScreen.designHeight,
-            );
-            final double imageLeft =
-                (constraints.maxWidth - SplashScreen.designWidth * scale) / 2;
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.asset(
-                    SplashScreen.splashAsset,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                    filterQuality: FilterQuality.high,
-                    semanticLabel: 'A small step for your big growth',
-                  ),
-                ),
-                if (!_checking)
-                  Positioned(
-                    left: imageLeft + SplashScreen.arrowHitArea.left * scale,
-                    top: SplashScreen.arrowHitArea.top * scale,
-                    width: SplashScreen.arrowHitArea.width * scale,
-                    height: SplashScreen.arrowHitArea.height * scale,
-                    child: GestureDetector(
-                      key: const Key('splashTap'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _continueToLogin(),
-                      child: const SizedBox.expand(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                SplashScreen.splashAsset,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'A small step for your big growth',
+              ),
+            ),
+            // The artwork no longer paints an arrow, so the continue button
+            // is a real widget: a black disc with a white arrow in the
+            // bottom-right corner. It appears once the session check has
+            // decided the seller has to tap through to the login flow.
+            if (!_checking)
+              Positioned(
+                right: 24,
+                bottom: 24,
+                child: Material(
+                  color: const Color.fromARGB(255, 0, 0, 0),
+                  shape: const CircleBorder(),
+                  elevation: 0,
+                  child: InkWell(
+                    key: const Key('splashTap'),
+                    customBorder: const CircleBorder(),
+                    onTap: _continueToLogin,
+                    child: const SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Icon(
+                        Icons.arrow_forward,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        size: 24,
+                      ),
                     ),
                   ),
-              ],
-            );
-          },
+                ),
+              ),
+          ],
         ),
       ),
     );

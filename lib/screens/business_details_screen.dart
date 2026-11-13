@@ -130,10 +130,16 @@ class _Step03BusinessDetailsScreenState
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
-      return;
+      // TEMPORARY (offline onboarding): while Supabase is not configured,
+      // skip the remote save and keep walking the steps instead of
+      // blocking — see ApiException.isMissingConfiguration.
+      if (!error.isMissingConfiguration) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+        return;
+      }
+      debugPrint('Step 03: skipping remote save (${error.message})');
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

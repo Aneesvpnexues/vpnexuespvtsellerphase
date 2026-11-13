@@ -53,6 +53,9 @@ class SellerBackendSync {
       bankComplete: store.bankComplete || backend.bankComplete,
       verificationComplete:
           store.verificationComplete || backend.verificationComplete,
+      // The backend does not report Personal Details completeness, so keep
+      // whatever the store already knows about that section.
+      personalComplete: store.personalComplete,
     );
     return backend;
   }

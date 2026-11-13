@@ -122,6 +122,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -227,6 +231,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -332,6 +340,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -436,6 +448,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -540,6 +556,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -644,6 +664,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':
@@ -749,6 +773,10 @@ class AppStrings extends InheritedWidget {
           'Name': 'Name',
           'E-Mail': 'E-Mail',
           'Password': 'Password',
+          'Enter your name': 'Enter your name',
+          'Enter a valid email address': 'Enter a valid email address',
+          'Password must be at least 6 characters':
+              'Password must be at least 6 characters',
           'Welcome ': 'Welcome ',
           'Seller!': 'Seller!',
           'Let\u2019s grow together.\nSell fresh. Reach further.':

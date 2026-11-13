@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
 import '../data/cloudinary_upload_api.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
@@ -146,6 +147,8 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     if (_saving) return;
     setState(() => _saving = true);
 
+    bool uploadedThisSession = false;
+    bool offlineSaved = false;
     try {
       // Upload each picked document to Cloudinary.
       String? aadhaarUrl;
@@ -163,10 +166,10 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
       }
 
       // Save URLs to Supabase.
-      final bool savedThisSession = aadhaarUrl != null ||
+      uploadedThisSession = aadhaarUrl != null ||
           panUrl != null ||
           businessUrl != null;
-      if (savedThisSession) {
+      if (uploadedThisSession) {
         final api = SupabaseProductApi();
         await api.saveVerifyDetails(
           aadhaarUrl: aadhaarUrl,
@@ -174,64 +177,81 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
           businessUrl: businessUrl,
         );
       }
-
+    } on ApiException catch (error) {
       if (!mounted) return;
-
-      // KYC counts as done if anything was just uploaded, or if an earlier
-      // session already stored a document.
-      final SellerProfileStore profile = SellerProfileStore.instance;
-      final bool verificationComplete =
-          savedThisSession || profile.verificationComplete;
-      profile.setCompletion(
-        profileComplete: profile.profileComplete,
-        bankComplete: profile.bankComplete,
-        verificationComplete: verificationComplete,
-        personalComplete: profile.personalComplete,
-      );
-
-      // Verify -> Personal Details -> Registration -> Bank -> Home: skip
-      // whatever is already done so a returning seller never re-enters
-      // completed pages.
-      if (!profile.personalComplete) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const PersonalDetailsScreen(),
-          ),
+      // TEMPORARY (offline onboarding): while Cloudinary/Supabase are not
+      // configured, treat the section as saved locally so the walk keeps
+      // moving instead of blocking — see ApiException.isMissingConfiguration.
+      if (!error.isMissingConfiguration) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
         );
         return;
       }
-
-      if (!profile.profileComplete) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const Step03BusinessDetailsScreen(),
-          ),
-        );
-        return;
-      }
-
-      if (!profile.bankComplete) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const BankDetaileScreen(),
-          ),
-        );
-        return;
-      }
-
-      // All sections complete — go to Home.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-        (Route<dynamic> route) => false,
-      );
+      offlineSaved = true;
+      debugPrint('Verify: continuing without upload (${error.message})');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
+      return;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+
+    if (!mounted) return;
+
+    // KYC counts as done if anything was just uploaded, if an earlier
+    // session already stored a document, or — temporarily — when the
+    // offline walk skipped the remote save; otherwise Personal Details
+    // would send the seller straight back here.
+    final SellerProfileStore profile = SellerProfileStore.instance;
+    final bool verificationComplete = uploadedThisSession ||
+        offlineSaved ||
+        profile.verificationComplete;
+    profile.setCompletion(
+      profileComplete: profile.profileComplete,
+      bankComplete: profile.bankComplete,
+      verificationComplete: verificationComplete,
+      personalComplete: profile.personalComplete,
+    );
+
+    // Verify -> Personal Details -> Registration -> Bank -> Home: skip
+    // whatever is already done so a returning seller never re-enters
+    // completed pages.
+    if (!profile.personalComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const PersonalDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!profile.profileComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Step03BusinessDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!profile.bankComplete) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
+      );
+      return;
+    }
+
+    // All sections complete — go to Home.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      (Route<dynamic> route) => false,
+    );
   }
 
   @override

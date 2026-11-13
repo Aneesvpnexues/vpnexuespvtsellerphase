@@ -172,8 +172,14 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       }
     } on ApiException catch (error) {
       if (!mounted) return;
-      _showMessage(error.message);
-      return;
+      // TEMPORARY (offline onboarding): while Supabase is not configured,
+      // save locally and keep walking the steps instead of blocking —
+      // see ApiException.isMissingConfiguration.
+      if (!error.isMissingConfiguration) {
+        _showMessage(error.message);
+        return;
+      }
+      debugPrint('Personal: skipping remote save (${error.message})');
     } catch (_) {
       if (!mounted) return;
       _showMessage(AppStrings.trOf(context, 'Could not save profile. Please try again.'));

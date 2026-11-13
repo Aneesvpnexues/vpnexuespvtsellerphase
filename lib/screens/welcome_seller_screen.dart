@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/country_codes.dart';
+import '../data/seller_profile_store.dart';
+import '../data/session_store.dart';
+import '../data/user_store.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../l10n/app_strings.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/inline_error.dart';
+import 'location_screen.dart';
 import 'otp_screen.dart';
-import 'seller_home_screen.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad0633d41c4e26df3c1017) with
@@ -20,10 +24,14 @@ import 'seller_home_screen.dart';
 ///
 /// The segmented Login / Sign Up control switches between the two states:
 /// - Login (default): hero + phone number form; "Send OTP" opens the OTP
-///   screen; the phone field accepts up to 10 digits.
+///   screen; the phone field accepts up to 10 digits. A verified login
+///   continues straight to the home page (see [OtpScreen]).
 /// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
-///   Password fields and a visual-only "Create account" button. Both states
-///   share the terms footer.
+///   Password fields. "Create account" validates all three fields inline (red
+///   message inside each invalid box), stores the account locally and starts
+///   the sign-up session at STEP 01, so the seller walks every onboarding
+///   step — location, seller type, business, verify, personal, bank — before
+///   reaching the home page. Both states share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
@@ -41,15 +49,41 @@ class WelcomeSellerScreen extends StatefulWidget {
 }
 
 class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
+  /// Same shape the design uses: something@tld.tld with no spaces.
+  static final RegExp _emailRegExp = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
+
   bool _signUp = false;
   bool _sending = false;
   CountryCode _country = CountryCode.india;
 
   final GlobalKey<_PhoneBoxState> _phoneBoxKey = GlobalKey<_PhoneBoxState>();
 
+  // Owned by the state so the parent form can validate and forward the input.
+  // Each error is rendered inline (in red) inside its own field box; a field
+  // shows its error after the CTA is tapped and clears it as soon as the
+  // seller types again.
+  String _nameError = '';
+  String _emailError = '';
+  String _passwordError = '';
+  final TextEditingController _signUpName = TextEditingController();
+  final TextEditingController _signUpEmail = TextEditingController();
+  final TextEditingController _signUpPassword = TextEditingController();
+
   void _showLogin() => setState(() => _signUp = false);
 
   void _showSignUp() => setState(() => _signUp = true);
+
+  void _clearNameError() {
+    if (_nameError.isNotEmpty) setState(() => _nameError = '');
+  }
+
+  void _clearEmailError() {
+    if (_emailError.isNotEmpty) setState(() => _emailError = '');
+  }
+
+  void _clearPasswordError() {
+    if (_passwordError.isNotEmpty) setState(() => _passwordError = '');
+  }
 
   Future<void> _showCountryPicker() async {
     final CountryCode? selected = await showModalBottomSheet<CountryCode>(
@@ -69,6 +103,9 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   @override
   void dispose() {
     AuthFlow.instance.autoVerified = null;
+    _signUpName.dispose();
+    _signUpEmail.dispose();
+    _signUpPassword.dispose();
     super.dispose();
   }
 
@@ -123,6 +160,67 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     final String display = '${_country.dial} $digits';
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: display)),
+    );
+  }
+
+  /// Validates Name / E-Mail / Password, stores the new account and seller
+  /// profile locally, opens the sign-up session and sends the new seller into
+  /// the onboarding steps at STEP 01 — the flow then walks STEP 01–03 (location,
+  /// seller type, business), Verify Your Details, Personal Details and Bank
+  /// Details before reaching the home page, with no OTP detour in between.
+  /// Every invalid field reports its problem inline, in red, so all of them
+  /// are visible at once.
+  void _createAccount() {
+    final String name = _signUpName.text.trim();
+    final String email = _signUpEmail.text.trim();
+    setState(() {
+      _nameError = name.isEmpty
+          ? AppStrings.trOf(context, 'Enter your name')
+          : '';
+      _emailError = _emailRegExp.hasMatch(email)
+          ? ''
+          : AppStrings.trOf(context, 'Enter a valid email address');
+      _passwordError = _signUpPassword.text.length >= 6
+          ? ''
+          : AppStrings.trOf(context, 'Password must be at least 6 characters');
+    });
+    if (_nameError.isNotEmpty ||
+        _emailError.isNotEmpty ||
+        _passwordError.isNotEmpty) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+
+    // Persist the sign-up details (name, e-mail, password) and the seller
+    // profile, then open the session that marks this as a sign-up: a later
+    // relaunch resumes the onboarding steps instead of skipping them, exactly
+    // like the OTP flow marks its sessions as login.
+    UserStore.instance.register(
+      SellerAccount(
+        name: name,
+        phone: '',
+        email: email,
+        password: _signUpPassword.text,
+      ),
+    );
+    SellerProfileStore.instance.save(
+      name: name,
+      mobile: SellerProfileStore.instance.mobile,
+      email: email,
+      sellerType: SellerProfileStore.instance.sellerType,
+    );
+    SessionStore.instance.startSession(
+      phone: SellerProfileStore.instance.mobile,
+      userName: name,
+      method: SessionStore.signupMethod,
+    );
+
+    // A new seller starts onboarding at STEP 01 and walks every step before
+    // reaching the home page. The stack is cleared behind it so the seller
+    // can't back into the sign-up form.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+      (route) => false,
     );
   }
 
@@ -207,33 +305,43 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                     Positioned(
                       left: 24,
                       top: 574,
-                      child: _SignUpField(hint: AppStrings.trOf(context, 'Name')),
+                      child: _SignUpField(
+                        hint: AppStrings.trOf(context, 'Name'),
+                        controller: _signUpName,
+                        errorText: _nameError,
+                        onInputChanged: _clearNameError,
+                        textInputAction: TextInputAction.next,
+                      ),
                     ),
                     Positioned(
                       left: 24,
                       top: 644,
                       child: _SignUpField(
                         hint: AppStrings.trOf(context, 'E-Mail'),
+                        controller: _signUpEmail,
                         keyboardType: TextInputType.emailAddress,
+                        errorText: _emailError,
+                        onInputChanged: _clearEmailError,
+                        textInputAction: TextInputAction.next,
                       ),
                     ),
                     Positioned(
                       left: 24,
                       top: 714,
-                      child: _SignUpField(hint: AppStrings.trOf(context, 'Password'), obscure: true),
+                      child: _SignUpField(
+                        hint: AppStrings.trOf(context, 'Password'),
+                        controller: _signUpPassword,
+                        obscure: true,
+                        errorText: _passwordError,
+                        onInputChanged: _clearPasswordError,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _createAccount(),
+                      ),
                     ),
                     Positioned(
                       left: 24,
                       top: 784,
-                      child: _CreateAccountButton(
-                        onTap: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const SellerHomeScreen(),
-                            ),
-                          );
-                        },
-                      ),
+                      child: _CreateAccountButton(onTap: _createAccount),
                     ),
                   ] else ...[
                     const Positioned(
@@ -698,21 +806,40 @@ class _Footer extends StatelessWidget {
 }
 
 /// Sign Up state: input box styled like the login fields (same fill, border
-/// and radius) holding a typeable [TextField] with a gray placeholder.
+/// and radius) holding a typeable [TextFormField] with a gray placeholder.
 ///
 /// When [obscure] is set (Password), an eye icon is added to the right:
 /// hidden state shows a gray eye-off icon, tapping it reveals the password
 /// and turns the icon into a blue eye.
+///
+/// When [errorText] is set (after "Create account" found the form invalid)
+/// the red message is drawn inside the box, under the input line, so the
+/// layout does not shift; [onInputChanged] lets the parent clear it as soon
+/// as the seller types again.
 class _SignUpField extends StatefulWidget {
   const _SignUpField({
     required this.hint,
+    required this.controller,
     this.keyboardType,
     this.obscure = false,
+    this.errorText = '',
+    this.onInputChanged,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   final String hint;
+
+  /// Owned by the parent form so "Create account" can read the value.
+  final TextEditingController controller;
   final TextInputType? keyboardType;
   final bool obscure;
+
+  /// Validation message drawn inside the box; empty means no error.
+  final String errorText;
+  final VoidCallback? onInputChanged;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
@@ -723,8 +850,35 @@ class _SignUpFieldState extends State<_SignUpField> {
 
   void _toggleVisible() => setState(() => _visible = !_visible);
 
+  void _onChanged() {
+    setState(() {});
+    widget.onInputChanged?.call();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SignUpField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onChanged);
+      widget.controller.addListener(_onChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChanged);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool hasError = widget.errorText.isNotEmpty;
     return Container(
       width: 364,
       height: 54,
@@ -735,44 +889,65 @@ class _SignUpFieldState extends State<_SignUpField> {
         ),
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
-      child: TextField(
-        keyboardType: widget.keyboardType,
-        obscureText: widget.obscure && !_visible,
-        textAlignVertical: TextAlignVertical.center,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textPrimary,
-        ),
-        decoration: InputDecoration(
-          hintText: widget.hint,
-          hintStyle: AppTextStyles.signUpField,
-          isDense: true,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 17,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: widget.controller,
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              onFieldSubmitted: widget.onFieldSubmitted,
+              // Ensures scrolling reveals the active field as well as the
+              // "Create account" button at the bottom of the Sign Up stack.
+              scrollPadding: const EdgeInsets.only(bottom: 310),
+              obscureText: widget.obscure && !_visible,
+              textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: AppTextStyles.signUpField,
+                isDense: true,
+                border: InputBorder.none,
+                // Tighter padding while an error shares the box with the input.
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: hasError ? 4 : 17,
+                ),
+                counterText: '',
+                suffixIcon: widget.obscure
+                    ? IconButton(
+                        key: const Key('passwordToggle'),
+                        onPressed: _toggleVisible,
+                        tooltip: _visible
+                            ? AppStrings.trOf(context, 'Hide password')
+                            : AppStrings.trOf(context, 'Show password'),
+                        icon: Icon(
+                          _visible ? Icons.visibility : Icons.visibility_off,
+                          size: 22,
+                          color: _visible
+                              ? AppColors.passwordShown
+                              : AppColors.hintGray,
+                        ),
+                      )
+                    : null,
+                suffixIconConstraints: const BoxConstraints(
+                  minHeight: 44,
+                  minWidth: 44,
+                ),
+              ),
+            ),
           ),
-          counterText: '',
-          suffixIcon: widget.obscure
-              ? IconButton(
-                  key: const Key('passwordToggle'),
-                  onPressed: _toggleVisible,
-                  tooltip: _visible ? AppStrings.trOf(context, 'Hide password') : AppStrings.trOf(context, 'Show password'),
-                  icon: Icon(
-                    _visible ? Icons.visibility : Icons.visibility_off,
-                    size: 22,
-                    color: _visible
-                        ? AppColors.passwordShown
-                        : AppColors.hintGray,
-                  ),
-                )
-              : null,
-          suffixIconConstraints: const BoxConstraints(
-            minHeight: 44,
-            minWidth: 44,
-          ),
-        ),
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, bottom: 7),
+              child: InlineErrorText(widget.errorText, maxLines: 1),
+            ),
+        ],
       ),
     );
   }

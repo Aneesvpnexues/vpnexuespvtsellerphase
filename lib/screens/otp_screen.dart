@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
+import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
@@ -15,11 +16,7 @@ import '../widgets/bottom_deco.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/keyboard_aware_canvas.dart';
 import '../widgets/otp_field_row.dart';
-import 'bank_detaile.dart';
-import 'business_details_screen.dart';
-import 'personal_details_screen.dart';
 import 'seller_home_screen.dart';
-import 'verify_detaile.dart';
 
 /// "Enter OTP" screen — replica of Zeplin "Android Compact - 50".
 ///
@@ -27,9 +24,11 @@ import 'verify_detaile.dart';
 /// the design, so on a matching device the layout renders 1:1; on shorter or
 /// wider viewports it scales down uniformly instead of overflowing.
 ///
-/// Nothing here advances on its own: Verify only navigates after
+/// Nothing here advances on its own: verification only continues after
 /// [AuthFlow.verifyOtp] confirms the code with Firebase (or Android
-/// auto-retrieves it and [_enterStep01] fires from the auto-verify handler).
+/// auto-retrieves it and [_routeAfterVerification] fires from the auto-verify
+/// handler). A verified login always lands on the home page — the onboarding
+/// steps are walked by the sign-up flow instead.
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.phone});
 
@@ -140,10 +139,14 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  /// After successful OTP verification, fetch all existing seller data from
-  /// Supabase using the authenticated mobile number, determine which
-  /// onboarding sections are already complete, skip those pages, and navigate
-  /// to the first incomplete step or directly to Home.
+  /// After successful OTP verification, open the local login session and
+  /// fetch the seller's existing data from Supabase using the authenticated
+  /// mobile number, then continue on the home page.
+  ///
+  /// Login never routes back into the onboarding steps — those belong to the
+  /// sign-up flow, which walks them from STEP 01 through Bank Details before
+  /// reaching Home. The completion flags are still recorded below so the
+  /// profile and settings screens can show which sections are done.
   Future<void> _routeAfterVerification() async {
     if (_entered) return;
     _entered = true;
@@ -175,6 +178,16 @@ class _OtpScreenState extends State<OtpScreen> {
 
     SellerProfileStore.instance.mobile = firebasePhone ?? widget.phone;
 
+    // Record that this session was opened through Login (OTP). The splash
+    // screen uses it on the next launch to continue on Home instead of
+    // restarting the onboarding steps. Recorded before the Supabase lookup
+    // so an unreachable backend can never send a login back to onboarding.
+    SessionStore.instance.startSession(
+      phone: firebasePhone ?? widget.phone,
+      userName: SellerProfileStore.instance.name,
+      method: SessionStore.loginMethod,
+    );
+
     // Look up the seller's Supabase rows for whatever phone number was just
     // verified. Nothing here is specific to one number: the profile match
     // tries the exact E.164 value, then the last 10 digits (display format),
@@ -202,6 +215,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
         if (profile != null) {
           _populateProfileStore(profile);
+          // Refresh the cached session display name with the Supabase row.
+          SessionStore.instance.startSession(
+            phone: firebasePhone ?? widget.phone,
+            userName: SellerProfileStore.instance.name,
+            method: SessionStore.loginMethod,
+          );
         }
 
         // Bank and KYC are fetched even when the profile row is missing: a
@@ -243,24 +262,17 @@ class _OtpScreenState extends State<OtpScreen> {
         );
 
         if (!mounted) return;
-        _navigateBasedOnCompletion(
-          profileComplete: profileComplete,
-          bankComplete: bankComplete,
-          verificationComplete: verificationComplete,
-          personalComplete: personalComplete,
-        );
+        _goHome();
         return;
       } catch (_) {
-        // Supabase lookup failed — fall through to onboarding.
+        // Supabase lookup failed — the home page still opens with whatever
+        // is cached locally.
       }
     }
 
-    // No Supabase data found for this number — new user starts onboarding
-    // at Verify Your Details, the first of the three steps.
-    if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
-    );
+    // No Supabase row for this number: a login still lands on Home — walking
+    // the onboarding steps belongs to the sign-up flow.
+    _goHome();
   }
 
   /// Determines whether the seller profile section is complete based on
@@ -314,69 +326,13 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Personal Details -> Registration -> Bank Details), or to Home if all
-  /// sections are complete.
-  /// Pushes (not replacement) so the user can navigate back through the flow
-  /// if needed.
-  void _navigateBasedOnCompletion({
-    required bool profileComplete,
-    required bool bankComplete,
-    required bool verificationComplete,
-    required bool personalComplete,
-  }) {
+  /// Continues on the home page after a verified login. The whole stack is
+  /// removed, so Back never returns to the OTP or the login form.
+  void _goHome() {
     if (!mounted) return;
-
-    print('ONBOARDING ROUTE: profile=$profileComplete '
-        'bank=$bankComplete kyc=$verificationComplete personal=$personalComplete');
-
-    // Onboarding order is Verify -> Personal Details -> Registration
-    // (STEP 03) -> Bank -> Home, so verification is always the first section
-    // to check.
-    if (!verificationComplete) {
-      print('DESTINATION: Verify Your Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!personalComplete) {
-      print('DESTINATION: Personal Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const PersonalDetailsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!profileComplete) {
-      print('DESTINATION: Registration (Business Details)');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step03BusinessDetailsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!bankComplete) {
-      print('DESTINATION: Bank Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    // All sections complete — go straight to Home.
-    print('DESTINATION: Home (all sections already complete)');
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      (route) => false,
     );
   }
 
