@@ -17,6 +17,7 @@ import '../widgets/keyboard_aware_canvas.dart';
 import '../widgets/otp_field_row.dart';
 import 'bank_detaile.dart';
 import 'business_details_screen.dart';
+import 'location_confirm_screen.dart';
 import 'personal_details_screen.dart';
 import 'seller_home_screen.dart';
 import 'verify_detaile.dart';
@@ -162,6 +163,13 @@ class _OtpScreenState extends State<OtpScreen> {
     ProductStore.instance.userId = firebaseUid;
     SellerProfileStore.instance.userId = firebaseUid;
 
+    // Retry a location write that failed while offline (marker left by
+    // LocationConfirmScreen) — Splash does not re-run on this login path.
+    LocationConfirmScreen.retryPendingLocation(
+      uid: firebaseUid,
+      phone: firebasePhone,
+    );
+
     // Always re-fetch this user's products from Supabase so they persist
     // across app restarts.
     try {
@@ -211,7 +219,14 @@ class _OtpScreenState extends State<OtpScreen> {
         Map<String, dynamic>? verificationDetails;
         if (candidateIds.isNotEmpty) {
           final accounts = await api.getBankDetailsForUsers(candidateIds);
-          bankDetails = accounts.isNotEmpty ? accounts.first : null;
+          // Most complete row, never `first`: older builds saved a
+          // half-filled row per attempt, and the oldest one wrongly kept
+          // bankComplete false — sending sellers back to the bank page
+          // even when a complete row existed.
+          bankDetails = SupabaseProductApi.mostCompleteBankAccount(accounts);
+          // Publish every row to the store so Profile / Bank screens show
+          // the saved account immediately instead of a placeholder.
+          SellerProfileStore.instance.setBankAccounts(accounts);
           verificationDetails =
               await api.getVerificationForUsers(candidateIds);
 
@@ -384,6 +399,14 @@ class _OtpScreenState extends State<OtpScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
+    // Location/address live on the profile row too — without them every
+    // home/profile/order screen shows the hardcoded placeholder forever.
+    final String location =
+        (profile['location'] ?? '').toString().trim();
+    final String address =
+        (profile['business_address'] ?? '').toString().trim();
+    final String business =
+        (profile['business_name'] ?? '').toString().trim();
     final String sellerTypeStr =
         (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
     SellerType sellerType;
@@ -395,13 +418,19 @@ class _OtpScreenState extends State<OtpScreen> {
       default:
         sellerType = SellerType.farmer;
     }
+    // Set location even when no name exists yet so the address shows up
+    // regardless of how far onboarding has progressed.
+    SellerProfileStore.instance.setBusinessLocation(
+      location: location,
+      address: address,
+    );
     if (name.isNotEmpty) {
       SellerProfileStore.instance.saveBusinessDetails(
         name: name,
-        business: name,
+        business: business.isNotEmpty ? business : name,
         phone: mobile,
-        location: '',
-        address: '',
+        location: location,
+        address: address,
         farmSize: '',
       );
     } else {

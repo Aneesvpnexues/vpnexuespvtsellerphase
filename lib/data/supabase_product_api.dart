@@ -90,24 +90,68 @@ class SupabaseProductApi {
     return _productFromWriteResponse(response, 'Could not add the product.');
   }
 
-  Future<void> saveBankDetails({
+  /// Inserts a `seller_bank_details` row and returns the saved row
+  /// (PostgREST echoes it because of `Prefer: return=representation`), or
+  /// null when the response carried no body.
+  ///
+  /// When [updateId] is set, the existing row is updated instead — reopening
+  /// the bank page and pressing Continue must not stack a duplicate row for
+  /// the same account. If that row has been deleted meanwhile, the insert
+  /// fallback runs so the details are never silently dropped.
+  Future<Map<String, dynamic>?> saveBankDetails({
     required String holderName,
     required String bankName,
     required String accountNumber,
     required String ifsc,
+    String? updateId,
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
+    final Map<String, dynamic> row = <String, dynamic>{
+      'user_id': userId!.trim(),
+      'account_houlder_name': holderName.trim(),
+      'bank_name': bankName.trim(),
+      'account_number': accountNumber.trim(),
+      'IFSC_code': ifsc.trim().toUpperCase(),
+    };
+
+    final String id = (updateId ?? '').trim();
+    if (id.isNotEmpty) {
+      final http.Response patch = await _client.patch(
+        Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details').replace(
+          queryParameters: <String, String>{
+            'id': 'eq.$id',
+            'user_id': 'eq.${userId!.trim()}',
+          },
+        ),
+        headers: _writeHeaders,
+        body: jsonEncode(row),
+      );
+      debugPrint(
+        '[supabase_product_api] saveBankDetails PATCH(id=$id) status=${patch.statusCode} body=${patch.body}',
+      );
+      if (patch.statusCode < 200 || patch.statusCode >= 300) {
+        throw _serverError(
+          patch,
+          'Could not save bank details.',
+          migration: '010_seller_bank_details_id.sql',
+        );
+      }
+      final Object? patched = _decode(patch.body);
+      if (patched is List && patched.isNotEmpty && patched.first is Map) {
+        return Map<String, dynamic>.from(patched.first as Map);
+      }
+      if (patched is! List) return null;
+      // Empty list: the row was deleted since prefill — fall through and
+      // insert a fresh one.
+    }
+
     final http.Response response = await _client.post(
       Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details'),
       headers: _writeHeaders,
       body: jsonEncode(<String, dynamic>{
         'id': DateTime.now().millisecondsSinceEpoch,
-        'user_id': userId!.trim(),
-        'account_houlder_name': holderName.trim(),
-        'bank_name': bankName.trim(),
-        'account_number': accountNumber.trim(),
-        'IFSC_code': ifsc.trim().toUpperCase(),
+        ...row,
       }),
     );
     debugPrint('[supabase_product_api] saveBankDetails status=${response.statusCode} body=${response.body}');
@@ -118,6 +162,11 @@ class SupabaseProductApi {
         migration: '010_seller_bank_details_id.sql',
       );
     }
+    final Object? decoded = _decode(response.body);
+    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+      return Map<String, dynamic>.from(decoded.first as Map);
+    }
+    return null;
   }
 
   Future<void> deleteBankDetails() async {
@@ -547,6 +596,17 @@ class SupabaseProductApi {
     return _mostComplete(rows, _bankFieldCount);
   }
 
+  /// The row with the fewest empty bank fields in [rows], or null when
+  /// [rows] is empty.
+  ///
+  /// Callers that fetch several rows (e.g. across a Firebase UID and a legacy
+  /// id) must use this instead of `rows.first`: older builds saved one row
+  /// per attempt, so the first row can be a half-filled one from an early
+  /// try and would wrongly report the bank section as incomplete.
+  static Map<String, dynamic>? mostCompleteBankAccount(
+    List<Map<String, dynamic>> rows,
+  ) => _mostComplete(rows, _bankFieldCount);
+
 /// Like [getBankDetailsByUserId] but fetches ALL rows for every id in [userIds]
 /// and returns them all as a list.
 ///
@@ -574,10 +634,12 @@ Future<List<Map<String, dynamic>>> getBankDetailsForUsers(
 /// Used to load the active bank account ID when restoring session.
 Future<String?> getActiveBankAccountId(String userId) async {
   _ensureConfigured();
+  final String id = userId.trim();
+  if (id.isEmpty) return null;
   final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
     queryParameters: <String, String>{
       'select': 'active_bank_account_id',
-      'user_id': 'eq.$userId',
+      _profileOwnerColumn(id): 'eq.$id',
       'limit': '1',
     },
   );
@@ -594,11 +656,16 @@ Future<String?> getActiveBankAccountId(String userId) async {
 }
 
 /// Persists the active (primary) bank account pointer on seller_profiles.
+///
+/// Throws when no profile row matches the signed-in seller: an update that
+/// silently matches nothing would make "Set primary" look saved while the
+/// database stays unchanged.
 Future<void> updateActiveBankAccountId(String accountId) async {
   _ensureConfigured();
   _ensureSignedIn();
+  final String id = userId!.trim();
   final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
-    queryParameters: <String, String>{'user_id': 'eq.${userId!.trim()}'},
+    queryParameters: <String, String>{_profileOwnerColumn(id): 'eq.$id'},
   );
   final http.Response response = await _client.patch(
     uri,
@@ -607,10 +674,37 @@ Future<void> updateActiveBankAccountId(String accountId) async {
       'active_bank_account_id': accountId.trim(),
     }),
   );
+  debugPrint(
+    '[supabase_product_api] updateActiveBankAccountId status=${response.statusCode} body=${response.body}',
+  );
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw _serverError(response, 'Could not update the primary account.');
+    throw _serverError(
+      response,
+      'Could not update the primary account.',
+      migration: '020_seller_profiles_active_bank_account.sql',
+    );
+  }
+  final Object? decoded = _decode(response.body);
+  if (decoded is List && decoded.isEmpty) {
+    throw const ApiException(
+      'Could not find your seller profile to save the primary account. '
+      'Save your Personal & Business details first, then try again.',
+    );
   }
 }
+
+/// Legacy `seller_profiles` rows are keyed by their uuid `user_id`; rows
+/// linked to a Firebase account (every row the current app creates) carry
+/// the Firebase UID in `firebase_uid`. Filtering the uuid column with a
+/// 28-character Firebase UID fails with
+/// `invalid input syntax for type uuid`, which used to make every
+/// active-bank-account read return null and every write fail with a 400.
+static String _profileOwnerColumn(String id) =>
+    _uuidPattern.hasMatch(id.trim()) ? 'user_id' : 'firebase_uid';
+
+static final RegExp _uuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
 
 /// Fetches verification (KYC) details for a seller identified by [userId].
   ///
@@ -797,6 +891,79 @@ Future<void> updateActiveBankAccountId(String accountId) async {
       if (saved.isNotEmpty) return saved;
     }
     return uid;
+  }
+
+  /// Writes the location confirmed on the map page into `seller_profiles`
+  /// (`location` = label line, `business_address` = detail line).
+  ///
+  /// Unlike [saveSellerProfile] this never touches name/business fields, so
+  /// the location step can persist as soon as it is confirmed — before the
+  /// rest of the profile exists. Row resolution mirrors [saveSellerProfile]:
+  /// an existing profile (by Firebase UID, then phone) is patched; a seller
+  /// with no row yet gets a fresh one keyed by `firebase_uid`.
+  ///
+  /// Throws [ApiException] on failure so callers can keep a pending-retry
+  /// marker instead of silently dropping the address.
+  Future<void> saveLocationDetails({
+    required String label,
+    required String address,
+    String? phone,
+  }) async {
+    _ensureConfigured();
+    _ensureSignedIn();
+    const String migration = '009_seller_profiles_write.sql';
+    final String now = DateTime.now().toUtc().toIso8601String();
+    final String location = label.trim();
+    final String fullAddress = address.trim();
+    if (location.isEmpty && fullAddress.isEmpty) return;
+
+    final Map<String, dynamic> body = <String, dynamic>{
+      'location': location,
+      'business_address': fullAddress,
+      'updated_at': now,
+    };
+
+    final String existing = await _existingProfileId(
+      phone: phone ?? AuthFlow.instance.currentUserPhone,
+    );
+    if (existing.isNotEmpty) {
+      final http.Response patch = await _client.patch(
+        Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+          queryParameters: <String, String>{'user_id': 'eq.$existing'},
+        ),
+        headers: _writeHeaders,
+        body: jsonEncode(body),
+      );
+      debugPrint(
+        '[supabase_product_api] saveLocationDetails PATCH ${patch.statusCode} body=${patch.body}',
+      );
+      _requireOk(
+        patch,
+        'Could not save your location.',
+        _migrationFor(patch, migration),
+      );
+      return;
+    }
+
+    final String uid = userId!.trim();
+    final Map<String, dynamic> insert = <String, dynamic>{
+      ...body,
+      'created_at': now,
+      if (uid.isNotEmpty) 'firebase_uid': uid,
+    };
+    final http.Response post = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_profiles'),
+      headers: _writeHeaders,
+      body: jsonEncode(insert),
+    );
+    debugPrint(
+      '[supabase_product_api] saveLocationDetails POST ${post.statusCode} body=${post.body}',
+    );
+    _requireOk(
+      post,
+      'Could not save your location.',
+      _migrationFor(post, migration),
+    );
   }
 
   /// Persists the FCM registration token on this seller's profile row.

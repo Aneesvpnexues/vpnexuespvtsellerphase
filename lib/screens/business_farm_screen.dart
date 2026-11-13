@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -276,17 +277,28 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     // Don't overwrite the field if the user kept typing meanwhile.
     if (_locationController.text != textAtStart) return;
     _syncingFromMap = true;
-    _locationController.text =
+    final String display =
         (name != null && name.isNotEmpty)
             ? name
             : '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+    _locationController.text = display;
+    // Push to the shared store so Home / Profile / Order pages reflect the
+    // newly marked location immediately, not just after Save Changes.
+    SellerProfileStore.instance.setBusinessLocation(
+      location: display,
+      address: display,
+    );
     _syncingFromMap = false;
     _refresh();
   }
 
   // SAVE BUSINESS AND FARM DETAILS
 
-  void _saveChanges() {
+  /// Saves to the store first (UI reacts immediately), then persists the
+  /// profile to Supabase. A failed write keeps the in-memory values and
+  /// shows an error snackbar instead of the success one — the seller can
+  /// tap Save again.
+  Future<void> _saveChanges() async {
     final profile = SellerProfileStore.instance;
 
     profile.saveBusinessDetails(
@@ -302,14 +314,46 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       farmSize: _farmSizeController.text.trim(),
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppStrings.trOf(context, 'Business & Farm details saved successfully!'),
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
+    final messenger = ScaffoldMessenger.of(context);
+    // Translate while this route's context is still valid — after the await
+    // the widget may already be disposed.
+    final String successMessage = AppStrings.trOf(
+      context,
+      'Business & Farm details saved successfully!',
     );
+    final String errorMessage = AppStrings.trOf(
+      context,
+      'Could not save your details to the server. Check your connection and try again.',
+    );
+    try {
+      await SupabaseProductApi().saveSellerProfile(
+        name: profile.name,
+        mobile: profile.mobile,
+        sellerType: profile.sellerType.dbValue,
+        businessName: profile.businessName,
+        businessLocation: profile.businessLocation,
+        businessAddress: profile.businessAddress,
+        avatarUrl: profile.avatarUrl,
+      );
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    } catch (error) {
+      debugPrint('[BusinessFarm] saveSellerProfile failed: $error');
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
   }
 
   Widget _safeAsset(
@@ -362,6 +406,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     String? hint,
     Widget? suffix,
     TextInputType keyboardType = TextInputType.text,
+    VoidCallback? onSubmitted,
   }) {
     return Container(
       height: 45,
@@ -386,6 +431,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
+              onSubmitted: (_) => onSubmitted?.call(),
               style: AppTextStyles.personalValue,
               decoration: InputDecoration(
                 border: InputBorder.none,
@@ -572,7 +618,12 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _allCrops.map((crop) {
+            children: _allCrops
+                .followedBy(_selectedCrops.where(
+                    (crop) => !_allCrops.contains(crop)))
+                .toSet()
+                .toList()
+                .map((crop) {
               final isSelected = _selectedCrops.contains(crop);
               return Chip(
                 label: Text(AppStrings.trOf(context, crop)),
@@ -720,6 +771,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             asset: 'assets/business/ic_location.png',
             controller: _locationController,
             hint: AppStrings.trOf(context, 'Enter location (e.g. Kochi)'),
+            onSubmitted: _geocodeTypedAddress,
           ),
 
           const SizedBox(height: 12),

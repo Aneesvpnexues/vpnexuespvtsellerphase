@@ -210,7 +210,13 @@ class _Greeting extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          const Text('Salem, Tamil Nadu', style: AppTextStyles.homeLocation),
+          AnimatedBuilder(
+            animation: SellerProfileStore.instance,
+            builder: (context, _) => Text(
+              SellerProfileStore.instance.locationDisplay,
+              style: AppTextStyles.homeLocation,
+            ),
+          ),
         ],
       ),
     );
@@ -614,25 +620,33 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 11,
-                      color: Color(0xFF144326),
-                    ),
-                    SizedBox(width: 3),
-                    Text(
-                      'Salem, TN',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        height: 1.0,
+                child: AnimatedBuilder(
+                  animation: SellerProfileStore.instance,
+                  builder: (context, _) => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 11,
                         color: Color(0xFF144326),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 3),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 84),
+                        child: Text(
+                          SellerProfileStore.instance.locationDisplay,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                            color: Color(0xFF144326),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

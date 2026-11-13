@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/api_error.dart';
 import '../data/product_store.dart';
 import '../data/seller_product_repository.dart';
+import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
@@ -645,11 +646,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 left: 88.5,
                 top: 717.7,
               ),
-              const _Text(
-                'Salem, Tamil Nadu',
+              _Text(
+                SellerProfileStore.instance.locationDisplay,
                 _Styles.rowValue,
                 left: 89,
                 top: 731.8,
+                width: 240,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const _Text(
                 'Performance',

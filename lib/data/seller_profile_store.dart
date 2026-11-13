@@ -212,7 +212,14 @@ class SellerProfileStore extends ChangeNotifier {
 
   String get initials => initialsForName(_name);
 
-  String get sellerSummary => '${_sellerType.label}, Salem, Tamil Nadu';
+  /// Address shown wherever a seller's place appears (home header, product
+  /// cards, order screens). Falls back to the old placeholder until the
+  /// seller confirms a location on the map page.
+  String get locationDisplay =>
+      _businessLocation.isNotEmpty ? _businessLocation : 'Salem, Tamil Nadu';
+
+  /// Line under the profile name: seller type + confirmed location.
+  String get sellerSummary => '${_sellerType.label}, $locationDisplay';
 
   /// Marks all completion flags as incomplete — used when logging out or
   /// switching accounts so stale data doesn't leak between users.
@@ -298,6 +305,19 @@ class SellerProfileStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Overwrites only the business location pair (label + detail line).
+  ///
+  /// Used when the map page confirms a new address: every display switches
+  /// to the new value immediately without touching name/phone/farm fields.
+  void setBusinessLocation({
+    required String location,
+    required String address,
+  }) {
+    _businessLocation = location.trim();
+    _businessAddress = address.trim();
+    notifyListeners();
+  }
+
   void reset() {
     _name = defaultName;
     _mobile = defaultMobile;
@@ -305,6 +325,16 @@ class SellerProfileStore extends ChangeNotifier {
     _avatarUrl = null;
     _userId = '';
     _sellerType = SellerType.farmer;
+    // Business & location data must not leak across account switches —
+    // the next seller would otherwise see the previous address everywhere.
+    _businessName = '';
+    _farmSize = '';
+    _businessLocation = '';
+    _businessAddress = '';
+    _pickedLocation = '';
+    _pickedAddress = '';
+    _pickedLatitude = null;
+    _pickedLongitude = null;
     _bankAccounts = [];
     _activeBankIndex = 0;
     resetCompletionFlags();

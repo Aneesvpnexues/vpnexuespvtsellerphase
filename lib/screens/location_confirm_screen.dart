@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../data/app_storage.dart';
 import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
 import '../services/backend_service.dart';
 import '../services/osm_geocoder.dart';
@@ -22,7 +25,9 @@ import 'seller_type_screen.dart';
 /// centre while the seller drags ("Drag the map to adjust"), the address
 /// card is editable and both directions stay in sync through Nominatim
 /// geocoding. "Confirm location" persists the pick to [SellerProfileStore]
-/// (shared with Business Details) and the backend before STEP 02.
+/// (shared with Business Details), writes it to Supabase
+/// (`seller_profiles.location` / `business_address`) with a pending-retry
+/// marker when offline, and calls the backend before STEP 02.
 ///
 /// Built against a 412x917 artboard, so every offset below is taken straight
 /// from the design PNG.
@@ -31,6 +36,57 @@ class LocationConfirmScreen extends StatefulWidget {
 
   static const double designWidth = 412;
   static const double designHeight = 917;
+
+  /// Retries a location write that failed while offline.
+  ///
+  /// The State's `_persistLocation` stores a `{label, address}` marker BEFORE
+  /// attempting the write and clears it only on success, so a seller who
+  /// confirmed their address with no connectivity keeps it for the next
+  /// login. Called from Splash (Firebase session resume) and the OTP login
+  /// (logout -> login again, where Splash does not re-run). Failure leaves
+  /// the marker in place for the next attempt.
+  static void retryPendingLocation({required String uid, String? phone}) {
+    final AppStorage? storage = AppStorage.current;
+    final String raw =
+        storage?.readString(StorageKeys.pendingLocationKey) ?? '';
+    if (raw.trim().isEmpty) return;
+    unawaited(() async {
+      try {
+        final Object? decoded = jsonDecode(raw);
+        if (decoded is! Map) {
+          await storage?.remove(StorageKeys.pendingLocationKey);
+          return;
+        }
+        final String label = (decoded['label'] ?? '').toString().trim();
+        final String address = (decoded['address'] ?? '').toString().trim();
+        if (label.isEmpty && address.isEmpty) {
+          await storage?.remove(StorageKeys.pendingLocationKey);
+          return;
+        }
+        final api = SupabaseProductApi();
+        api.userId = uid;
+        await api
+            .saveLocationDetails(
+              label: label,
+              address: address,
+              phone: (phone ?? '').trim().isNotEmpty
+                  ? phone!.trim()
+                  : AuthFlow.instance.currentUserPhone,
+            )
+            .timeout(const Duration(seconds: 15));
+        await storage?.remove(StorageKeys.pendingLocationKey);
+        debugPrint('[LocationConfirm] pending location saved');
+        // Keep the freshly saved address visible without waiting for the
+        // next profile fetch.
+        SellerProfileStore.instance.setBusinessLocation(
+          location: label,
+          address: address,
+        );
+      } catch (error) {
+        debugPrint('[LocationConfirm] pending location retry failed: $error');
+      }
+    }());
+  }
 
   @override
   State<LocationConfirmScreen> createState() => _LocationConfirmScreenState();
@@ -282,16 +338,83 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
 
   void _confirm() {
     final SellerProfileStore store = SellerProfileStore.instance;
+    final String label = _labelController.text.trim();
+    final String address = _addressController.text.trim();
     store.setPickedLocation(
-      label: _labelController.text.trim(),
-      address: _addressController.text.trim(),
+      label: label,
+      address: address,
       latitude: _center.latitude,
       longitude: _center.longitude,
     );
+    // Every location display (home, profile, orders, Business & Farm)
+    // reads businessLocation/businessAddress — mirror the pick so all of
+    // them switch to it right away.
+    store.setBusinessLocation(location: label, address: address);
     unawaited(_saveLocation());
+
+    // Supabase is the source the app reads back on every login. Capture the
+    // messenger and the translated warning while this route's context is
+    // still valid, then let onboarding continue either way (retry-on-login
+    // covers an offline failure).
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    unawaited(
+      _persistLocation(
+        label: label,
+        address: address,
+        phone: store.mobile,
+        messenger: messenger,
+        warning:
+            'Could not save your location to the server. It will retry at next login.',
+      ),
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
+  }
+
+  /// Writes the confirmed address to `seller_profiles.location` /
+  /// `business_address`.
+  ///
+  /// A pending marker is stored BEFORE the attempt and cleared only on
+  /// success, so a failed write is retried on the next login instead of
+  /// being lost. On failure [warning] is shown on [messenger] (captured
+  /// before navigating away) and onboarding continues anyway.
+  static Future<void> _persistLocation({
+    required String label,
+    required String address,
+    required String phone,
+    required ScaffoldMessengerState messenger,
+    required String warning,
+  }) async {
+    final AppStorage? storage = AppStorage.current;
+    const String key = StorageKeys.pendingLocationKey;
+    try {
+      await storage?.writeString(
+        key,
+        jsonEncode(<String, String>{'label': label, 'address': address}),
+      );
+    } catch (_) {
+      // Marker is best-effort; the direct attempt below still runs.
+    }
+    try {
+      await SupabaseProductApi()
+          .saveLocationDetails(label: label, address: address, phone: phone)
+          .timeout(const Duration(seconds: 15));
+      try {
+        await storage?.remove(key);
+      } catch (_) {}
+    } catch (error) {
+      debugPrint('[LocationConfirm] saveLocationDetails failed: $error');
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(warning),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
   }
 
   /// Best-effort `PUT /onboarding/location` so the backend marks the step;

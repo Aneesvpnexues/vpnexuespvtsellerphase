@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
@@ -18,7 +19,9 @@ import 'bank_detaile.dart';
 /// (`seller_bank_details`): the primary account in the card, extra accounts
 /// as tappable "Set primary" rows, and a working "Add another bank account"
 /// button. When signed out (design replica / tests) the Zeplin mock content
-/// is shown instead.
+/// is shown instead; a signed-in seller never sees the mock — while the
+/// fetch runs the card shows a spinner, and a failed fetch falls back to
+/// the honest empty state instead of fake account data.
 class BankDetailsScreen extends StatefulWidget {
   const BankDetailsScreen({super.key});
 
@@ -34,21 +37,25 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
   List<Map<String, dynamic>> _accounts = const [];
   int _activeIndex = 0;
   bool _loaded = false;
+  bool _signedIn = false;
 
   @override
   void initState() {
     super.initState();
+    _signedIn = _sessionIds().isNotEmpty;
     _loadBankAccounts();
   }
 
-  Future<void> _loadBankAccounts() async {
-    try {
-      final List<String> ids = <String>{
+  static List<String> _sessionIds() => <String>{
         AuthFlow.instance.firebaseUid ?? '',
         SellerProfileStore.instance.userId,
       }.where((String id) => id.trim().isNotEmpty).toList();
-      if (ids.isEmpty) return;
 
+  Future<void> _loadBankAccounts() async {
+    final List<String> ids = _sessionIds();
+    // Signed out — the design replica mock below is intentional.
+    if (ids.isEmpty) return;
+    try {
       final List<Map<String, dynamic>> rows =
           await SupabaseProductApi().getBankDetailsForUsers(ids);
       if (!mounted) return;
@@ -61,7 +68,14 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
         _loaded = true;
       });
     } catch (_) {
-      // Offline / not configured — keep the design mock.
+      // A signed-in load failure must never show the fake design account as
+      // if it were the seller's own saved data — show the empty state
+      // instead (reopening the page retries the fetch).
+      if (!mounted) return;
+      setState(() {
+        _accounts = const [];
+        _loaded = true;
+      });
     }
   }
 
@@ -82,8 +96,16 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
       );
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _setPrimary(int index) async {
     if (index == _activeIndex) return;
+    final int previous = _activeIndex;
     setState(() => _activeIndex = index);
 
     final SellerProfileStore store = SellerProfileStore.instance;
@@ -96,8 +118,21 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
       final SupabaseProductApi api = SupabaseProductApi();
       if (store.userId.isNotEmpty) api.userId = store.userId;
       await api.updateActiveBankAccountId(id);
+    } on ApiException catch (error) {
+      // Persistence failed — put the badge back and say why, instead of
+      // pretending the primary account was saved.
+      if (mounted) {
+        setState(() => _activeIndex = previous);
+        store.setActiveBankIndex(previous);
+      }
+      _showError(error.message);
     } catch (_) {
-      // Persistence is best-effort; the UI already switched.
+      if (!mounted) return;
+      setState(() => _activeIndex = previous);
+      store.setActiveBankIndex(previous);
+      _showError(
+        AppStrings.trOf(context, 'Could not update the primary account. Please try again.'),
+      );
     }
   }
 
@@ -130,7 +165,11 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool mock = !_loaded;
+    // Zeplin mock content only for the signed-out design replica; a
+    // signed-in seller sees a spinner while the fetch runs and real data
+    // (or the empty state) afterwards.
+    final bool mock = !_loaded && !_signedIn;
+    final bool loading = !_loaded && _signedIn;
     final Map<String, dynamic>? active =
         _accounts.isEmpty ? null : _accounts[_activeIndex];
     final List<int> otherIndexes = <int>[
@@ -167,12 +206,14 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
               Positioned(
                 left: 25,
                 top: 127,
-                child: _BankCard(
-                  bankName: bankName,
-                  accountTail: tail,
-                  holderName: holder,
-                  ifsc: ifsc,
-                ),
+                child: loading
+                    ? const _BankCardLoading()
+                    : _BankCard(
+                        bankName: bankName,
+                        accountTail: tail,
+                        holderName: holder,
+                        ifsc: ifsc,
+                      ),
               ),
               for (int i = 0; i < otherIndexes.length; i++)
                 Positioned(
@@ -213,6 +254,39 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Same footprint and gradient as [_BankCard] shown while a signed-in
+/// seller's accounts are still loading — the fake design account must not
+/// flash in their place.
+class _BankCardLoading extends StatelessWidget {
+  const _BankCardLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 362,
+      height: 173,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [AppColors.orderCardDark, AppColors.bankCardEnd],
+        ),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: Colors.white,
           ),
         ),
       ),
@@ -731,6 +805,7 @@ class _AllAccountsSheetState extends State<_AllAccountsSheet> {
 
   Future<void> _setPrimary(int index) async {
     if (index == _activeIndex) return;
+    final int previous = _activeIndex;
     setState(() => _activeIndex = index);
 
     final SellerProfileStore store = SellerProfileStore.instance;
@@ -742,9 +817,27 @@ class _AllAccountsSheetState extends State<_AllAccountsSheet> {
       final SupabaseProductApi api = SupabaseProductApi();
       if (store.userId.isNotEmpty) api.userId = store.userId;
       await api.updateActiveBankAccountId(id);
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _activeIndex = previous);
+        store.setActiveBankIndex(previous);
+      }
+      _showError(error.message);
     } catch (_) {
-      // Best-effort persistence; the badge already moved.
+      if (!mounted) return;
+      setState(() => _activeIndex = previous);
+      store.setActiveBankIndex(previous);
+      _showError(
+        AppStrings.trOf(context, 'Could not update the primary account. Please try again.'),
+      );
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _addAccount() async {

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/api_error.dart';
+import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -21,8 +23,10 @@ import 'seller_home_screen.dart';
 /// produce wash, the sharp vegetable basket and the white "STEP 04" pill all
 /// live in that PNG. Only "STEP 02" is rendered as text here. Name/account/IFSC
 /// are typeable, the bank card opens a picker, Verify validates the IFSC
-/// format, and Continue saves nothing but opens the home page
-/// ([SellerHomeScreen]).
+/// format, and Continue saves the row to `seller_bank_details` in Supabase —
+/// then opens the home page ([SellerHomeScreen]), or pops back to the caller
+/// in [BankDetaileScreen.addMode]. A previously saved row is prefilled so
+/// reopening the page shows what is already in the database.
 class BankDetaileScreen extends StatefulWidget {
   const BankDetaileScreen({super.key, this.addMode = false});
 
@@ -75,6 +79,71 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
   String? _bankName = _banks.first;
   bool _ifscVerified = false;
   bool _showManualBank = false;
+
+  /// `seller_bank_details.id` of the row loaded by [_prefillSavedDetails].
+  /// When set, Continue updates that row instead of stacking a duplicate on
+  /// every revisit of this page.
+  String? _existingRowId;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillSavedDetails();
+  }
+
+  /// Loads the seller's most complete saved row so reopening this page shows
+  /// what is already in the database instead of an empty form (which made
+  /// saved details look lost). Skipped in [BankDetaileScreen.addMode] —
+  /// adding another account starts blank.
+  Future<void> _prefillSavedDetails() async {
+    if (widget.addMode) return;
+    try {
+      final List<String> ids = <String>{
+        AuthFlow.instance.firebaseUid ?? '',
+        SellerProfileStore.instance.userId,
+      }.where((String id) => id.trim().isNotEmpty).toList();
+      if (ids.isEmpty) return;
+      final List<Map<String, dynamic>> rows =
+          await SupabaseProductApi().getBankDetailsForUsers(ids);
+      final Map<String, dynamic>? best =
+          SupabaseProductApi.mostCompleteBankAccount(rows);
+      if (best == null || !mounted) return;
+      _existingRowId = best['id']?.toString();
+
+      final String holder =
+          (best['account_houlder_name'] ?? '').toString().trim();
+      final String account = (best['account_number'] ?? '').toString().trim();
+      final String ifsc = (best['IFSC_code'] ?? '').toString().trim();
+      final String bank = (best['bank_name'] ?? '').toString().trim();
+      setState(() {
+        if (holder.isNotEmpty) _holderName.text = holder;
+        if (account.isNotEmpty) {
+          _accountNumber.text = const _AccountNumberFormatter()
+              .formatEditUpdate(
+                TextEditingValue.empty,
+                TextEditingValue(text: account),
+              )
+              .text;
+        }
+        if (ifsc.isNotEmpty) {
+          _ifsc.text = ifsc.toUpperCase();
+          _ifscVerified = _ifscIsValid;
+        }
+        if (bank.isNotEmpty) {
+          if (_banks.contains(bank)) {
+            _bankName = bank;
+            _showManualBank = false;
+          } else {
+            _bankName = 'Other / Manual entry';
+            _manualBank.text = bank;
+            _showManualBank = true;
+          }
+        }
+      });
+    } catch (_) {
+      // Prefill is best-effort; the form stays editable either way.
+    }
+  }
 
   @override
   void dispose() {
@@ -161,15 +230,28 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       _showMessage(AppStrings.trOf(context, 'Select your bank.'));
       return;
     }
+    if (accountNumber.isEmpty) {
+      _showMessage(AppStrings.trOf(context, 'Enter your account number.'));
+      return;
+    }
+    if (ifsc.isEmpty || ifsc.length != 11) {
+      _showMessage(
+        AppStrings.trOf(context, 'Enter a valid 11-character IFSC code.'),
+      );
+      return;
+    }
 
     try {
-      await SupabaseProductApi().saveBankDetails(
+      final Map<String, dynamic>? saved =
+          await SupabaseProductApi().saveBankDetails(
         holderName: holderName,
         bankName: bankName,
         accountNumber: accountNumber,
         ifsc: ifsc,
+        updateId: widget.addMode ? null : _existingRowId,
       );
       if (!mounted) return;
+      if (saved != null) _mergeSavedRow(saved);
       if (widget.addMode) {
         Navigator.pop(context, true);
         return;
@@ -183,6 +265,25 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     } catch (_) {
       if (mounted) _showMessage(AppStrings.trOf(context, 'Could not save bank details. Please try again.'));
     }
+  }
+
+  /// Keeps [SellerProfileStore] in sync with the row just written so the
+  /// settings Bank Details page shows it without waiting for a re-fetch.
+  void _mergeSavedRow(Map<String, dynamic> row) {
+    final SellerProfileStore store = SellerProfileStore.instance;
+    final List<Map<String, dynamic>> accounts =
+        List<Map<String, dynamic>>.of(store.bankAccounts);
+    final int existing = accounts.indexWhere(
+      (Map<String, dynamic> account) =>
+          account['id']?.toString() == row['id']?.toString(),
+    );
+    if (existing >= 0) {
+      accounts[existing] = row;
+    } else {
+      accounts.add(row);
+    }
+    store.setBankAccounts(accounts);
+    _existingRowId ??= row['id']?.toString();
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -608,11 +609,11 @@ class _BuyerCard extends StatelessWidget {
               height: 9,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 109,
             top: 75,
             child: _Label(
-              'Salem, Tamil Nadu',
+              SellerProfileStore.instance.locationDisplay,
               AppTextStyles.orderMuted,
               width: 90,
               height: 13,
@@ -683,8 +684,8 @@ class _BuyerCard extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 77,
-                    top: 7,
+                    left: 74,
+                    top: 11,
                     child: _Label(
                       AppStrings.trOf(context, 'Call'),
                       AppTextStyles.orderCallLabel,
@@ -711,7 +712,7 @@ class _BuyerCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned(
-                    left: 56,
+                    left: 52,
                     top: 13,
                     child: Image(
                       image: AssetImage('assets/order/ic_message.png'),
@@ -720,17 +721,17 @@ class _BuyerCard extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 79,
-                    top: 7,
+                    left: 72,
+                    top: 11,
                     child: _Label(
-                      AppStrings.trOf(context, 'Call'),
+                      AppStrings.trOf(context, 'Message'),
                       const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.12,
                         color: Colors.white,
                       ),
-                      width: 27,
+                      width: 56,
                       height: 17,
                     ),
                   ),

@@ -79,6 +79,13 @@ class _Step03BusinessDetailsScreenState
             : (store.businessLocation.isNotEmpty
                 ? store.businessLocation
                 : 'Salem, Tamil Nadu');
+    // The detail line lives in businessAddress/pickedAddress — seed it too,
+    // otherwise Continue would overwrite a saved address with an empty field.
+    if (_address.text.trim().isEmpty) {
+      _address.text = store.pickedAddress.isNotEmpty
+          ? store.pickedAddress
+          : store.businessAddress;
+    }
   }
 
   /// "Change" next to Business Location: open the map screen directly and

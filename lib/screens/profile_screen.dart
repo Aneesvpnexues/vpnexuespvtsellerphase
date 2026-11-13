@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../widgets/profile_shell.dart';
 import 'bank_details_screen.dart';
@@ -65,7 +66,7 @@ class ProfileScreen extends StatelessWidget {
           ProfileListRow(
             icon: Icons.account_balance_outlined,
             title: AppStrings.trOf(context, 'Bank Details'),
-            subtitle: 'SBI •••• 3421',
+            subtitle: _bankSubtitle(context),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BankDetailsScreen()),
             ),
@@ -73,5 +74,21 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// "Bank •••• 1234" for the active account, or a neutral label when the
+  /// seller has not saved one yet — the old hardcoded 'SBI •••• 3421' made
+  /// every seller look like they had an SBI account in the database.
+  String _bankSubtitle(BuildContext context) {
+    final Map<String, dynamic>? account =
+        SellerProfileStore.instance.activeBankAccount;
+    final String bank = (account?['bank_name'] ?? '').toString().trim();
+    if (bank.isEmpty) {
+      return AppStrings.trOf(context, 'No bank account yet');
+    }
+    final String number =
+        (account?['account_number'] ?? '').toString().replaceAll(' ', '');
+    if (number.length < 4) return bank;
+    return '$bank •••• ${number.substring(number.length - 4)}';
   }
 }

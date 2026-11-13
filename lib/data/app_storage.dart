@@ -20,6 +20,11 @@ abstract final class StorageKeys {
   /// Cached country code from GeoIP/GPS cascade (ISO 3166-1 alpha-2).
   /// Used to determine currency for price formatting.
   static const String geoCountryKey = 'geo_country';
+
+  /// JSON `{label, address}` marker for a location confirmed on the map
+  /// page whose Supabase write failed (offline). Splash retries it on the
+  /// next login and clears it once the write succeeds.
+  static const String pendingLocationKey = 'pending_location';
 }
 
 /// Minimal synchronous-read / async-write key-value surface the stores
