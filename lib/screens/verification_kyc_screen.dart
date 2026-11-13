@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../data/cloudinary_upload_api.dart';
@@ -9,6 +10,7 @@ import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../services/auth_flow.dart';
+import '../services/kyc_document_validator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
@@ -21,9 +23,11 @@ enum _KycDoc { aadhaar, pan, farm }
 /// Verification (KYC) — Zeplin "Android Compact - 161"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1af835d2f94b851860b63).
 ///
-/// Built against a 412x917 artboard. Badges reflect whether a document URL
-/// exists in Supabase (`seller_verify_your_details`). Tapping a row opens a
-/// sheet to view / edit / save the document image.
+/// Built against a 412x917 artboard. Badges reflect whether a *validated*
+/// document URL exists in Supabase (`seller_verify_your_details`): blank or
+/// unreadable images are rejected on pick, on save and again on load
+/// (SELLER-017). Tapping a row opens a sheet to view / edit / save the
+/// document image.
 class VerificationKycScreen extends StatefulWidget {
   const VerificationKycScreen({super.key});
 
@@ -36,9 +40,12 @@ class VerificationKycScreen extends StatefulWidget {
 }
 
 class _VerificationKycScreenState extends State<VerificationKycScreen> {
-  // Design defaults — kept when the Supabase fetch fails (e.g. offline).
-  bool _aadhaarVerified = true;
-  bool _panVerified = true;
+  // No document reads as "Verified" until a stored, validated image exists —
+  // the screen must never claim verification it cannot back up (SELLER-017).
+  // The badges start at "Under review" and only flip once
+  // [KycDocumentValidator] has approved the image behind them.
+  bool _aadhaarVerified = false;
+  bool _panVerified = false;
   bool _farmVerified = false;
 
   String? _aadhaarUrl;
@@ -79,16 +86,51 @@ class _VerificationKycScreenState extends State<VerificationKycScreen> {
       final String aadhaar = _urlOf(row, 'aadhaar_card');
       final String pan = _urlOf(row, 'pan_card');
       final String farm = _urlOf(row, 'business_registration');
+
+      // A URL alone must not read as "Verified": every stored image is
+      // downloaded and run through the same blankness check used on upload,
+      // so a blank upload (including one made before this check existed)
+      // never shows a green badge (SELLER-017).
+      final List<bool> validated = await Future.wait<bool>(<Future<bool>>[
+        _isUsableDocument(aadhaar),
+        _isUsableDocument(pan),
+        _isUsableDocument(farm),
+      ]);
+      if (!mounted) return;
+
       setState(() {
         _aadhaarUrl = aadhaar.isEmpty ? null : aadhaar;
         _panUrl = pan.isEmpty ? null : pan;
         _farmUrl = farm.isEmpty ? null : farm;
-        _aadhaarVerified = aadhaar.isNotEmpty;
-        _panVerified = pan.isNotEmpty;
-        _farmVerified = farm.isNotEmpty;
+        _aadhaarVerified = validated[0];
+        _panVerified = validated[1];
+        _farmVerified = validated[2];
       });
     } catch (_) {
-      // Offline / not configured — keep the design defaults.
+      // Offline / not configured — every badge stays at "Under review":
+      // verification is never assumed without evidence (SELLER-017).
+    }
+  }
+
+  /// Downloads [url] and applies the same validation as the upload flow.
+  /// Anything empty, unreachable or blank counts as not verified.
+  Future<bool> _isUsableDocument(String url) async {
+    if (url.trim().isEmpty) return false;
+    try {
+      final http.Response response = await http
+          .get(Uri.parse(url.trim()))
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return false;
+      }
+      final KycDocumentIssue? issue = await KycDocumentValidator.check(
+        response.bodyBytes,
+        mimeType: response.headers['content-type'],
+        filename: Uri.tryParse(url.trim())?.path ?? '',
+      );
+      return issue == null;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -586,6 +628,22 @@ class _DocSheetState extends State<_DocSheet> {
     // (web has no file paths for Image.file).
     final Uint8List bytes = await picked.readAsBytes();
     if (!mounted) return;
+
+    // Blank / unreadable photos are refused here, before they can be
+    // previewed, uploaded or flagged "Verified" (SELLER-017).
+    final KycDocumentIssue? issue = await KycDocumentValidator.check(
+      bytes,
+      mimeType: picked.mimeType,
+      filename: picked.name,
+    );
+    if (!mounted) return;
+    if (issue != null) {
+      _showMessage(
+        AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+      );
+      return;
+    }
+
     setState(() {
       _picked = picked;
       _pickedBytes = bytes;
@@ -602,6 +660,24 @@ class _DocSheetState extends State<_DocSheet> {
     setState(() => _saving = true);
     try {
       final Uint8List bytes = await _picked!.readAsBytes();
+
+      // Final gate before the upload: nothing invalid reaches Cloudinary or
+      // Supabase, so an unverifiable image can never flip the badge to
+      // "Verified" (SELLER-017).
+      final KycDocumentIssue? issue = await KycDocumentValidator.check(
+        bytes,
+        mimeType: _picked!.mimeType,
+        filename: _picked!.name,
+      );
+      if (issue != null) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        _showMessage(
+          AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+        );
+        return;
+      }
+
       final String url = await CloudinaryUploadApi(folder: 'seller_kyc')
           .upload(
             ProductPhoto(
