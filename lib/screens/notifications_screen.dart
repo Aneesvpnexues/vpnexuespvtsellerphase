@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../widgets/app_navigation.dart';
+import 'my_orders_screen.dart';
+
+/// What a notification card opens when tapped. Unknown or missing actions are
+/// handled by leaving the card's `onTap` null, so a card without a mapped
+/// action simply stays inert instead of crashing.
+enum _NotificationAction { newOrders, storeVerified }
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -24,11 +31,13 @@ class NotificationsScreen extends StatelessWidget {
               'Review and accept to grow your business!',
             ),
             icon: Icons.shopping_bag_outlined,
+            onTap: () => _openNotification(context, _NotificationAction.newOrders),
           ),
           _NotificationCard(
             title: AppStrings.trOf(context, 'Your store is verified'),
             subtitle: AppStrings.trOf(context, 'You can now accept orders.'),
             icon: Icons.verified_user_outlined,
+            onTap: () => _openNotification(context, _NotificationAction.storeVerified),
           ),
         ],
       ),
@@ -36,15 +45,33 @@ class NotificationsScreen extends StatelessWidget {
   }
 }
 
+/// Dispatches a notification tap to the screen its type maps to.
+void _openNotification(BuildContext context, _NotificationAction action) {
+  switch (action) {
+    case _NotificationAction.newOrders:
+      // Pushed on top (not switchTab) so Back returns to the list.
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: AppRoutes.orders),
+          builder: (_) => const MyOrdersScreen(),
+        ),
+      );
+    case _NotificationAction.storeVerified:
+      goToVerificationKyc(context);
+  }
+}
+
 class _NotificationCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _NotificationCard({
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.onTap,
   });
 
   @override
@@ -54,6 +81,7 @@ class _NotificationCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: const Color(0xFFE8F2E0),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: const Color(0xFF0D3B20),
           child: Icon(icon, color: const Color(0xFFC6E96D)),
