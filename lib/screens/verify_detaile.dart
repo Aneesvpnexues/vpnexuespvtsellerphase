@@ -8,6 +8,7 @@ import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
+import '../services/kyc_document_validator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -79,10 +80,48 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     }
 
     if (!mounted) return;
+
+    // Blank / unreadable documents are refused here so they never earn a
+    // "Verified" badge, an upload or a saved URL (SELLER-017).
+    if (document != null) {
+      final KycDocumentIssue? issue = await _validate(document);
+      if (!mounted) return;
+      if (issue != null) {
+        setState(() => _pickingSlot = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _pickingSlot = null;
       if (document != null) _documents[slot] = document;
     });
+  }
+
+  /// Runs [KycDocumentValidator] over a picked document. Files whose bytes
+  /// could not be read are treated as unreadable: they can neither be
+  /// verified nor uploaded, so they must not be accepted either.
+  Future<KycDocumentIssue?> _validate(PickedDocument document) async {
+    final Uint8List? bytes = _bytesOf(document);
+    if (bytes == null) return KycDocumentIssue.unreadable;
+    return KycDocumentValidator.check(
+      bytes,
+      mimeType: document.mimeType,
+      filename: document.name,
+    );
+  }
+
+  static Uint8List? _bytesOf(PickedDocument document) {
+    final List<int>? bytes = document.bytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    return bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
   }
 
   Future<PickedDocument?> _pickDocumentFromDevice() async {
@@ -147,6 +186,24 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     setState(() => _saving = true);
 
     try {
+      // Submit-time gate: re-validate every picked document so the Continue
+      // action itself refuses blank or unreadable files, whatever path they
+      // got in by (SELLER-017). The `finally` below clears the spinner.
+      for (final PickedDocument document in _documents.values) {
+        final KycDocumentIssue? issue = await _validate(document);
+        if (issue != null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
       // Upload each picked document to Cloudinary.
       String? aadhaarUrl;
       String? panUrl;
