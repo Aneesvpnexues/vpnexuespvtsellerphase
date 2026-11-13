@@ -241,6 +241,8 @@ class _OtpScreenState extends State<OtpScreen> {
           }
         }
 
+        final bool locationComplete =
+            profile != null && _isLocationComplete(profile);
         final bool profileComplete =
             profile != null && _isProfileComplete(profile);
         final bool personalComplete =
@@ -263,6 +265,7 @@ class _OtpScreenState extends State<OtpScreen> {
           bankComplete: bankComplete,
           verificationComplete: verificationComplete,
           personalComplete: personalComplete,
+          locationComplete: locationComplete,
         );
         return;
       } catch (_) {
@@ -271,10 +274,22 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     // No Supabase data found for this number — new user starts onboarding
-    // at Verify Your Details, the first of the three steps.
+    // at Location Confirm, the first step of the onboarding flow.
     if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+      MaterialPageRoute<void>(builder: (_) => const LocationConfirmScreen()),
+    );
+  }
+
+  /// Determines whether the Location section is complete based on
+  /// location/address being non-empty.
+  bool _isLocationComplete(Map<String, dynamic> profile) {
+    final fields = <String>[
+      profile['location'] ?? '',
+      profile['business_address'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
     );
   }
 
@@ -329,9 +344,8 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Personal Details -> Registration -> Bank Details), or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step:
+  /// [Location Confirm] -> [Seller Type / Business Details] -> [Verify (KYC)] -> [Bank Details] -> Home
   /// Pushes (not replacement) so the user can navigate back through the flow
   /// if needed.
   void _navigateBasedOnCompletion({
@@ -339,30 +353,18 @@ class _OtpScreenState extends State<OtpScreen> {
     required bool bankComplete,
     required bool verificationComplete,
     required bool personalComplete,
+    bool locationComplete = true,
   }) {
     if (!mounted) return;
 
-    print('ONBOARDING ROUTE: profile=$profileComplete '
+    print('ONBOARDING ROUTE: location=$locationComplete profile=$profileComplete '
         'bank=$bankComplete kyc=$verificationComplete personal=$personalComplete');
 
-    // Onboarding order is Verify -> Personal Details -> Registration
-    // (STEP 03) -> Bank -> Home, so verification is always the first section
-    // to check.
-    if (!verificationComplete) {
-      print('DESTINATION: Verify Your Details');
+    if (!locationComplete) {
+      print('DESTINATION: Location Confirm');
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!personalComplete) {
-      print('DESTINATION: Personal Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const PersonalDetailsScreen(),
+          builder: (_) => const LocationConfirmScreen(),
         ),
       );
       return;
@@ -373,6 +375,16 @@ class _OtpScreenState extends State<OtpScreen> {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => const Step03BusinessDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!verificationComplete) {
+      print('DESTINATION: Verify Your Details (KYC)');
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const VerifyDetaileScreen(),
         ),
       );
       return;

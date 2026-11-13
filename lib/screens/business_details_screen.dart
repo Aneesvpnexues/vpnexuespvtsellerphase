@@ -171,7 +171,7 @@ class _Step03BusinessDetailsScreenState
 
     if (!mounted) return;
 
-    // Forward flow is Verify -> Bank -> Home; skip whatever is already done.
+    // Forward flow: Location Confirm -> Seller Type -> Business Details -> Verify (KYC) -> Bank -> Home
     if (profile.verificationComplete && profile.bankComplete) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
@@ -180,15 +180,15 @@ class _Step03BusinessDetailsScreenState
       return;
     }
 
-    if (profile.verificationComplete) {
+    if (!profile.verificationComplete) {
       Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
       );
       return;
     }
 
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+      MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
     );
   }
 

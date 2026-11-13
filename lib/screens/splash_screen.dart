@@ -185,6 +185,8 @@ class _SplashScreenState extends State<SplashScreen> {
               _populateProfileStore(profile);
             }
 
+          final bool locationComplete =
+              profile != null && _isLocationComplete(profile);
           final bool profileComplete =
               profile != null && _isProfileComplete(profile);
           final bool personalComplete =
@@ -206,6 +208,7 @@ class _SplashScreenState extends State<SplashScreen> {
             bankComplete: bankComplete,
             verificationComplete: verificationComplete,
             personalComplete: personalComplete,
+            locationComplete: locationComplete,
           );
             return;
           }
@@ -215,20 +218,21 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
 
-      // No Supabase data found for this seller — resume at Verify Your
-      // Details exactly like the OTP and welcome login paths, so a pending
-      // onboarding page is never skipped in favour of Home.
+      // No Supabase data found for this seller — start onboarding at Location
+      // Confirm, the first step of the onboarding flow.
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const LocationConfirmScreen(),
+        ),
       );
     } else {
       setState(() => _checking = false);
     }
   }
 
-  /// Determines whether the seller profile section is complete based on
-  /// required Supabase fields being non-empty.
+  /// Determines whether the seller profile (Business Details) section is
+  /// complete based on required Supabase fields being non-empty.
   bool _isProfileComplete(Map<String, dynamic> profile) {
     final fields = <String>[
       profile['business_name'] ?? '',
@@ -240,12 +244,12 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  /// Determines whether the Personal Details section is complete based on
-  /// required Supabase fields being non-empty.
-  bool _isPersonalComplete(Map<String, dynamic> profile) {
+  /// Determines whether the Location section is complete based on
+  /// location/address being non-empty.
+  bool _isLocationComplete(Map<String, dynamic> profile) {
     final fields = <String>[
-      profile['display_name'] ?? '',
-      profile['phone_number'] ?? '',
+      profile['location'] ?? '',
+      profile['business_address'] ?? '',
     ];
     return fields.every(
       (value) => value.toString().trim().isNotEmpty,
@@ -278,33 +282,21 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Personal Details -> Registration -> Bank Details), or to Home if all
-  /// sections are complete.
+  /// Navigates to the first incomplete onboarding step:
+  /// [Location Confirm] -> [Seller Type / Business Details] -> [Verify (KYC)] -> [Bank Details] -> Home
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
     required bool verificationComplete,
     required bool personalComplete,
+    bool locationComplete = true,
   }) {
     if (!mounted) return;
 
-    // Onboarding order is Verify -> Personal Details -> Registration
-    // (STEP 03) -> Bank -> Home, so verification is always the first section
-    // to check.
-    if (!verificationComplete) {
+    if (!locationComplete) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!personalComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const PersonalDetailsScreen(),
+          builder: (_) => const LocationConfirmScreen(),
         ),
       );
       return;
@@ -314,6 +306,15 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => const Step03BusinessDetailsScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!verificationComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const VerifyDetaileScreen(),
         ),
       );
       return;

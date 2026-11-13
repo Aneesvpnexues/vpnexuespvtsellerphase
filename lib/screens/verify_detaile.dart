@@ -189,18 +189,8 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
         personalComplete: profile.personalComplete,
       );
 
-      // Verify -> Personal Details -> Registration -> Bank -> Home: skip
-      // whatever is already done so a returning seller never re-enters
-      // completed pages.
-      if (!profile.personalComplete) {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const PersonalDetailsScreen(),
-          ),
-        );
-        return;
-      }
-
+      // Onboarding order: Location -> Seller Type -> Business Details -> Verify (KYC) -> Bank -> Home
+      // Skip whatever is already done so a returning seller never re-enters completed pages.
       if (!profile.profileComplete) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
