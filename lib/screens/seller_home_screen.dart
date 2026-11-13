@@ -210,7 +210,15 @@ class _Greeting extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          const Text('Salem, Tamil Nadu', style: AppTextStyles.homeLocation),
+          AnimatedBuilder(
+            animation: SellerProfileStore.instance,
+            builder: (context, _) => Text(
+              SellerProfileStore.instance.displayLocation,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.homeLocation,
+            ),
+          ),
         ],
       ),
     );
@@ -600,39 +608,44 @@ class _ProductCard extends StatelessWidget {
             Positioned(
               right: 10,
               top: 8,
-              child: Container(
-                height: 22,
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: const BoxDecoration(
-                  color: Color(0xD6CDEB6B),
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x40000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 11,
-                      color: Color(0xFF144326),
-                    ),
-                    SizedBox(width: 3),
-                    Text(
-                      'Salem, TN',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        height: 1.0,
+              child: AnimatedBuilder(
+                animation: SellerProfileStore.instance,
+                builder: (context, _) => Container(
+                  height: 22,
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xD6CDEB6B),
+                    borderRadius: BorderRadius.all(Radius.circular(30)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x40000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 11,
                         color: Color(0xFF144326),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 3),
+                      Text(
+                        SellerProfileStore.instance.shortLocation,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          height: 1.0,
+                          color: Color(0xFF144326),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

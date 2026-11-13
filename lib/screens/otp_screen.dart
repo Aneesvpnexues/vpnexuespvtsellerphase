@@ -384,6 +384,13 @@ class _OtpScreenState extends State<OtpScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
+    // The seller's chosen location travels with the profile row: it must be
+    // restored, otherwise every screen falls back to a placeholder city and
+    // the place picked during login disappears (BUG_SELLER_023).
+    final String location =
+        (profile['location'] ?? '').toString().trim();
+    final String address =
+        (profile['business_address'] ?? '').toString().trim();
     final String sellerTypeStr =
         (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
     SellerType sellerType;
@@ -400,8 +407,8 @@ class _OtpScreenState extends State<OtpScreen> {
         name: name,
         business: name,
         phone: mobile,
-        location: '',
-        address: '',
+        location: location,
+        address: address,
         farmSize: '',
       );
     } else {
