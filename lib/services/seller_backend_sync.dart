@@ -53,6 +53,8 @@ class SellerBackendSync {
       bankComplete: store.bankComplete || backend.bankComplete,
       verificationComplete:
           store.verificationComplete || backend.verificationComplete,
+      // The backend has no personal-details flag — keep the local one.
+      personalComplete: store.personalComplete,
     );
     return backend;
   }
