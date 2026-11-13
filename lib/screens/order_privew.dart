@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/artboard.dart';
 import '../widgets/page_header.dart';
@@ -49,12 +50,12 @@ class OrderPrivewScreen extends StatelessWidget {
               height: 332,
               child: Image.asset(heroAsset, fit: BoxFit.fill),
             ),
-            const Positioned(
+            Positioned(
               left: 0,
               top: 400.9,
               width: 412,
               child: Text(
-                'Fresh Tomatoes is live!',
+                AppStrings.trOf(context, 'Fresh Tomatoes is live!'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,
@@ -65,12 +66,15 @@ class OrderPrivewScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 0,
               top: 437.9,
               width: 412,
               child: Text(
-                'Buyers can noww see it and place orders.',
+                AppStrings.trOf(
+                  context,
+                  'Buyers can noww see it and place orders.',
+                ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -140,11 +144,11 @@ class _ProductCard extends StatelessWidget {
             height: 74,
             child: Image.asset(OrderPrivewScreen.tileAsset, fit: BoxFit.fill),
           ),
-          const Positioned(
+          Positioned(
             left: 117.8,
             top: 17.6,
             child: Text(
-              'Fresh Tomatoes',
+              AppStrings.trOf(context, 'Fresh Tomatoes'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -154,11 +158,11 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 117.7,
             top: 34.4,
             child: Text(
-              'Vegetables',
+              AppStrings.trOf(context, 'Vegetables'),
               style: TextStyle(
                 fontSize: 13,
                 letterSpacing: 0,
@@ -198,11 +202,11 @@ class _ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 254,
             top: 67.2,
             child: Text(
-              '50 kg available',
+              AppStrings.trOf(context, '50 kg available'),
               style: TextStyle(
                 fontSize: 13,
                 letterSpacing: 0,
@@ -235,7 +239,7 @@ class _ActivePill extends StatelessWidget {
         border: Border.fromBorderSide(BorderSide(color: Color(0xFFD3E0BE))),
       ),
       child: Stack(
-        children: const [
+        children: [
           Positioned(
             left: 12,
             top: 4.5,
@@ -254,7 +258,7 @@ class _ActivePill extends StatelessWidget {
             left: 19,
             top: 2,
             child: Text(
-              'Active',
+              AppStrings.trOf(context, 'Active'),
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
@@ -302,8 +306,8 @@ class _PreviewButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text(
-          'Preview product',
+        child: Text(
+          AppStrings.trOf(context, 'Preview product'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -341,7 +345,7 @@ class _AddProductButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Text(
               '+',
               style: TextStyle(
@@ -354,7 +358,7 @@ class _AddProductButton extends StatelessWidget {
             ),
             SizedBox(width: 10.7),
             Text(
-              'Add another product',
+              AppStrings.trOf(context, 'Add another product'),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,

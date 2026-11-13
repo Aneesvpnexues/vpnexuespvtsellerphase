@@ -962,8 +962,7 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                                 selectedIndex: null,
                                 onHomeTap: () => goToHome(context),
                                 onProductsTap: () => goToProducts(context),
-                                onAddTap: () =>
-                                    Navigator.of(context).maybePop(),
+                                onAddTap: () {},
                                 onOrdersTap: () => Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => const MyOrdersScreen(),

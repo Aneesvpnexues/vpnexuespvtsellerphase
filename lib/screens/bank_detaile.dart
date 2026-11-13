@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../data/api_error.dart';
 import '../data/supabase_product_api.dart';
-import '../services/seller_backend_sync.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -25,7 +24,11 @@ import 'seller_home_screen.dart';
 /// format, and Continue saves nothing but opens the home page
 /// ([SellerHomeScreen]).
 class BankDetaileScreen extends StatefulWidget {
-  const BankDetaileScreen({super.key});
+  const BankDetaileScreen({super.key, this.addMode = false});
+
+  /// When true, a successful save pops back to the caller (used by
+  /// "Add another bank account") instead of navigating to the home page.
+  final bool addMode;
 
   static const String headerAsset = 'assets/bank/header.png';
   static const double designWidth = 412;
@@ -127,7 +130,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
 
   void _verifyIfsc() {
     if (!_ifscIsValid) {
-      _showMessage('Enter a valid 11-character IFSC code.');
+      _showMessage(AppStrings.trOf(context, 'Enter a valid 11-character IFSC code.'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -147,16 +150,15 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     final ifsc = _ifsc.text.trim();
 
     if (holderName.isEmpty) {
-      _showMessage('Enter the account holder name.');
+      _showMessage(AppStrings.trOf(context, 'Enter the account holder name.'));
       return;
     }
-    if (_bankName == 'Other / Manual entry' &&
-        _manualBank.text.trim().isEmpty) {
-      _showMessage('Enter your bank name.');
+    if (_bankName == 'Other / Manual entry' && _manualBank.text.trim().isEmpty) {
+      _showMessage(AppStrings.trOf(context, 'Enter your bank name.'));
       return;
     }
     if (bankName.isEmpty) {
-      _showMessage('Select your bank.');
+      _showMessage(AppStrings.trOf(context, 'Select your bank.'));
       return;
     }
 
@@ -167,18 +169,11 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
         accountNumber: accountNumber,
         ifsc: ifsc,
       );
-
-      unawaited(
-        SellerBackendSync.syncBank(
-          holderName: holderName,
-          bankName: bankName,
-          accountNumber: accountNumber,
-          ifsc: ifsc,
-          ifscVerified: _ifscVerified,
-        ),
-      );
-
       if (!mounted) return;
+      if (widget.addMode) {
+        Navigator.pop(context, true);
+        return;
+      }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
         (route) => false,
@@ -186,9 +181,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) {
-        _showMessage('Could not save bank details. Please try again.');
-      }
+      if (mounted) _showMessage(AppStrings.trOf(context, 'Could not save bank details. Please try again.'));
     }
   }
 
@@ -247,12 +240,12 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                   left: 90.5,
                   top: 415.99,
                   width: 273,
-                  child: _BankTextField(
-                    fieldKey: const Key('bank-holder-name-field'),
-                    controller: _holderName,
-                    focusNode: _holderNameFocus,
-                    hintText: 'Name should match your bank account',
-                    textCapitalization: TextCapitalization.words,
+                child: _BankTextField(
+                  fieldKey: const Key('bank-holder-name-field'),
+                  controller: _holderName,
+                  focusNode: _holderNameFocus,
+                  hintText: AppStrings.trOf(context, 'Name should match your bank account'),
+                  textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
                     maxLength: 50,
                     onSubmitted: (_) => _accountFocus.requestFocus(),
@@ -268,7 +261,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                   top: 520.10,
                   width: 240,
                   child: Text(
-                    _bankName ?? 'Select your bank',
+                    _bankName ?? AppStrings.trOf(context, 'Select your bank'),
                     key: const Key('bank-name-value'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -285,7 +278,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                       fieldKey: const Key('bank-manual-name-field'),
                       controller: _manualBank,
                       focusNode: _manualBankFocus,
-                      hintText: 'Enter your bank name',
+                      hintText: AppStrings.trOf(context, 'Enter your bank name'),
                       textInputAction: TextInputAction.next,
                       maxLength: 50,
                       onSubmitted: (_) => _accountFocus.requestFocus(),
@@ -347,7 +340,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
                     fieldKey: const Key('bank-ifsc-field'),
                     controller: _ifsc,
                     focusNode: _ifscFocus,
-                    hintText: 'Enter 11-digit code',
+                    hintText: AppStrings.trOf(context, 'Enter 11-digit code'),
                     textCapitalization: TextCapitalization.characters,
                     textInputAction: TextInputAction.done,
                     inputFormatters: [
@@ -513,7 +506,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 02', style: AppTextStyles.stepLabelMuted);
+    return Text(AppStrings.trOf(context, 'STEP 02'), style: AppTextStyles.stepLabelMuted);
   }
 }
 
@@ -558,7 +551,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Add your', style: AppTextStyles.headingLarge);
+    return Text(AppStrings.trOf(context, 'Add your'), style: AppTextStyles.headingLarge);
   }
 }
 
@@ -576,7 +569,7 @@ class _TitleAccent extends StatelessWidget {
           AppColors.bankHeadingGreenEnd,
         ],
       ).createShader(bounds),
-      child: const Text('bank details', style: AppTextStyles.headingLarge),
+      child: Text(AppStrings.trOf(context, 'bank details'), style: AppTextStyles.headingLarge),
     );
   }
 }
@@ -586,8 +579,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'To receive your earnings',
+    return Text(
+      AppStrings.trOf(context, 'To receive your earnings'),
       style: AppTextStyles.bankSubtitle,
     );
   }
@@ -647,8 +640,8 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Fill Your Bank Details',
+    return Text(
+      AppStrings.trOf(context, 'Fill Your Bank Details'),
       style: AppTextStyles.bankSectionTitle,
     );
   }
@@ -669,10 +662,10 @@ class _PillNote extends StatelessWidget {
       ),
       // Scales the note down under the Ahem test font (glyphs render one em
       // wide there); with bundled Roboto on device it renders 1:1.
-      child: const FittedBox(
+      child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          'All fields are required',
+          AppStrings.trOf(context, 'All fields are required'),
           style: AppTextStyles.verifyPillNote,
           textAlign: TextAlign.center,
           maxLines: 1,
@@ -1009,8 +1002,8 @@ class _LabelName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Account Holder Name',
+    return Text(
+      AppStrings.trOf(context, 'Account Holder Name'),
       style: AppTextStyles.bankFieldLabel,
     );
   }
@@ -1021,7 +1014,7 @@ class _LabelBank extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Bank Name', style: AppTextStyles.bankFieldLabel);
+    return Text(AppStrings.trOf(context, 'Bank Name'), style: AppTextStyles.bankFieldLabel);
   }
 }
 
@@ -1030,7 +1023,7 @@ class _LabelAccount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Account Number', style: AppTextStyles.bankFieldLabel);
+    return Text(AppStrings.trOf(context, 'Account Number'), style: AppTextStyles.bankFieldLabel);
   }
 }
 
@@ -1039,7 +1032,7 @@ class _LabelIfsc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('IFSC Code', style: AppTextStyles.bankFieldLabel);
+    return Text(AppStrings.trOf(context, 'IFSC Code'), style: AppTextStyles.bankFieldLabel);
   }
 }
 
@@ -1205,7 +1198,7 @@ class _VerifyButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(7),
           ),
           child: Text(
-            verified ? 'Verified' : 'Verify',
+            verified ? AppStrings.trOf(context, 'Verified') : AppStrings.trOf(context, 'Verify'),
             style: AppTextStyles.bankVerifyText,
           ),
         ),
@@ -1291,8 +1284,8 @@ class _BannerTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Your information is safe with us.',
+    return Text(
+      AppStrings.trOf(context, 'Your information is safe with us.'),
       style: AppTextStyles.bankBannerTitle,
     );
   }
@@ -1303,8 +1296,8 @@ class _BannerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'We use bank-grade security to protect your details.',
+    return Text(
+      AppStrings.trOf(context, 'We use bank-grade security to protect your details.'),
       style: AppTextStyles.bankBannerBody,
     );
   }
@@ -1341,9 +1334,9 @@ class _BankPickerSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text(
-                        'Select bank',
-                        style: TextStyle(
+                      Text(
+                        AppStrings.trOf(context, 'Select bank'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1382,7 +1375,9 @@ class _BankPickerSheet extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              bank,
+                              bank == 'Other / Manual entry'
+                                  ? AppStrings.trOf(context, 'Other / Manual entry')
+                                  : bank,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: isSelected

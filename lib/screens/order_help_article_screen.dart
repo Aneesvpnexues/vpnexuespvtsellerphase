@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import 'help_article_screen.dart';
 
 /// Article "How do I track my order?" - Zeplin "Android Compact - 205"
@@ -9,30 +10,38 @@ class TrackOrderHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Orders & delivery',
-      title: 'How do I track my order?',
-      intro:
-          'You can follow every order from the moment it is packed until it '
-          'reaches the buyer.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Orders & delivery'),
+      title: AppStrings.trOf(context, 'How do I track my order?'),
+      intro: AppStrings.trOf(
+        context,
+        'You can follow every order from the moment it is packed until it '
+            'reaches the buyer.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'Open My Orders',
-          body:
-              'Tap Orders in the bottom bar to see your active and completed '
-              'orders.',
+          title: AppStrings.trOf(context, 'Open My Orders'),
+          body: AppStrings.trOf(
+            context,
+            'Tap Orders in the bottom bar to see your active and completed '
+                'orders.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Select the order',
-          body:
-              'Choose the order you want to follow. The latest status is shown '
-              'on its card.',
+          title: AppStrings.trOf(context, 'Select the order'),
+          body: AppStrings.trOf(
+            context,
+            'Choose the order you want to follow. The latest status is shown '
+                'on its card.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Tap Track order',
-          body:
-              'The status moves from Packed to Out for delivery and then '
-              'Delivered. You get a notification at every step.',
+          title: AppStrings.trOf(context, 'Tap Track order'),
+          body: AppStrings.trOf(
+            context,
+            'The status moves from Packed to Out for delivery and then '
+                'Delivered. You get a notification at every step.',
+          ),
         ),
       ],
     );
@@ -46,30 +55,38 @@ class CancelOrderHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Orders & delivery',
-      title: 'Can I cancel an order?',
-      intro:
-          'Orders can be cancelled only before they are picked up by the '
-          'delivery partner.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Orders & delivery'),
+      title: AppStrings.trOf(context, 'Can I cancel an order?'),
+      intro: AppStrings.trOf(
+        context,
+        'Orders can be cancelled only before they are picked up by the '
+            'delivery partner.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'While the order is Packed',
-          body:
-              'Open My Orders, select the order and tap Cancel. Choose a '
-              'reason and confirm the cancellation.',
+          title: AppStrings.trOf(context, 'While the order is Packed'),
+          body: AppStrings.trOf(
+            context,
+            'Open My Orders, select the order and tap Cancel. Choose a '
+                'reason and confirm the cancellation.',
+          ),
         ),
         HelpArticleSection(
-          title: 'After pickup',
-          body:
-              'Cancellation is no longer available. Contact support and we '
-              'will help you with a return or refund.',
+          title: AppStrings.trOf(context, 'After pickup'),
+          body: AppStrings.trOf(
+            context,
+            'Cancellation is no longer available. Contact support and we '
+                'will help you with a return or refund.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Refund timeline',
-          body:
-              'Approved refunds return to your wallet within 3 to 5 working '
-              'days.',
+          title: AppStrings.trOf(context, 'Refund timeline'),
+          body: AppStrings.trOf(
+            context,
+            'Approved refunds return to your wallet within 3 to 5 working '
+                'days.',
+          ),
         ),
       ],
     );
@@ -83,30 +100,38 @@ class DelayedOrderHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpArticleScreen(
-      header: 'Orders & delivery',
-      title: 'What if my order is delayed?',
-      intro:
-          'If an order has passed its delivery window, report it so we can '
-          'check with the delivery partner.',
+    return HelpArticleScreen(
+      header: AppStrings.trOf(context, 'Orders & delivery'),
+      title: AppStrings.trOf(context, 'What if my order is delayed?'),
+      intro: AppStrings.trOf(
+        context,
+        'If an order has passed its delivery window, report it so we can '
+            'check with the delivery partner.',
+      ),
       sections: <HelpArticleSection>[
         HelpArticleSection(
-          title: 'Check the delivery window',
-          body:
-              'Open My Orders and confirm the expected delivery time. Traffic '
-              'or weather can cause short delays.',
+          title: AppStrings.trOf(context, 'Check the delivery window'),
+          body: AppStrings.trOf(
+            context,
+            'Open My Orders and confirm the expected delivery time. Traffic '
+                'or weather can cause short delays.',
+          ),
         ),
         HelpArticleSection(
-          title: 'Report the delay',
-          body:
-              'Tap Report issue on the order and tell us what happened. Add a '
-              'photo if it helps.',
+          title: AppStrings.trOf(context, 'Report the delay'),
+          body: AppStrings.trOf(
+            context,
+            'Tap Report issue on the order and tell us what happened. Add a '
+                'photo if it helps.',
+          ),
         ),
         HelpArticleSection(
-          title: 'What happens next',
-          body:
-              'Our team contacts the delivery partner and updates you within '
-              '24 hours. Follow the case from the order details.',
+          title: AppStrings.trOf(context, 'What happens next'),
+          body: AppStrings.trOf(
+            context,
+            'Our team contacts the delivery partner and updates you within '
+                '24 hours. Follow the case from the order details.',
+          ),
         ),
       ],
     );

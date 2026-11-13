@@ -1,25 +1,29 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
+import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details ΓÇö pickup code entry state. Replica of Zeplin
-/// "Android Compact - 154".
+/// Order pickup code entry — replica of Zeplin "Android Compact - 141"
+/// (project 6a8d49709e27bd8b35213d35,
+/// screen 6ad1ae10ae8ab8b653609477).
 ///
-/// The four code boxes accept a demo code that is shared by every order and
-/// user: [demoCode]. When the entered code does not match, the boxes turn red,
-/// show an error line and clear; the slide CTA is locked until four digits are
-/// present.
+/// Built against a 412x1098 artboard. The four code boxes accept the demo
+/// code shared by every order and user: [demoCode]. When the entered code
+/// does not match, the boxes turn red, show an error line and clear; the
+/// slide CTA stays locked until four digits are present. A valid code hands
+/// over to the confirmation screen.
 class OrderPickupCodeScreen extends StatefulWidget {
   const OrderPickupCodeScreen({super.key});
 
   static const double designWidth = 412;
-  static const double designHeight = 917;
+  static const double designHeight = 1098;
   static const double trimTop = 49;
 
   /// Universal demo pickup code (no backend yet).
@@ -61,7 +65,13 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
   bool _submit() {
     if (!_complete) return false;
     if (_code.text == OrderPickupCodeScreen.demoCode) {
-      goToOrderPickupSuccess(context);
+      goToOrderConfirmation(
+        context,
+        amount: 2840,
+        itemsCount: 3,
+        orderId: '#NX4582',
+        dateTime: DateTime.now(),
+      );
       return true;
     }
     _code.clear();
@@ -80,20 +90,22 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
           designWidth: OrderPickupCodeScreen.designWidth,
           designHeight: OrderPickupCodeScreen.designHeight,
           trimTop: OrderPickupCodeScreen.trimTop,
-          child: DefaultTextStyle(
-            style: const TextStyle(fontFamily: 'Roboto'),
-            child: Stack(
+          child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 0,
                   top: 73,
-                  child: PageHeader(title: 'Order Details'),
+                  child: PageHeader(
+                    title: AppStrings.trOf(context, 'Order Details'),
+                  ),
                 ),
                 const Positioned(left: 22, top: 117, child: _SegmentTabs()),
                 const Positioned(left: 25, top: 172, child: _HeroCard()),
+                const Positioned(left: 22, top: 358, child: _BuyerCard()),
+                const Positioned(left: 22, top: 552, child: _DeliveryCard()),
                 Positioned(
-                  left: 25,
-                  top: 359,
+                  left: 22,
+                  top: 733,
                   child: _CodeCard(
                     controller: _code,
                     focusNode: _codeFocus,
@@ -101,12 +113,11 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
                   ),
                 ),
                 Positioned(
-                  left: 22,
-                  top: 847,
-                  child: _ContinueButton(locked: !_complete, onSubmit: _submit),
+                  left: 24,
+                  top: 1017,
+                  child: _SlideConfirm(locked: !_complete, onSubmit: _submit),
                 ),
               ],
-            ),
           ),
         ),
       ),
@@ -114,6 +125,16 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
   }
 }
 
+/// Small helper that places a text inside the exact Zeplin text box so the
+/// glyphs sit at the same vertical offset as the design.
+///
+/// `height` is the line height Zeplin reports for the layer, so the style gets
+/// an explicit `height` (box / font size) with even leading distribution to
+/// reproduce the design's half-leading.
+///
+/// Zeplin boxes hug the text, so the Inter advance plus Flutter's trailing
+/// letter spacing can be a hair wider than the box. Every label in the design
+/// is single line, so wrapping is disabled instead of widening the box.
 class _Label extends StatelessWidget {
   const _Label(this.text, this.style, {required this.width, this.height = 25});
 
@@ -124,12 +145,19 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double? fontSize = style.fontSize;
+    final TextStyle effective = fontSize == null || fontSize == 0
+        ? style
+        : style.copyWith(
+            height: height / fontSize,
+            leadingDistribution: TextLeadingDistribution.even,
+          );
     return SizedBox(
       width: width,
       height: height,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(text, style: style),
+        child: Text(text, style: effective, maxLines: 1, softWrap: false),
       ),
     );
   }
@@ -165,17 +193,17 @@ class _SegmentTabs extends StatelessWidget {
                 color: AppColors.orderDark,
                 borderRadius: BorderRadius.all(Radius.circular(23)),
               ),
-              child: const Text(
-                'Buyer Pickup',
-                style: AppTextStyles.orderSegmentActiveOnDark,
+              child: Text(
+                AppStrings.trOf(context, 'Buyer Pickup'),
+                style: AppTextStyles.orderSegmentActive,
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 238,
             top: 10,
             child: _Label(
-              'Delivery',
+              AppStrings.trOf(context, 'Delivery'),
               AppTextStyles.orderSegmentIdle,
               width: 50,
             ),
@@ -213,7 +241,12 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(22)),
         gradient: const LinearGradient(
-          colors: [AppColors.orderLime, Color(0xFFCDECA8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Color(0xFFC9EA73),
+            Color(0xFFC8EAA5),
+          ],
         ),
         boxShadow: const [
           BoxShadow(
@@ -240,64 +273,56 @@ class _HeroCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
-            left: 14,
-            top: 10,
+          Positioned(
+            left: 16,
+            top: 12,
             child: _Label(
-              'ORDER #NX4582',
-              TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 2.5,
-                color: AppColors.orderIdGreen,
-              ),
-              width: 113,
+              AppStrings.trOf(context, 'ORDER #NX4582'),
+              AppTextStyles.orderId,
+              width: 107,
               height: 15,
             ),
           ),
           Positioned(
-            left: 278,
-            top: 11,
-            child: Container(
-              width: 68.5,
-              height: 18.5,
-              decoration: const BoxDecoration(
-                color: AppColors.orderDark,
-                borderRadius: BorderRadius.all(Radius.circular(9.25)),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 289.5,
-            top: 17.75,
-            child: _Dot(size: 5, color: AppColors.orderDivider),
-          ),
-          const Positioned(
-            left: 297.5,
-            top: 10.25,
+            left: 16,
+            top: 30,
             child: _Label(
-              'Pick up',
-              AppTextStyles.orderPillLabel,
-              width: 44,
-              height: 20,
-            ),
-          ),
-          const Positioned(
-            left: 15,
-            top: 30.5,
-            child: _Label(
-              'Ready for Pickup',
-              TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.35,
-                color: AppColors.orderDark,
-              ),
-              width: 260,
+              AppStrings.trOf(context, 'Ready for Pickup'),
+              AppTextStyles.orderHeroTitle,
+              width: 240,
               height: 34,
             ),
           ),
-          const Positioned(left: 15, top: 76, child: _ProgressStrip()),
+          Positioned(
+            left: 246,
+            top: 11,
+            child: Container(
+              width: 100,
+              height: 19,
+              decoration: const BoxDecoration(
+                color: AppColors.orderDark,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 255,
+            top: 18,
+            child: _Dot(size: 5, color: AppColors.orderDivider),
+          ),
+          Positioned(
+            left: 265.5,
+            top: 10.5,
+            child: _Label(
+              AppStrings.trOf(context, 'Out for delivery'),
+              AppTextStyles.orderPillLabel.copyWith(
+                color: AppColors.orderDivider,
+              ),
+              width: 74,
+              height: 20,
+            ),
+          ),
+          const Positioned(left: 15, top: 82, child: _ProgressStrip()),
         ],
       ),
     );
@@ -307,6 +332,14 @@ class _HeroCard extends StatelessWidget {
 class _ProgressStrip extends StatelessWidget {
   const _ProgressStrip();
 
+  static const List<_Step> steps = [
+    _Step('Active', _StepIcon.bolt, false, 38),
+    _Step('Pickup', _StepIcon.download, true, 146),
+    _Step('Completed', _StepIcon.flag, false, 256),
+  ];
+
+  static const List<double> centers = [56, 164, 274];
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -314,186 +347,136 @@ class _ProgressStrip extends StatelessWidget {
       height: 79,
       decoration: const BoxDecoration(
         color: AppColors.orderMint,
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: BorderRadius.all(Radius.circular(24)),
       ),
       child: Stack(
         children: [
           const Positioned(
-            left: 37,
+            left: 74,
             top: 33,
-            child: CustomPaint(size: Size(260, 1), painter: _DashedLine()),
+            child: CustomPaint(size: Size(182, 1), painter: _DashedLine()),
           ),
-          for (int i = 0; i < 5; i++)
+          for (int i = 0; i < steps.length; i++)
             Positioned(
-              left: 21 + i * 65,
-              top: 18,
-              child: _StepCircle(index: i),
+              left: steps[i].left,
+              top: 16,
+              child: _StepCircle(step: steps[i]),
             ),
-          const Positioned(
-            left: 21,
-            top: 55,
-            child: _Label(
-              'Active',
-              TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.orderDark,
+          for (int i = 0; i < steps.length; i++)
+            Positioned(
+              left: centers[i] - 30,
+              top: 55,
+              child: SizedBox(
+                width: 60,
+                height: 15,
+                child: Text(
+                  AppStrings.trOf(context, steps[i].label),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: steps[i].active
+                        ? AppColors.orderDark
+                        : const Color(0x8C0D3B20),
+                  ),
+                ),
               ),
-              width: 34,
-              height: 15,
             ),
-          ),
-          const Positioned(
-            left: 78.5,
-            top: 55,
-            child: _Label(
-              'Accepted',
-              TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.orderDark,
-              ),
-              width: 48,
-              height: 15,
-            ),
-          ),
-          const Positioned(
-            left: 152,
-            top: 55,
-            child: _Label(
-              'Ready',
-              TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.orderDark,
-              ),
-              width: 34,
-              height: 15,
-            ),
-          ),
-          const Positioned(
-            left: 215,
-            top: 55,
-            child: _Label(
-              'Pickup',
-              TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.orderDark,
-              ),
-              width: 38,
-              height: 15,
-            ),
-          ),
-          const Positioned(
-            left: 267,
-            top: 55,
-            child: _Label(
-              'Completed',
-              TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Color(0x8C0D3B20),
-              ),
-              width: 60,
-              height: 15,
-            ),
-          ),
         ],
       ),
     );
   }
+}
+
+enum _StepIcon { bolt, download, flag }
+
+class _Step {
+  const _Step(this.label, this.icon, this.active, this.left);
+
+  final String label;
+  final _StepIcon icon;
+  final bool active;
+  final double left;
 }
 
 class _StepCircle extends StatelessWidget {
-  const _StepCircle({required this.index});
+  const _StepCircle({required this.step});
 
-  final int index;
+  final _Step step;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 32,
-      height: 32,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: -2,
-            top: -2,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0x80C6E96D),
-                shape: BoxShape.circle,
-              ),
-            ),
+    final Widget icon;
+    switch (step.icon) {
+      case _StepIcon.bolt:
+        icon = CustomPaint(
+          size: const Size(15, 19),
+          painter: _BoltPainter(
+            color: step.active ? AppColors.orderLime : const Color(0xFFABABAB),
           ),
-          if (index < 3)
-            Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E8B4B),
-                shape: BoxShape.circle,
-              ),
-              child: const CustomPaint(
-                size: Size(12, 10),
-                painter: _TickPainter(),
-              ),
-            )
-          else if (index == 3)
-            Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: AppColors.orderDark,
-                shape: BoxShape.circle,
-              ),
-              child: const CustomPaint(
-                size: Size(20, 20),
-                painter: _DownloadPainter(),
-              ),
-            )
-          else
-            Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Image(
-                image: AssetImage('assets/order/ic_step_flag.png'),
-                width: 15,
-                height: 15,
-              ),
-            ),
-        ],
+        );
+      case _StepIcon.download:
+        icon = step.active
+            ? const CustomPaint(
+                size: Size(16, 16),
+                painter: _DownloadPainter(color: AppColors.orderLime),
+              )
+            : Image.asset(
+                'assets/order/ic_step_download.png',
+                width: 18,
+                height: 18,
+              );
+      case _StepIcon.flag:
+        icon = Image.asset(
+          'assets/order/ic_step_flag.png',
+          width: 16,
+          height: 16,
+        );
+    }
+    return Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: step.active ? AppColors.orderDark : Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: step.active
+              ? const Color(0xFFE1F8A4)
+              : const Color(0xFFE9E9E9),
+          width: 2,
+        ),
       ),
+      child: icon,
     );
   }
 }
 
-class _TickPainter extends CustomPainter {
-  const _TickPainter();
+class _BoltPainter extends CustomPainter {
+  const _BoltPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
     final Paint paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.2
+      ..color = color
+      ..strokeWidth = 1.7
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
     final Path path = Path()
-      ..moveTo(1.5, 5.5)
-      ..lineTo(4.2, 8.3)
-      ..lineTo(10.5, 1.5);
+      ..moveTo(w * 0.58, h * 0.05)
+      ..lineTo(w * 0.27, h * 0.57)
+      ..lineTo(w * 0.55, h * 0.57)
+      ..lineTo(w * 0.45, h * 0.95)
+      ..lineTo(w * 0.84, h * 0.4)
+      ..lineTo(w * 0.55, h * 0.4)
+      ..close();
     canvas.drawPath(path, paint);
   }
 
@@ -502,23 +485,27 @@ class _TickPainter extends CustomPainter {
 }
 
 class _DownloadPainter extends CustomPainter {
-  const _DownloadPainter();
+  const _DownloadPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
     final Paint paint = Paint()
-      ..color = AppColors.orderDivider
-      ..strokeWidth = 1.8
+      ..color = color
+      ..strokeWidth = 1.7
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(const Offset(10, 2), const Offset(10, 10), paint);
-    final Path head = Path()
-      ..moveTo(5, 7)
-      ..lineTo(10, 11)
-      ..lineTo(15, 7);
-    canvas.drawPath(head, paint);
-    canvas.drawLine(const Offset(0.5, 17.5), const Offset(19.5, 17.5), paint);
+    canvas.drawLine(Offset(w * 0.5, h * 0.12), Offset(w * 0.5, h * 0.52), paint);
+    final Path chevron = Path()
+      ..moveTo(w * 0.24, h * 0.3)
+      ..lineTo(w * 0.5, h * 0.54)
+      ..lineTo(w * 0.76, h * 0.3);
+    canvas.drawPath(chevron, paint);
+    canvas.drawLine(Offset(w * 0.16, h * 0.84), Offset(w * 0.84, h * 0.84), paint);
   }
 
   @override
@@ -546,6 +533,463 @@ class _DashedLine extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class _CardDashedLine extends CustomPainter {
+  const _CardDashedLine();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = AppColors.orderDeliveryDivider
+      ..strokeWidth = 1;
+    const double dash = 4;
+    const double gap = 4;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, 0), Offset(x + dash, 0), paint);
+      x += dash + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BagPainter extends CustomPainter {
+  const _BagPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Paint paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final Path body = Path()
+      ..moveTo(w * 0.12, h * 0.3)
+      ..lineTo(w * 0.88, h * 0.3)
+      ..lineTo(w * 0.82, h * 0.93)
+      ..lineTo(w * 0.18, h * 0.93)
+      ..close();
+    canvas.drawPath(body, paint);
+    final Path handle = Path()
+      ..moveTo(w * 0.31, h * 0.3)
+      ..lineTo(w * 0.31, h * 0.22)
+      ..arcToPoint(
+        Offset(w * 0.69, h * 0.22),
+        radius: Radius.circular(w * 0.19),
+      )
+      ..lineTo(w * 0.69, h * 0.3);
+    canvas.drawPath(handle, paint);
+    final Paint smile = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Path smilePath = Path()
+      ..moveTo(w * 0.36, h * 0.55)
+      ..quadraticBezierTo(w * 0.5, h * 0.68, w * 0.64, h * 0.55);
+    canvas.drawPath(smilePath, smile);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _LockPainter extends CustomPainter {
+  const _LockPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Paint paint = Paint()
+      ..color = const Color(0xFF2A5238)
+      ..strokeWidth = 1.7
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final Path shackle = Path()
+      ..moveTo(w * 0.25, h * 0.44)
+      ..lineTo(w * 0.25, h * 0.3)
+      ..arcToPoint(
+        Offset(w * 0.75, h * 0.3),
+        radius: Radius.circular(w * 0.25),
+      )
+      ..lineTo(w * 0.75, h * 0.44);
+    canvas.drawPath(shackle, paint);
+    final RRect body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.09, h * 0.44, w * 0.82, h * 0.5),
+      Radius.circular(w * 0.13),
+    );
+    canvas.drawRRect(body, paint);
+    final Paint keyhole = Paint()..color = const Color(0xFF2A5238);
+    canvas.drawCircle(Offset(w * 0.5, h * 0.66), w * 0.1, keyhole);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BuyerCard extends StatelessWidget {
+  const _BuyerCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 368,
+      height: 181,
+      decoration: BoxDecoration(
+        color: AppColors.orderCardDark,
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
+        border: Border.all(color: const Color(0x12000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            offset: Offset(0, 1),
+            blurRadius: 3,
+          ),
+          BoxShadow(
+            color: Color(0x17000000),
+            offset: Offset(0, 5),
+            blurRadius: 5,
+          ),
+          BoxShadow(
+            color: Color(0x0D000000),
+            offset: Offset(0, 12),
+            blurRadius: 7,
+          ),
+          BoxShadow(
+            color: Color(0x03000000),
+            offset: Offset(0, 21),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 17,
+            top: 15,
+            child: _Label(
+              AppStrings.trOf(context, 'BUYER DETAILS'),
+              AppTextStyles.orderSectionLabel,
+              width: 102,
+              height: 15,
+            ),
+          ),
+          Positioned(
+            left: 17,
+            top: 44,
+            child: Container(
+              alignment: Alignment.center,
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: AppColors.orderAvatar,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+              child: const Image(
+                image: AssetImage('assets/order/ic_shop.png'),
+                width: 30,
+                height: 30,
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 95,
+            top: 44,
+            child: _Label(
+              'Akash Stores',
+              AppTextStyles.orderStoreName,
+              width: 133,
+            ),
+          ),
+          const Positioned(
+            left: 94,
+            top: 77,
+            child: Image(
+              image: AssetImage('assets/order/ic_location.png'),
+              width: 9,
+              height: 9,
+            ),
+          ),
+          const Positioned(
+            left: 109,
+            top: 75,
+            child: _Label(
+              'Salem, Tamil Nadu',
+              AppTextStyles.orderMuted,
+              width: 90,
+              height: 13,
+            ),
+          ),
+          const Positioned(
+            left: 95,
+            top: 96,
+            child: Image(
+              image: AssetImage('assets/order/ic_phone_sm.png'),
+              width: 9,
+              height: 12,
+            ),
+          ),
+          const Positioned(
+            left: 109,
+            top: 95,
+            child: _Label(
+              '+91 12345 67890',
+              AppTextStyles.orderMuted,
+              width: 86,
+              height: 13,
+            ),
+          ),
+          Positioned(
+            left: 241,
+            top: 48,
+            child: Container(
+              width: 61,
+              height: 19,
+              decoration: const BoxDecoration(
+                color: AppColors.orderLime,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 253,
+            top: 45,
+            child: _Label(
+              AppStrings.trOf(context, 'Retailer'),
+              AppTextStyles.orderBuyerType,
+              width: 49,
+              height: 20,
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 122,
+            child: Container(
+              alignment: Alignment.center,
+              width: 162,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.orderLime,
+                borderRadius: const BorderRadius.all(Radius.circular(28)),
+                border: Border.all(color: const Color(0x14000000)),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 58,
+                    top: 14,
+                    child: Image(
+                      image: AssetImage('assets/order/ic_phone.png'),
+                      width: 10,
+                      height: 12,
+                    ),
+                  ),
+                  Positioned(
+                    left: 77,
+                    top: 7,
+                    child: _Label(
+                      AppStrings.trOf(context, 'Call'),
+                      AppTextStyles.orderCallLabel,
+                      width: 27,
+                      height: 17,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 188,
+            top: 122,
+            child: Container(
+              alignment: Alignment.center,
+              width: 162,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.orderSecondary,
+                borderRadius: const BorderRadius.all(Radius.circular(28)),
+                border: Border.all(color: const Color(0x14000000)),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 56,
+                    top: 13,
+                    child: Image(
+                      image: AssetImage('assets/order/ic_message.png'),
+                      width: 14,
+                      height: 14,
+                    ),
+                  ),
+                  Positioned(
+                    left: 79,
+                    top: 7,
+                    child: _Label(
+                      AppStrings.trOf(context, 'Call'),
+                      const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.12,
+                        color: Colors.white,
+                      ),
+                      width: 27,
+                      height: 17,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryCard extends StatelessWidget {
+  const _DeliveryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 368,
+      height: 166,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
+        border: Border.all(color: const Color(0x12000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A9E9E9E),
+            offset: Offset(0, 2),
+            blurRadius: 4,
+          ),
+          BoxShadow(
+            color: Color(0x179E9E9E),
+            offset: Offset(0, 7),
+            blurRadius: 7,
+          ),
+          BoxShadow(
+            color: Color(0x0D9E9E9E),
+            offset: Offset(0, 16),
+            blurRadius: 10,
+          ),
+          BoxShadow(
+            color: Color(0x039E9E9E),
+            offset: Offset(0, 29),
+            blurRadius: 11,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 19,
+            top: 17,
+            child: Container(
+              alignment: Alignment.center,
+              width: 54,
+              height: 54,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.orderDeliveryTileStart,
+                    AppColors.orderDeliveryTileEnd,
+                  ],
+                ),
+              ),
+              child: const CustomPaint(
+                size: Size(26, 26),
+                painter: _BagPainter(),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 86,
+            top: 18,
+            child: _Label(
+              AppStrings.trOf(context, 'Delivery Details'),
+              AppTextStyles.orderCardTitle.copyWith(fontSize: 15),
+              width: 112,
+              height: 25,
+            ),
+          ),
+          Positioned(
+            left: 86,
+            top: 38,
+            child: SizedBox(
+              width: 224,
+              height: 40,
+              child: Text(
+                AppStrings.trOf(
+                  context,
+                  'Waiting for the buyer to arrive at your\nlocation',
+                ),
+                style: AppTextStyles.orderSubText,
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 20,
+            top: 88,
+            child: CustomPaint(
+              size: Size(325, 1),
+              painter: _CardDashedLine(),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            top: 104,
+            child: Container(
+              alignment: Alignment.center,
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F6E6),
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              child: const Image(
+                image: AssetImage('assets/order/ic_calendar.png'),
+                width: 20,
+                height: 20,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 72,
+            top: 103,
+            child: _Label(
+              AppStrings.trOf(context, 'Expected Pickup Date'),
+              AppTextStyles.orderItemMeta,
+              width: 150,
+              height: 25,
+            ),
+          ),
+          Positioned(
+            left: 72,
+            top: 125,
+            child: _Label(
+              '24 Mar 2024',
+              AppTextStyles.orderDate.copyWith(fontSize: 14),
+              width: 110,
+              height: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CodeCard extends StatelessWidget {
   const _CodeCard({
     required this.controller,
@@ -557,221 +1001,89 @@ class _CodeCard extends StatelessWidget {
   final FocusNode focusNode;
   final bool error;
 
-  static const List<double> _boxLefts = <double>[0, 69, 137, 205];
+  static const List<double> _boxLefts = <double>[0, 86, 172, 258];
 
   @override
   Widget build(BuildContext context) {
     final String value = controller.text;
     return Container(
-      width: 362,
-      height: 317,
+      width: 368,
+      height: 211,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
         border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x129E9E9E),
-            offset: Offset(0, 1),
-            blurRadius: 3,
+            color: Color(0x1A9E9E9E),
+            offset: Offset(0, 2),
+            blurRadius: 4,
           ),
           BoxShadow(
-            color: Color(0x0E9E9E9E),
-            offset: Offset(0, 3),
-            blurRadius: 5,
-          ),
-          BoxShadow(
-            color: Color(0x069E9E9E),
+            color: Color(0x179E9E9E),
             offset: Offset(0, 7),
-            blurRadius: 8,
+            blurRadius: 7,
+          ),
+          BoxShadow(
+            color: Color(0x0D9E9E9E),
+            offset: Offset(0, 16),
+            blurRadius: 10,
           ),
           BoxShadow(
             color: Color(0x039E9E9E),
-            offset: Offset(0, 12),
-            blurRadius: 10,
+            offset: Offset(0, 29),
+            blurRadius: 11,
           ),
         ],
       ),
       child: Stack(
         children: [
           Positioned(
-            left: 14,
+            left: 19,
             top: 21,
             child: Container(
-              width: 333.5,
-              height: 76.5,
+              alignment: Alignment.center,
+              width: 38,
+              height: 38,
               decoration: const BoxDecoration(
                 color: Color(0xFFF3F6E6),
-                borderRadius: BorderRadius.all(Radius.circular(16)),
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              child: const CustomPaint(
+                size: Size(16, 17),
+                painter: _LockPainter(),
               ),
             ),
           ),
           Positioned(
-            left: 28,
-            top: 38,
-            child: Container(
-              alignment: Alignment.center,
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.orderTile,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
-              child: Transform.translate(
-                offset: const Offset(-1, -1),
-                child: ColorFiltered(
-                  colorFilter: const ColorFilter.matrix(<double>[
-                    0,
-                    0,
-                    0,
-                    0,
-                    13,
-                    0,
-                    0,
-                    0,
-                    0,
-                    59,
-                    0,
-                    0,
-                    0,
-                    0,
-                    32,
-                    0,
-                    8,
-                    0,
-                    0,
-                    -1200,
-                  ]),
-                  child: const Image(
-                    image: AssetImage('assets/order/ic_shop.png'),
-                    width: 20,
-                    height: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 130,
-            top: 42.5,
+            left: 72,
+            top: 24,
             child: _Label(
-              'Akash Stores',
-              TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: AppColors.textPrimary,
-              ),
-              width: 130,
-              height: 18,
+              AppStrings.trOf(context, 'Enter pickup code'),
+              AppTextStyles.orderCardTitle.copyWith(fontSize: 15),
+              width: 140,
+              height: 25,
             ),
           ),
           Positioned(
-            left: 122,
-            top: 62.5,
+            left: 23,
+            top: 64,
             child: SizedBox(
-              width: 170,
-              height: 14,
-              child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                    fontFamily: 'Roboto',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF7F8078),
-                  ),
-                  children: [
-                    TextSpan(
-                      text: '#NX4582',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                        color: AppColors.orderIdGreen,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' \u2022 3 Items',
-                      style: TextStyle(fontSize: 10),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 273.5,
-            top: 45.9,
-            child: _Label(
-              '\u20B92,840',
-              TextStyle(
-                fontSize: 19.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.9,
-                color: AppColors.textPrimary,
-              ),
-              width: 70,
-              height: 26,
-            ),
-          ),
-          const Positioned(
-            left: 22,
-            top: 117,
-            child: _Label(
-              'Pickup code',
-              TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF7F8078),
-              ),
-              width: 90,
-              height: 16,
-            ),
-          ),
-          Positioned(
-            key: const Key('pickup-code-hint'),
-            left: 208,
-            top: 110,
-            child: Row(
-              children: [
-                for (var i = 0; i < 4; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  _CodeHintBox(character: OrderPickupCodeScreen.demoCode[i]),
-                ],
-              ],
-            ),
-          ),
-          Positioned(
-            left: 79,
-            top: 173,
-            width: 200,
-            height: 26,
-            child: Align(
-              alignment: Alignment.center,
+              width: 315,
+              height: 44,
               child: Text(
-                'Enter pickup code',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.35,
-                  color: AppColors.textPrimary,
+                AppStrings.trOf(
+                  context,
+                  'Ask the buyer for the 4-digit code shown in their app only when they arrive.',
                 ),
+                style: AppTextStyles.orderCodeNote.copyWith(height: 1.65),
               ),
             ),
           ),
-          const Positioned(
-            left: 49,
-            top: 202.5,
-            child: _Label(
-              'Ask the buyer for the 4-digital code shown in their app',
-              TextStyle(fontSize: 12, color: Color(0xFF858585)),
-              width: 300,
-              height: 16,
-            ),
-          ),
           Positioned(
-            left: 53,
-            top: 231,
-            width: 259,
+            left: 23,
+            top: 120,
+            width: 312,
             height: 61,
             child: Stack(
               key: const Key('pickup-code-boxes'),
@@ -789,7 +1101,7 @@ class _CodeCard extends StatelessWidget {
                 Positioned(
                   left: 0,
                   top: 0,
-                  width: 259,
+                  width: 312,
                   height: 61,
                   child: TextField(
                     key: const Key('pickup-code-field'),
@@ -817,14 +1129,14 @@ class _CodeCard extends StatelessWidget {
             ),
           ),
           if (error)
-            const Positioned(
-              left: 53,
-              top: 295,
+            Positioned(
+              left: 23,
+              top: 186,
               width: 258,
               height: 14,
               child: _Label(
-                'Incorrect code. Try again.',
-                TextStyle(
+                AppStrings.trOf(context, 'Incorrect code. Try again.'),
+                const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: AppColors.attentionRed,
@@ -889,46 +1201,17 @@ class _CodeBox extends StatelessWidget {
   }
 }
 
-class _CodeHintBox extends StatelessWidget {
-  const _CodeHintBox({required this.character});
-
-  final String character;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 28,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(8)),
-        border: Border.all(color: const Color(0xFFDFE3E8)),
-      ),
-      child: Text(
-        character,
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-      ),
-    );
-  }
-}
-
-class _ContinueButton extends StatefulWidget {
-  const _ContinueButton({required this.locked, required this.onSubmit});
+class _SlideConfirm extends StatefulWidget {
+  const _SlideConfirm({required this.locked, required this.onSubmit});
 
   final bool locked;
   final bool Function() onSubmit;
 
   @override
-  State<_ContinueButton> createState() => _ContinueButtonState();
+  State<_SlideConfirm> createState() => _SlideConfirmState();
 }
 
-class _ContinueButtonState extends State<_ContinueButton>
+class _SlideConfirmState extends State<_SlideConfirm>
     with SingleTickerProviderStateMixin {
   static const double _start = 4;
   static const double _end = 310;
@@ -984,65 +1267,73 @@ class _ContinueButtonState extends State<_ContinueButton>
 
   @override
   Widget build(BuildContext context) {
-    return SlideDragDetector(
-      onTap: widget.locked
-          ? null
-          : () {
-              if (widget.onSubmit()) {
-                setState(() => _knobX = _end);
-              }
-            },
-      onUpdate: _onDragUpdate,
-      onEnd: _onDragEnd,
-      child: AnimatedContainer(
-        key: const Key('pickup-slide-bar'),
-        duration: const Duration(milliseconds: 200),
-        width: 368,
-        height: 58,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(29)),
-          gradient: LinearGradient(
-            colors: widget.locked
-                ? const [Color(0xFF607E6A), Color(0xFF71CA93)]
-                : const [Color(0xFF4FC96F), Color(0xFF2FBF71)],
+    return HoverPress.slide(
+      child: SlideDragDetector(
+        onTap: widget.locked
+            ? null
+            : () {
+                if (widget.onSubmit()) {
+                  setState(() => _knobX = _end);
+                }
+              },
+        onUpdate: _onDragUpdate,
+        onEnd: _onDragEnd,
+        child: Container(
+          key: const Key('pickup-slide-bar'),
+          width: 364,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(29)),
+            gradient: const LinearGradient(
+              colors: [AppColors.orderSlideStart, AppColors.orderSlideEnd],
+            ),
+            border: Border.all(color: const Color(0x14000000)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                offset: Offset(0, 10),
+                blurRadius: 22,
+              ),
+              BoxShadow(
+                color: Color(0x17000000),
+                offset: Offset(0, 40),
+                blurRadius: 40,
+              ),
+              BoxShadow(
+                color: Color(0x0D000000),
+                offset: Offset(0, 90),
+                blurRadius: 54,
+              ),
+            ],
           ),
-          border: Border.all(color: const Color(0x14000000)),
-          boxShadow: widget.locked
-              ? null
-              : const [BoxShadow(color: Color(0x40C6E96D), blurRadius: 14)],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: _knobX,
-              top: 4,
-              child: AnimatedContainer(
-                key: const Key('pickup-slide-knob'),
-                duration: const Duration(milliseconds: 200),
-                alignment: Alignment.center,
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: widget.locked
-                      ? const Color(0xFF9EC463)
-                      : const Color(0xFFC6E96D),
-                  shape: BoxShape.circle,
-                ),
-                child: const CustomPaint(
-                  size: Size(17, 11),
-                  painter: _ArrowPainter(),
+          child: Stack(
+            children: [
+              Positioned(
+                left: _knobX,
+                top: 4,
+                child: Container(
+                  key: const Key('pickup-slide-knob'),
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orderSlideLime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Image(
+                    image: AssetImage('assets/order/ic_slide.png'),
+                    width: 26,
+                    height: 26,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 65,
-              top: -1,
-              width: 250,
-              height: 58,
-              child: Align(
-                alignment: Alignment.center,
+              Positioned(
+                left: 94,
+                top: 19,
                 child: Text(
-                  'Enter the code to continus',
+                  AppStrings.trOf(context, 'Slide to confirm pickup'),
+                  maxLines: 1,
+                  softWrap: false,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -1051,34 +1342,10 @@ class _ContinueButtonState extends State<_ContinueButton>
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-class _ArrowPainter extends CustomPainter {
-  const _ArrowPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = const Color(0xFF3C6736)
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-    final Path path = Path()
-      ..moveTo(0.5, 5.5)
-      ..lineTo(16.5, 5.5)
-      ..moveTo(11.5, 0.5)
-      ..lineTo(16.5, 5.5)
-      ..lineTo(11.5, 10.5);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

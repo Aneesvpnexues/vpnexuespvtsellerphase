@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'hover_press.dart';
@@ -74,7 +75,7 @@ class BottomNavBar extends StatelessWidget {
             top: 14,
             child: _NavItem(
               icon: Icons.home_outlined,
-              label: 'Home',
+              label: AppStrings.trOf(context, 'Home'),
               active: selectedIndex == 0,
               onTap: onHomeTap,
             ),
@@ -84,7 +85,7 @@ class BottomNavBar extends StatelessWidget {
             top: 14,
             child: _NavItem(
               icon: Icons.inventory_2_outlined,
-              label: 'Products',
+              label: AppStrings.trOf(context, 'Products'),
               active: selectedIndex == 1,
               onTap: onProductsTap,
             ),
@@ -94,7 +95,7 @@ class BottomNavBar extends StatelessWidget {
             top: 14,
             child: _NavItem(
               icon: Icons.receipt_long_outlined,
-              label: 'Orders',
+              label: AppStrings.trOf(context, 'Orders'),
               active: selectedIndex == 2,
               onTap: onOrdersTap,
             ),
@@ -104,7 +105,7 @@ class BottomNavBar extends StatelessWidget {
             top: 14,
             child: _NavItem(
               icon: Icons.person_outline,
-              label: 'Profile',
+              label: AppStrings.trOf(context, 'Profile'),
               active: selectedIndex == 3,
               onTap: onProfileTap,
             ),

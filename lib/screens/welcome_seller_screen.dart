@@ -1,23 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/country_codes.dart';
-import '../data/product_store.dart';
-import '../data/seller_profile_store.dart';
-import '../data/seller_product_repository.dart';
-import '../data/supabase_product_api.dart';
 import '../services/auth_flow.dart';
-import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/keyboard_aware_canvas.dart';
-import 'bank_detaile.dart';
-import 'business_details_screen.dart';
+import '../l10n/app_strings.dart';
+import '../widgets/design_canvas.dart';
 import 'otp_screen.dart';
 import 'seller_home_screen.dart';
-import 'verify_detaile.dart';
 
 /// "Welcome Seller!" screen — static replica of Zeplin "Android Compact - 49"
 /// (project 6a8d49709e27bd8b35213d35, screen 6aad0633d41c4e26df3c1017) with
@@ -31,17 +22,19 @@ import 'verify_detaile.dart';
 /// - Login (default): hero + phone number form; "Send OTP" opens the OTP
 ///   screen; the phone field accepts up to 10 digits.
 /// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
-///   Password fields; "Create account" opens the STEP 01 location screen. Both
-///   states share the terms footer.
+///   Password fields and a visual-only "Create account" button. Both states
+///   share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
   static const String leafAsset = 'assets/welcome/leaf.png';
   static const String heroAsset = 'assets/welcome/hero.png';
   static const String flagAsset = 'assets/welcome/flag.png';
+  static const String waveAsset = 'assets/welcome/wave.png';
   static const String sendAsset = 'assets/welcome/send.png';
   static const double designWidth = 412;
   static const double designHeight = 917;
+  static const double trimTop = 0;
 
   @override
   State<WelcomeSellerScreen> createState() => _WelcomeSellerScreenState();
@@ -52,13 +45,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   bool _sending = false;
   CountryCode _country = CountryCode.india;
 
-  /// Owned here so [AuthFlow] can read the digits on "Send OTP"; [TextField]
-  /// in [_PhoneBox] only borrows it.
-  final TextEditingController _phone = TextEditingController();
-
-  /// Sign Up only: read by the demo login check in [_createAccount].
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _password = TextEditingController();
+  final GlobalKey<_PhoneBoxState> _phoneBoxKey = GlobalKey<_PhoneBoxState>();
 
   void _showLogin() => setState(() => _signUp = false);
 
@@ -82,9 +69,6 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   @override
   void dispose() {
     AuthFlow.instance.autoVerified = null;
-    _phone.dispose();
-    _name.dispose();
-    _password.dispose();
     super.dispose();
   }
 
@@ -98,21 +82,14 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   /// an SMS. The OTP screen opens only from the codeSent callback, so the
   /// flow never advances before Firebase accepted the number.
   Future<void> _sendOtp() async {
-    if (_sending) {
-      print('SEND OTP BLOCKED: already sending');
-      return;
-    }
-    final String digits = _phone.text.replaceAll(RegExp(r'\D'), '');
+    if (_sending) return;
+    final String digits = _phoneBoxKey.currentState?.phoneDigits ?? '';
     if (digits.length != _country.maxDigits) {
-      print(
-        'VALIDATION FAILED: digits="$digits" '
-        '(need ${_country.maxDigits}) - staying on welcome',
-      );
-      _showError('Enter a valid ${_country.maxDigits}-digit mobile number.');
+      _showError(AppStrings.trOf(context, 'Enter a valid {digits}-digit mobile number.').replaceAll('{digits}', _country.maxDigits.toString()));
       return;
     }
     final String display = '${_country.dial} $digits';
-    AuthFlow.instance.autoVerified = _openOnboarding;
+    AuthFlow.instance.autoVerified = _openStep01;
     setState(() => _sending = true);
     await AuthFlow.instance.sendOtp(
       e164: '${_country.dial}$digits',
@@ -135,419 +112,207 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   }
 
   /// Android instant verification / SMS auto-retrieval: the phone is
-  /// confirmed without a typed code. Fetch existing seller data from Supabase,
-  /// skip completed onboarding pages, and navigate to the first incomplete
-  /// step or directly to Home.
-  void _openOnboarding() {
+  /// confirmed without a typed code. Open the OTP screen — its
+  /// [_routeAfterVerification]-equivalent runs on mount because the code is
+  /// already verified.
+  void _openStep01() {
     AuthFlow.instance.autoVerified = null;
-    SellerProfileStore.instance.mobile = AuthFlow.instance.displayPhone;
-    _routeAfterLogin();
-  }
-
-  /// After instant verification (or the Sign Up tab), fetch all existing
-  /// seller data from Supabase using the authenticated mobile number,
-  /// determine which onboarding sections are already complete, skip those
-  /// pages, and navigate to the first incomplete step or directly to Home.
-  void _routeAfterLogin() async {
-    // Clear any stale data from a previous login session.
-    SellerProfileStore.instance.resetCompletionFlags();
-    ProductStore.instance.clear();
-
-    // Get the verified phone number from Firebase Auth (null-safe in tests).
-    final String? firebasePhone = AuthFlow.instance.currentUserPhone;
-    final String firebaseUid = AuthFlow.instance.firebaseUid ?? '';
-
-    // Set the user_id for product queries and all user-scoped lookups.
-    ProductStore.instance.userId = firebaseUid;
-    SellerProfileStore.instance.userId = firebaseUid;
-
-    // Always re-fetch this user's products from Supabase.
-    try {
-      await SellerProductRepository().refresh(ProductStore.instance);
-    } catch (_) {
-      // Home still opens with whatever products are cached locally.
-    }
-
-    SellerProfileStore.instance.mobile =
-        firebasePhone ?? AuthFlow.instance.displayPhone;
-
-    // Look up the seller's Supabase rows for the verified phone number. The
-    // match is number-agnostic: exact E.164 -> last 10 digits -> Firebase
-    // UID, and bank/KYC are always checked under both candidate ids.
-    if (mounted) {
-      try {
-        final api = SupabaseProductApi();
-        api.userId = firebaseUid;
-        final profile = await api.getProfileByPhone(
-          firebasePhone ?? AuthFlow.instance.displayPhone,
-          userId: firebaseUid,
-        );
-
-        final String profileUserId = (profile?['user_id'] ?? '')
-            .toString()
-            .trim();
-
-        // Products live under the Firebase UID; profile/bank/KYC rows may
-        // also carry a legacy backend id, so check both.
-        final List<String> candidateIds = <String>{
-          firebaseUid,
-          profileUserId,
-        }.where((String id) => id.trim().isNotEmpty).toList();
-
-        if (profile != null) {
-          _populateProfileStore(profile);
-        }
-
-        // Bank and KYC are fetched even when the profile row is missing so a
-        // seller who finished them but lost the profile row is not retried.
-        Map<String, dynamic>? bankDetails;
-        Map<String, dynamic>? verificationDetails;
-        if (candidateIds.isNotEmpty) {
-          bankDetails = await api.getBankDetailsForUsers(candidateIds);
-          verificationDetails = await api.getVerificationForUsers(candidateIds);
-        }
-
-        final bool profileComplete =
-            profile != null && _isProfileComplete(profile);
-        final bool bankComplete =
-            bankDetails != null && _isBankComplete(bankDetails);
-        final bool verificationComplete =
-            verificationDetails != null &&
-            _isVerificationComplete(verificationDetails);
-
-        SellerProfileStore.instance.setCompletion(
-          profileComplete: profileComplete,
-          bankComplete: bankComplete,
-          verificationComplete: verificationComplete,
-        );
-
-        final bool supabaseHasProgress =
-            profileComplete || bankComplete || verificationComplete;
-        if (supabaseHasProgress) {
-          // Supabase already knows this seller; sync the backend in the
-          // background so login is not blocked by a cold Render instance.
-          unawaited(SellerBackendSync.mergeCompletion());
-        } else {
-          await SellerBackendSync.mergeCompletion();
-        }
-
-        if (!mounted) return;
-        final SellerProfileStore merged = SellerProfileStore.instance;
-        _navigateBasedOnCompletion(
-          profileComplete: merged.profileComplete,
-          bankComplete: merged.bankComplete,
-          verificationComplete: merged.verificationComplete,
-        );
-        return;
-      } catch (_) {
-        // Supabase lookup failed — try the backend before falling back.
-        await SellerBackendSync.mergeCompletion();
-        if (!mounted) return;
-        final SellerProfileStore merged = SellerProfileStore.instance;
-        if (merged.profileComplete ||
-            merged.bankComplete ||
-            merged.verificationComplete) {
-          _navigateBasedOnCompletion(
-            profileComplete: merged.profileComplete,
-            bankComplete: merged.bankComplete,
-            verificationComplete: merged.verificationComplete,
-          );
-          return;
-        }
-      }
-    }
-
-    // No Supabase or backend data found for this number — new user starts
-    // onboarding at Verify Your Details, the first of the three steps.
     if (!mounted) return;
     setState(() => _sending = false);
+    final String digits = _phoneBoxKey.currentState?.phoneDigits ?? '';
+    final String display = '${_country.dial} $digits';
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+      MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: display)),
     );
-  }
-
-  /// Determines whether the seller profile section is complete based on
-  /// required Supabase fields being non-empty.
-  bool _isProfileComplete(Map<String, dynamic> profile) {
-    final fields = <String>[
-      profile['display_name'] ?? '',
-      profile['business_name'] ?? '',
-      profile['phone_number'] ?? '',
-      profile['location'] ?? '',
-      profile['business_address'] ?? '',
-    ];
-    return fields.every((value) => value.toString().trim().isNotEmpty);
-  }
-
-  /// Determines whether bank details are complete based on required fields.
-  bool _isBankComplete(Map<String, dynamic> bank) {
-    final fields = <String>[
-      bank['account_houlder_name'] ?? '',
-      bank['bank_name'] ?? '',
-      bank['account_number'] ?? '',
-      bank['IFSC_code'] ?? '',
-    ];
-    return fields.every((value) => value.toString().trim().isNotEmpty);
-  }
-
-  /// Determines whether verification/KYC is complete based on at least one
-  /// document URL being present.
-  bool _isVerificationComplete(Map<String, dynamic> verification) {
-    final fields = <String>[
-      verification['aadhaar_card'] ?? '',
-      verification['pan_card'] ?? '',
-      verification['business_registration'] ?? '',
-    ];
-    return fields.any((value) => value.toString().trim().isNotEmpty);
-  }
-
-  /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Registration -> Bank Details), or to Home if all sections are complete.
-  void _navigateBasedOnCompletion({
-    required bool profileComplete,
-    required bool bankComplete,
-    required bool verificationComplete,
-  }) {
-    if (!mounted) return;
-    setState(() => _sending = false);
-
-    print(
-      'ONBOARDING ROUTE: profile=$profileComplete '
-      'bank=$bankComplete kyc=$verificationComplete',
-    );
-
-    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
-    // so verification is always the first section to check.
-    if (!verificationComplete) {
-      print('DESTINATION: Verify Your Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
-      );
-      return;
-    }
-
-    if (!profileComplete) {
-      print('DESTINATION: Registration (Business Details)');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step03BusinessDetailsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!bankComplete) {
-      print('DESTINATION: Bank Details');
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-      );
-      return;
-    }
-
-    // All sections complete — go straight to Home.
-    print('DESTINATION: Home (all sections already complete)');
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-    );
-  }
-
-  /// Populate the in-memory profile store from a Supabase profile record.
-  void _populateProfileStore(Map<String, dynamic> profile) {
-    final String name = (profile['display_name'] ?? '').toString().trim();
-    final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    final String sellerTypeStr = (profile['seller_type'] ?? 'farmer')
-        .toString()
-        .trim()
-        .toLowerCase();
-    SellerType sellerType;
-    switch (sellerTypeStr) {
-      case 'trader':
-        sellerType = SellerType.trader;
-      case 'fpo':
-        sellerType = SellerType.fpo;
-      default:
-        sellerType = SellerType.farmer;
-    }
-    if (name.isNotEmpty) {
-      SellerProfileStore.instance.save(
-        name: name,
-        mobile: mobile,
-        email: '',
-        sellerType: sellerType,
-      );
-    } else {
-      SellerProfileStore.instance.mobile = mobile;
-    }
-  }
-
-  /// "Create account" on the Sign Up tab.
-  ///
-  /// - Empty form: jump straight to Home (demo shortcut, no OTP).
-  /// - Demo credentials (john / 1234567890 / vpnesuxe): also open Home
-  ///   directly.
-  /// - Anything else: Firebase OTP first, then the same Supabase completion
-  ///   check as Login routes the seller into onboarding — or straight to Home
-  ///   when every registration detail is already saved.
-  Future<void> _createAccount() async {
-    final String name = _name.text.trim();
-    final String phone = _phone.text.replaceAll(RegExp(r'\D'), '');
-    final String password = _password.text.trim();
-
-    if (name.isEmpty && phone.isEmpty && password.isEmpty) {
-      print('DEMO LOGIN: empty sign-up form - going straight to Home');
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      );
-      return;
-    }
-
-    if (name.toLowerCase() == 'john' &&
-        phone == '1234567890' &&
-        password.toLowerCase() == 'vpnesuxe') {
-      print('DEMO LOGIN: john / 1234567890 - going straight to Home');
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      );
-      return;
-    }
-    await _sendOtp();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.welcomeBg,
-      body: KeyboardAwareCanvas(
+      body: DesignCanvas(
         designWidth: WelcomeSellerScreen.designWidth,
         designHeight: WelcomeSellerScreen.designHeight,
+        trimTop: WelcomeSellerScreen.trimTop,
         child: Stack(
-          children: [
-            const Positioned(left: 0, top: 64, child: _Leaf()),
-            const Positioned(left: 0, top: 225, child: _Hero()),
-            const Positioned(
-              left: 0,
-              right: 0,
-              top: 504,
-              bottom: 0,
-              child: _Card(),
-            ),
-            const Positioned(left: 0, right: 0, top: 127.4, child: _Title()),
-            const Positioned(left: 0, right: 6, top: 168.7, child: _Subtitle()),
-            const Positioned(left: 22, top: 506, child: _SegmentTrack()),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              left: _signUp ? 195 : 24,
-              top: 505,
-              width: 191,
-              height: 53,
-              child: _SegmentPill(),
-            ),
-            Positioned(
-              left: 22,
-              width: 191,
-              top: 522.6,
-              child: _SegmentLabel('Login', active: !_signUp),
-            ),
-            Positioned(
-              left: 215,
-              width: 171,
-              top: 522.6,
-              child: _SegmentLabel('Sign Up', active: _signUp),
-            ),
-            Positioned(
-              left: 22,
-              width: 191,
-              top: 506,
-              height: 53,
-              child: GestureDetector(
-                key: const Key('welcomeTabLogin'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _signUp ? _showLogin : null,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            Positioned(
-              left: 215,
-              width: 171,
-              top: 506,
-              height: 53,
-              child: GestureDetector(
-                key: const Key('welcomeTabSignUp'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _signUp ? null : _showSignUp,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            if (_signUp) ...[
-              Positioned(
-                left: 22,
-                top: 574,
-                child: _SignUpField(hint: 'Name', controller: _name),
-              ),
-              Positioned(
-                left: 22,
-                top: 644,
-                child: _SignUpField(
-                  hint: 'Phone Number',
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                ),
-              ),
-              Positioned(
-                left: 22,
-                top: 714,
-                child: _SignUpField(
-                  hint: 'Password',
-                  obscure: true,
-                  controller: _password,
-                ),
-              ),
-              Positioned(
-                left: 22,
-                top: 784,
-                child: _CreateAccountButton(onTap: _createAccount),
-              ),
-            ] else ...[
-              const Positioned(left: 22, top: 587.8, child: _WelcomeBack()),
-              const Positioned(
-                left: 22,
-                right: 0,
-                top: 612.3,
-                child: _PhoneHint(),
-              ),
-              const Positioned(left: 22, top: 656.5, child: _PhoneLabel()),
-              Positioned(
-                left: 22,
-                top: 684,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _CountrySelector(
-                      country: _country,
-                      onTap: _showCountryPicker,
+                children: [
+                  const Positioned(left: 0, top: 64, child: _Leaf()),
+                  const Positioned(left: 0, top: 225, child: _Hero()),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 504,
+                    bottom: 0,
+                    child: _Card(),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 127.4,
+                    child: _Title(),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 6,
+                    top: 168.7,
+                    child: _Subtitle(),
+                  ),
+                  const Positioned(left: 24, top: 506, child: _SegmentTrack()),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    left: _signUp ? 195 : 24,
+                    top: 505,
+                    width: 191,
+                    height: 53,
+                    child: _SegmentPill(),
+                  ),
+                  Positioned(
+                    left: 24,
+                    width: 191,
+                    top: 524,
+                    child: _SegmentLabel(AppStrings.trOf(context, 'Login'), active: !_signUp),
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 524,
+                    child: _SegmentLabel(AppStrings.trOf(context, 'Sign Up'), active: _signUp),
+                  ),
+                  Positioned(
+                    left: 24,
+                    width: 191,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabLogin'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? _showLogin : null,
+                      child: const SizedBox.expand(),
                     ),
-                    const SizedBox(width: 5),
-                    _PhoneBox(
-                      controller: _phone,
-                      maxLength: _country.maxDigits,
+                  ),
+                  Positioned(
+                    left: 215,
+                    width: 171,
+                    top: 506,
+                    height: 53,
+                    child: GestureDetector(
+                      key: const Key('welcomeTabSignUp'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _signUp ? null : _showSignUp,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  if (_signUp) ...[
+                    Positioned(
+                      left: 24,
+                      top: 574,
+                      child: _SignUpField(hint: AppStrings.trOf(context, 'Name')),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 644,
+                      child: _SignUpField(
+                        hint: AppStrings.trOf(context, 'E-Mail'),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 714,
+                      child: _SignUpField(hint: AppStrings.trOf(context, 'Password'), obscure: true),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 784,
+                      child: _CreateAccountButton(
+                        onTap: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SellerHomeScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ] else ...[
+                    const Positioned(
+                      left: 24,
+                      top: 587.8,
+                      child: _WelcomeBack(),
+                    ),
+                    const Positioned(left: 166, top: 579, child: _Wave()),
+                    const Positioned(
+                      left: 24,
+                      right: 0,
+                      top: 612.3,
+                      child: _PhoneHint(),
+                    ),
+                    const Positioned(
+                      left: 24,
+                      top: 656.5,
+                      child: _PhoneLabel(),
+                    ),
+                    const Positioned(left: 24, top: 684, child: _FieldBox()),
+                    Positioned(
+                      left: 24,
+                      top: 684,
+                      width: 83,
+                      height: 54,
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _country.isIndia
+                                ? const _Flag()
+                                : Text(
+                                    _country.flag,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                            const SizedBox(width: 5),
+                            _DialCode(_country.dial),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 684,
+                      width: 83,
+                      height: 54,
+                      child: GestureDetector(
+                        key: const Key('countryPicker'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _showCountryPicker,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                    Positioned(
+                      left: 112,
+                      top: 684,
+                      child: _PhoneBox(
+                        key: _phoneBoxKey,
+                        maxLength: _country.maxDigits,
+                      ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 749,
+                      child: _SendOtpButton(
+                        loading: _sending,
+                        onTap: _sendOtp,
+                      ),
                     ),
                   ],
-                ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 859,
+                    child: _Footer(),
+                  ),
+                ],
               ),
-              Positioned(
-                left: 22,
-                top: 749,
-                child: _SendOtpButton(loading: _sending, onTap: _sendOtp),
-              ),
-            ],
-            const Positioned(left: 0, right: 0, top: 859, child: _Footer()),
-          ],
-        ),
-      ),
+            ),
     );
   }
 }
@@ -596,12 +361,12 @@ class _Title extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
-      text: const TextSpan(
+      text: TextSpan(
         style: AppTextStyles.welcomeTitle,
         children: [
-          TextSpan(text: 'Welcome '),
+          TextSpan(text: AppStrings.trOf(context, 'Welcome ')),
           TextSpan(
-            text: 'Seller!',
+            text: AppStrings.trOf(context, 'Seller!'),
             style: TextStyle(color: AppColors.sellerGreen),
           ),
         ],
@@ -615,8 +380,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Let\u2019s grow together.\nSell fresh. Reach further.',
+    return Text(
+      AppStrings.trOf(context, 'Let\u2019s grow together.\nSell fresh. Reach further.'),
       textAlign: TextAlign.center,
       style: AppTextStyles.welcomeSubtitle,
     );
@@ -683,14 +448,20 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text('Welcome back', style: AppTextStyles.welcomeBack),
-        SizedBox(width: 6),
-        Text('👋', style: TextStyle(fontSize: 18, height: 1.0)),
-      ],
+    return Text(AppStrings.trOf(context, 'Welcome back'), style: AppTextStyles.welcomeBack);
+  }
+}
+
+class _Wave extends StatelessWidget {
+  const _Wave();
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      WelcomeSellerScreen.waveAsset,
+      width: 28,
+      height: 28,
+      fit: BoxFit.fill,
     );
   }
 }
@@ -700,10 +471,7 @@ class _PhoneHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Enter your phone number to proceed',
-      style: AppTextStyles.phoneHint,
-    );
+    return Text(AppStrings.trOf(context, 'Enter your phone number to proceed'), style: AppTextStyles.phoneHint);
   }
 }
 
@@ -712,45 +480,24 @@ class _PhoneLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Phone Number', style: AppTextStyles.phoneLabel);
+    return Text(AppStrings.trOf(context, 'Phone Number'), style: AppTextStyles.phoneLabel);
   }
 }
 
-class _CountrySelector extends StatelessWidget {
-  const _CountrySelector({required this.country, required this.onTap});
-
-  final CountryCode country;
-  final VoidCallback onTap;
+class _FieldBox extends StatelessWidget {
+  const _FieldBox();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('countryPicker'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 83,
-        height: 54,
-        decoration: const BoxDecoration(
-          color: AppColors.fieldFill,
-          border: Border.fromBorderSide(
-            BorderSide(color: AppColors.fieldBorder, width: 1),
-          ),
-          borderRadius: BorderRadius.all(Radius.circular(27)),
+    return Container(
+      width: 83,
+      height: 54,
+      decoration: const BoxDecoration(
+        color: AppColors.fieldFill,
+        border: Border.fromBorderSide(
+          BorderSide(color: AppColors.fieldBorder, width: 1),
         ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              country.isIndia
-                  ? const _Flag()
-                  : Text(country.flag, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 5),
-              _DialCode(country.dial),
-            ],
-          ),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(27)),
       ),
     );
   }
@@ -763,10 +510,9 @@ class _Flag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       WelcomeSellerScreen.flagAsset,
-      width: 24,
+      width: 23,
       height: 16,
       fit: BoxFit.fill,
-      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -782,17 +528,13 @@ class _DialCode extends StatelessWidget {
   }
 }
 
-/// Redesigned phone input: pill-shaped box that shows a blinking caret while
-/// empty (mirroring the design), numeric-only entry and a [maxLength] that
-/// follows the selected country's dial code (truncating any longer number
-/// when the country changes).
-///
-/// The [controller] is owned by the widget state above (it is what "Send OTP"
-/// reads); this box only attaches listeners to it.
+/// Redesigned phone input: pill-shaped box with a "Mobile number"
+/// placeholder, numeric-only entry and a [maxLength] that follows the
+/// selected country's dial code (truncating any longer number when the
+/// country changes).
 class _PhoneBox extends StatefulWidget {
-  const _PhoneBox({required this.controller, required this.maxLength});
+  const _PhoneBox({super.key, required this.maxLength});
 
-  final TextEditingController controller;
   final int maxLength;
 
   @override
@@ -800,13 +542,16 @@ class _PhoneBox extends StatefulWidget {
 }
 
 class _PhoneBoxState extends State<_PhoneBox> {
+  final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
+  /// Digits-only phone number entered by the user.
+  String get phoneDigits => _controller.text.replaceAll(RegExp(r'\D'), '');
 
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_onChanged);
-    _focusNode.addListener(_onChanged);
+    _controller.addListener(_onChanged);
   }
 
   void _onChanged() => setState(() {});
@@ -814,31 +559,22 @@ class _PhoneBoxState extends State<_PhoneBox> {
   @override
   void didUpdateWidget(covariant _PhoneBox oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_onChanged);
-      widget.controller.addListener(_onChanged);
-    }
     if (widget.maxLength != oldWidget.maxLength &&
-        widget.controller.text.length > widget.maxLength) {
-      widget.controller.text = widget.controller.text.substring(
-        0,
-        widget.maxLength,
-      );
+        _controller.text.length > widget.maxLength) {
+      _controller.text = _controller.text.substring(0, widget.maxLength);
     }
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onChanged);
-    _focusNode.removeListener(_onChanged);
+    _controller.removeListener(_onChanged);
+    _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool showCaret =
-        widget.controller.text.isEmpty && !_focusNode.hasFocus;
     return Container(
       width: 277,
       height: 54,
@@ -849,86 +585,26 @@ class _PhoneBoxState extends State<_PhoneBox> {
         ),
         borderRadius: BorderRadius.all(Radius.circular(27)),
       ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: TextField(
-              key: const Key('loginPhone'),
-              controller: widget.controller,
-              focusNode: _focusNode,
-              maxLength: widget.maxLength,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-              ),
-              cursorColor: AppColors.inputCaret,
-              cursorWidth: 2,
-              decoration: const InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
-                filled: false,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 17,
-                ),
-              ),
-            ),
-          ),
-          if (showCaret)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: _PhoneCaret(),
-                  ),
-                ),
-              ),
-            ),
-        ],
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        maxLength: widget.maxLength,
+        keyboardType: TextInputType.phone,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        textAlignVertical: TextAlignVertical.center,
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+        cursorColor: AppColors.inputCaret,
+        cursorWidth: 2,
+        decoration: InputDecoration(
+          hintText: AppStrings.trOf(context, 'Mobile number'),
+          hintStyle: AppTextStyles.signUpField,
+          counterText: '',
+          border: InputBorder.none,
+          filled: false,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+        ),
       ),
-    );
-  }
-}
-
-/// Decorative blinking caret shown while the phone field is empty and
-/// unfocused, matching the design's resting state. The real text cursor takes
-/// over as soon as the field is focused.
-class _PhoneCaret extends StatefulWidget {
-  const _PhoneCaret();
-
-  @override
-  State<_PhoneCaret> createState() => _PhoneCaretState();
-}
-
-class _PhoneCaretState extends State<_PhoneCaret> {
-  Timer? _timer;
-  bool _visible = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (mounted) setState(() => _visible = !_visible);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: _visible ? 1 : 0,
-      child: Container(width: 2, height: 19, color: AppColors.inputCaret),
     );
   }
 }
@@ -948,7 +624,7 @@ class _SendOtpButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: loading ? null : onTap,
       child: Container(
-        width: 368,
+        width: 364,
         height: 52,
         padding: const EdgeInsets.only(right: 6),
         decoration: const BoxDecoration(
@@ -972,10 +648,10 @@ class _SendOtpButton extends StatelessWidget {
                     color: AppColors.surface,
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Send OTP', style: AppTextStyles.sendOtp),
+                    Text(AppStrings.trOf(context, 'Send OTP'), style: AppTextStyles.sendOtp),
                     SizedBox(width: 12),
                     _SendIcon(),
                   ],
@@ -1007,12 +683,12 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
-      text: const TextSpan(
+      text: TextSpan(
         style: AppTextStyles.footer,
         children: [
-          TextSpan(text: 'By continuing, you agree to '),
+          TextSpan(text: AppStrings.trOf(context, 'By continuing, you agree to ')),
           TextSpan(
-            text: 'Terms & Privacy Policy.',
+            text: AppStrings.trOf(context, 'Terms & Privacy Policy.'),
             style: AppTextStyles.footerLink,
           ),
         ],
@@ -1032,18 +708,11 @@ class _SignUpField extends StatefulWidget {
     required this.hint,
     this.keyboardType,
     this.obscure = false,
-    this.inputFormatters,
-    this.controller,
   });
 
   final String hint;
   final TextInputType? keyboardType;
   final bool obscure;
-  final List<TextInputFormatter>? inputFormatters;
-
-  /// Shared controller so the Sign Up phone field feeds the same OTP flow
-  /// as the Login tab.
-  final TextEditingController? controller;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
@@ -1057,7 +726,7 @@ class _SignUpFieldState extends State<_SignUpField> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 368,
+      width: 364,
       height: 54,
       decoration: const BoxDecoration(
         color: AppColors.fieldFill,
@@ -1067,9 +736,7 @@ class _SignUpFieldState extends State<_SignUpField> {
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
       child: TextField(
-        controller: widget.controller,
         keyboardType: widget.keyboardType,
-        inputFormatters: widget.inputFormatters,
         obscureText: widget.obscure && !_visible,
         textAlignVertical: TextAlignVertical.center,
         style: const TextStyle(
@@ -1091,7 +758,7 @@ class _SignUpFieldState extends State<_SignUpField> {
               ? IconButton(
                   key: const Key('passwordToggle'),
                   onPressed: _toggleVisible,
-                  tooltip: _visible ? 'Hide password' : 'Show password',
+                  tooltip: _visible ? AppStrings.trOf(context, 'Hide password') : AppStrings.trOf(context, 'Show password'),
                   icon: Icon(
                     _visible ? Icons.visibility : Icons.visibility_off,
                     size: 22,
@@ -1119,10 +786,9 @@ class _CreateAccountButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 368,
+        width: 364,
         height: 52,
         alignment: Alignment.center,
         decoration: const BoxDecoration(
@@ -1136,7 +802,7 @@ class _CreateAccountButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text('Create account', style: AppTextStyles.sendOtp),
+        child: Text(AppStrings.trOf(context, 'Create account'), style: AppTextStyles.sendOtp),
       ),
     );
   }
@@ -1184,9 +850,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
-            child: Text('Select country', style: AppTextStyles.welcomeBack),
+            child: Text(AppStrings.trOf(context, 'Select country'), style: AppTextStyles.welcomeBack),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1200,7 +866,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               ),
               cursorColor: AppColors.inputCaret,
               decoration: InputDecoration(
-                hintText: 'Search country or code',
+                hintText: AppStrings.trOf(context, 'Search country or code'),
                 hintStyle: AppTextStyles.signUpField,
                 prefixIcon: const Icon(
                   Icons.search,
@@ -1238,9 +904,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           const SizedBox(height: 4),
           Expanded(
             child: results.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No country found',
+                      AppStrings.trOf(context, 'No country found'),
                       style: AppTextStyles.phoneHint,
                     ),
                   )

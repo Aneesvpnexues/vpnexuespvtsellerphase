@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -12,14 +13,46 @@ import '../widgets/slide_drag_detector.dart';
 /// (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae16aa9fda71b12bf121).
 ///
-/// Built against a 412x1501 artboard. Same zoom-scroll pattern as 117/123/132:
-/// fit width, scroll vertically for the 1501px tall content. Visual only.
+/// Built against a 412x1567 artboard: fit width, scroll vertically for the
+/// tall content. Slide-to-accept hands over to [OrderPickupCodeScreen];
+/// "Reject order" asks for confirmation and pops back to My Orders.
 class OrderDetailsScreen extends StatelessWidget {
   const OrderDetailsScreen({super.key});
 
   static const double designWidth = 412;
-  static const double designHeight = 1501;
+  static const double designHeight = 1567;
   static const double trimTop = 49;
+
+  Future<void> _confirmReject(BuildContext context) async {
+    final bool? reject = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(AppStrings.trOf(dialogContext, 'Reject this order?')),
+        content: Text(
+          AppStrings.trOf(
+            dialogContext,
+            'The buyer will be notified that you declined this order.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(AppStrings.trOf(dialogContext, 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              AppStrings.trOf(dialogContext, 'Reject'),
+              style: const TextStyle(color: AppColors.attentionRed),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (reject == true && context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,19 +65,44 @@ class OrderDetailsScreen extends StatelessWidget {
           designHeight: designHeight,
           trimTop: trimTop,
           child: Stack(
-            children: const [
+            children: [
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: 'Order Details'),
+                child: PageHeader(
+                  title: AppStrings.trOf(context, 'Order Details'),
+                ),
               ),
-              Positioned(left: 22, top: 117, child: _SegmentTabs()),
-              Positioned(left: 25, top: 172, child: _OrderHero()),
-              Positioned(left: 22, top: 394, child: _BuyerCard()),
-              Positioned(left: 22, top: 588, child: _ItemsCard()),
-              Positioned(left: 22, top: 862, child: _SummaryCard()),
-              Positioned(left: 22, top: 1082, child: _DeliveryCard()),
-              Positioned(left: 21, top: 1420, child: _SlideAccept()),
+              Positioned(left: 22, top: 117, child: const _SegmentTabs()),
+              Positioned(left: 25, top: 172, child: const _OrderHero()),
+              Positioned(left: 22, top: 394, child: const _BuyerCard()),
+              Positioned(left: 22, top: 588, child: const _ItemsCard()),
+              Positioned(left: 22, top: 862, child: const _SummaryCard()),
+              Positioned(left: 22, top: 1082, child: const _DeliveryCard()),
+              Positioned(
+                left: 21,
+                top: 1424,
+                width: 364,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _confirmReject(context),
+              child: SizedBox(
+                height: 16,
+                child: Text(
+                  AppStrings.trOf(context, 'Reject order'),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.attentionRed,
+                  ),
+                ),
+              ),
+                ),
+              ),
+              Positioned(left: 21, top: 1494, child: const _SlideAccept()),
             ],
           ),
         ),
@@ -58,14 +116,11 @@ class OrderDetailsScreen extends StatelessWidget {
 ///
 /// `height` is the line height Zeplin reports for the layer, so the style gets
 /// an explicit `height` (box / font size) with even leading distribution to
-/// reproduce the design's half-leading. Without it Flutter clamps paragraphs
-/// that are taller than the box (e.g. a 28px title: natural line box 34px >
-/// 27px box) and paints the glyphs a few pixels lower than Zeplin.
+/// reproduce the design's half-leading.
 ///
 /// Zeplin boxes hug the text, so the Inter advance plus Flutter's trailing
-/// letter spacing can be a hair wider than the box (e.g. 'ORDER #NX4582':
-/// 108.8px in a 107px box). Every label in the design is single line, so
-/// wrapping is disabled instead of widening the box.
+/// letter spacing can be a hair wider than the box. Every label in the design
+/// is single line, so wrapping is disabled instead of widening the box.
 class _Label extends StatelessWidget {
   const _Label(this.text, this.style, {required this.width, this.height = 25});
 
@@ -110,7 +165,7 @@ class _SegmentTabs extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: const BorderRadius.all(Radius.circular(28)),
-              border: Border.all(color: Color(0x14000000)),
+              border: Border.all(color: const Color(0x14000000)),
             ),
           ),
           Positioned(
@@ -124,17 +179,17 @@ class _SegmentTabs extends StatelessWidget {
                 color: AppColors.orderDark,
                 borderRadius: BorderRadius.all(Radius.circular(23)),
               ),
-              child: const Text(
-                'Buyer Pickup',
+              child: Text(
+                AppStrings.trOf(context, 'Buyer Pickup'),
                 style: AppTextStyles.orderSegmentActive,
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 238,
             top: 10,
             child: _Label(
-              'Delivery',
+              AppStrings.trOf(context, 'Delivery'),
               AppTextStyles.orderSegmentIdle,
               width: 50,
             ),
@@ -156,7 +211,12 @@ class _OrderHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(22)),
         gradient: const LinearGradient(
-          colors: [AppColors.orderLime, AppColors.orderHeroEnd],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Color(0xFFC9EA73),
+            Color(0xFFC8EAA5),
+          ],
         ),
         boxShadow: const [
           BoxShadow(
@@ -181,54 +241,53 @@ class _OrderHero extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        child: Stack(
         children: [
           Positioned(
-            left: 208,
-            top: 0,
-            child: Transform.rotate(
-              angle: 27.582 * 3.14159265358979 / 180,
-              child: Container(
-                width: 154,
-                height: 149,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [
-                      AppColors.orderCircleStart,
-                      AppColors.orderCircleEnd,
-                    ],
-                  ),
-                  border: Border.all(color: Color(0x51FDF9F0)),
+            left: 238,
+            top: -44,
+            child: Container(
+              width: 164,
+              height: 164,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [
+                    AppColors.orderCircleStart,
+                    AppColors.orderCircleEnd,
+                  ],
                 ),
+                border: Border.all(color: const Color(0x51FDF9F0)),
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 12,
             child: _Label(
-              'ORDER #NX4582',
+              AppStrings.trOf(context, 'ORDER #NX4582'),
               AppTextStyles.orderId,
               width: 107,
               height: 15,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 32,
             child: _Label(
-              'New Order',
+              AppStrings.trOf(context, 'New Order'),
               AppTextStyles.orderHeroTitle,
               width: 149,
               height: 34,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             top: 67,
             child: _Label(
-              'Waiting for your response',
+              AppStrings.trOf(context, 'Waiting for your response'),
               AppTextStyles.orderHeroCaption,
               width: 126,
               height: 13,
@@ -245,8 +304,8 @@ class _OrderHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 132,
-            top: 87,
+            left: 284,
+            top: 15,
             child: Container(
               width: 61,
               height: 19,
@@ -257,65 +316,25 @@ class _OrderHero extends StatelessWidget {
             ),
           ),
           const Positioned(
-            left: 142,
-            top: 94,
+            left: 294,
+            top: 22,
             child: _Dot(size: 5, color: AppColors.orderDivider),
           ),
-          const Positioned(
-            left: 149.6,
-            top: 84,
+          Positioned(
+            left: 301.5,
+            top: 15,
             child: _Label(
-              'Active',
-              AppTextStyles.orderPillLabel,
+              AppStrings.trOf(context, 'Active'),
+              AppTextStyles.orderPillLabel.copyWith(
+                color: AppColors.orderDivider,
+              ),
               width: 34,
               height: 20,
             ),
           ),
-          const Positioned(left: 16, top: 117, child: _ProgressStrip()),
-          Positioned(
-            left: 301.99,
-            top: 11,
-            child: Container(
-              alignment: Alignment.center,
-              width: 48,
-              height: 46,
-              decoration: const BoxDecoration(
-                color: AppColors.orderDark,
-                borderRadius: BorderRadius.all(Radius.circular(11)),
-              ),
-              child: const Image(
-                image: AssetImage('assets/order/ic_hero_box_dark.png'),
-                width: 22,
-                height: 22,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 273.75,
-            top: 30.5,
-            child: Container(
-              alignment: Alignment.center,
-              width: 49,
-              height: 45,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(11)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1A000000),
-                    offset: Offset(0, 4),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: const Image(
-                image: AssetImage('assets/order/ic_hero_box_white.png'),
-                width: 22,
-                height: 22,
-              ),
-            ),
-          ),
+          const Positioned(left: 17, top: 118, child: _ProgressStrip()),
         ],
+        ),
       ),
     );
   }
@@ -341,18 +360,18 @@ class _ProgressStrip extends StatelessWidget {
   const _ProgressStrip();
 
   static const List<_Step> steps = [
-    _Step('Active', 'assets/order/ic_step_box.png', true),
-    _Step('Accepted', 'assets/order/ic_step_tick.png', false),
-    _Step('Ready', 'assets/order/ic_step_package.png', false),
-    _Step('Pickup', 'assets/order/ic_step_download.png', false),
-    _Step('Completed', 'assets/order/ic_step_flag.png', false),
+    _Step('Active', _StepIcon.bolt, true, 38),
+    _Step('Pickup', _StepIcon.download, false, 146),
+    _Step('Completed', _StepIcon.flag, false, 256),
   ];
+
+  static const List<double> centers = [56, 164, 274];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 334,
-      height: 81,
+      width: 332,
+      height: 79,
       decoration: const BoxDecoration(
         color: AppColors.orderMint,
         borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -360,27 +379,36 @@ class _ProgressStrip extends StatelessWidget {
       child: Stack(
         children: [
           const Positioned(
-            left: 30,
-            top: 34,
-            child: CustomPaint(size: Size(266, 1), painter: _DashedLine()),
+            left: 74,
+            top: 33,
+            child: CustomPaint(size: Size(182, 1), painter: _DashedLine()),
           ),
           for (int i = 0; i < steps.length; i++)
             Positioned(
-              left: 20 + i * 65,
-              top: 17,
+              left: steps[i].left,
+              top: 16,
               child: _StepCircle(step: steps[i]),
             ),
           for (int i = 0; i < steps.length; i++)
             Positioned(
-              left: 20 + i * 65,
-              top: 51,
-              child: _Label(
-                steps[i].label,
-                steps[i].active
-                    ? AppTextStyles.orderStepLabel
-                    : AppTextStyles.orderStepLabelIdle,
-                width: steps[i].labelWidth,
-                height: 25,
+              left: centers[i] - 30,
+              top: 55,
+              child: SizedBox(
+                width: 60,
+                height: 15,
+                child: Text(
+                  AppStrings.trOf(context, steps[i].label),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: steps[i].active
+                        ? AppColors.orderDark
+                        : const Color(0x8C0D3B20),
+                  ),
+                ),
               ),
             ),
         ],
@@ -389,27 +417,15 @@ class _ProgressStrip extends StatelessWidget {
   }
 }
 
+enum _StepIcon { bolt, download, flag }
+
 class _Step {
-  const _Step(this.label, this.icon, this.active);
+  const _Step(this.label, this.icon, this.active, this.left);
 
   final String label;
-  final String icon;
+  final _StepIcon icon;
   final bool active;
-
-  double get labelWidth {
-    switch (label) {
-      case 'Active':
-        return 32;
-      case 'Accepted':
-        return 48;
-      case 'Ready':
-        return 31;
-      case 'Pickup':
-        return 34;
-      default:
-        return 55;
-    }
-  }
+  final double left;
 }
 
 class _StepCircle extends StatelessWidget {
@@ -419,6 +435,26 @@ class _StepCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget icon;
+    switch (step.icon) {
+      case _StepIcon.bolt:
+        icon = CustomPaint(
+          size: const Size(15, 19),
+          painter: _BoltPainter(color: AppColors.orderLime),
+        );
+      case _StepIcon.download:
+        icon = Image.asset(
+          'assets/order/ic_step_download.png',
+          width: 18,
+          height: 18,
+        );
+      case _StepIcon.flag:
+        icon = Image.asset(
+          'assets/order/ic_step_flag.png',
+          width: 16,
+          height: 16,
+        );
+    }
     return Container(
       width: 36,
       height: 36,
@@ -426,14 +462,46 @@ class _StepCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: step.active ? AppColors.orderDark : Colors.white,
         shape: BoxShape.circle,
+        border: Border.all(
+          color: step.active
+              ? const Color(0xFFE1F8A4)
+              : const Color(0xFFE9E9E9),
+          width: 2,
+        ),
       ),
-      child: Image(
-        image: AssetImage(step.icon),
-        width: step.active ? 18 : 19,
-        height: step.active ? 18 : 19,
-      ),
+      child: icon,
     );
   }
+}
+
+class _BoltPainter extends CustomPainter {
+  const _BoltPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.7
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final Path path = Path()
+      ..moveTo(w * 0.58, h * 0.05)
+      ..lineTo(w * 0.27, h * 0.57)
+      ..lineTo(w * 0.55, h * 0.57)
+      ..lineTo(w * 0.45, h * 0.95)
+      ..lineTo(w * 0.84, h * 0.4)
+      ..lineTo(w * 0.55, h * 0.4)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DashedLine extends CustomPainter {
@@ -444,8 +512,8 @@ class _DashedLine extends CustomPainter {
     final Paint paint = Paint()
       ..color = AppColors.orderDivider
       ..strokeWidth = 1;
-    const double dash = 4;
-    const double gap = 4;
+    const double dash = 5;
+    const double gap = 5;
     double x = 0;
     while (x < size.width) {
       canvas.drawLine(Offset(x, 0), Offset(x + dash, 0), paint);
@@ -468,7 +536,7 @@ class _BuyerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.orderCardDark,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: Color(0x12000000)),
+        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
@@ -494,11 +562,11 @@ class _BuyerCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
+          Positioned(
             left: 17,
             top: 15,
             child: _Label(
-              'BUYER DETAILS',
+              AppStrings.trOf(context, 'BUYER DETAILS'),
               AppTextStyles.orderSectionLabel,
               width: 102,
               height: 15,
@@ -581,11 +649,11 @@ class _BuyerCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 253,
             top: 45,
             child: _Label(
-              'Retailer',
+              AppStrings.trOf(context, 'Retailer'),
               AppTextStyles.orderBuyerType,
               width: 49,
               height: 20,
@@ -601,9 +669,9 @@ class _BuyerCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.orderLime,
                 borderRadius: const BorderRadius.all(Radius.circular(28)),
-                border: Border.all(color: Color(0x14000000)),
+                border: Border.all(color: const Color(0x14000000)),
               ),
-              child: const Stack(
+              child: Stack(
                 children: [
                   Positioned(
                     left: 58,
@@ -618,7 +686,7 @@ class _BuyerCard extends StatelessWidget {
                     left: 77,
                     top: 7,
                     child: _Label(
-                      'Call',
+                      AppStrings.trOf(context, 'Call'),
                       AppTextStyles.orderCallLabel,
                       width: 27,
                       height: 17,
@@ -638,9 +706,9 @@ class _BuyerCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.orderSecondary,
                 borderRadius: const BorderRadius.all(Radius.circular(28)),
-                border: Border.all(color: Color(0x14000000)),
+                border: Border.all(color: const Color(0x14000000)),
               ),
-              child: const Stack(
+              child: Stack(
                 children: [
                   Positioned(
                     left: 56,
@@ -655,8 +723,8 @@ class _BuyerCard extends StatelessWidget {
                     left: 79,
                     top: 7,
                     child: _Label(
-                      'Call',
-                      TextStyle(
+                      AppStrings.trOf(context, 'Call'),
+                      const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.12,
@@ -687,7 +755,7 @@ class _ItemsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: Color(0x12000000)),
+        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A9E9E9E),
@@ -731,11 +799,11 @@ class _ItemsCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 56,
             top: 19,
             child: _Label(
-              'Order Items',
+              AppStrings.trOf(context, 'Order Items'),
               AppTextStyles.orderCardTitle,
               width: 98,
             ),
@@ -803,7 +871,7 @@ class _ItemRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(14)),
-        border: Border.all(color: Color(0x12000000)),
+        border: Border.all(color: const Color(0x12000000)),
       ),
       child: Stack(
         children: [
@@ -852,7 +920,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: Color(0x12000000)),
+        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A9E9E9E),
@@ -898,11 +966,11 @@ class _SummaryCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 56,
               top: 19,
               child: _Label(
-                'Order Summary',
+                AppStrings.trOf(context, 'Order Summary'),
                 AppTextStyles.orderCardTitle,
                 width: 128,
               ),
@@ -916,11 +984,11 @@ class _SummaryCard extends StatelessWidget {
                 color: AppColors.orderPale,
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 32,
               top: 76,
               child: _Label(
-                'Items Total',
+                AppStrings.trOf(context, 'Items Total'),
                 AppTextStyles.orderRowLabel,
                 width: 120,
               ),
@@ -934,11 +1002,11 @@ class _SummaryCard extends StatelessWidget {
                 width: 65,
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 32,
               top: 105,
               child: _Label(
-                'Delivery Charges',
+                AppStrings.trOf(context, 'Delivery Charges'),
                 AppTextStyles.orderRowLabel,
                 width: 140,
               ),
@@ -957,11 +1025,11 @@ class _SummaryCard extends StatelessWidget {
                 color: AppColors.orderBand,
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 32,
               top: 148,
               child: _Label(
-                'Total Amount',
+                AppStrings.trOf(context, 'Total Amount'),
                 AppTextStyles.orderTotalLabel,
                 width: 120,
               ),
@@ -993,7 +1061,7 @@ class _DeliveryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        border: Border.all(color: Color(0x12000000)),
+        border: Border.all(color: const Color(0x12000000)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A9E9E9E),
@@ -1037,11 +1105,11 @@ class _DeliveryCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 56,
             top: 19,
             child: _Label(
-              'Delivery Details',
+              AppStrings.trOf(context, 'Delivery Details'),
               AppTextStyles.orderCardTitle,
               width: 128,
             ),
@@ -1076,23 +1144,26 @@ class _DeliveryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     left: 63,
                     top: 5,
                     child: _Label(
-                      'Buyer Pickup',
+                      AppStrings.trOf(context, 'Buyer Pickup'),
                       AppTextStyles.orderSubTitle,
                       width: 140,
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     left: 63,
                     top: 26,
                     child: SizedBox(
                       width: 221,
                       height: 30,
                       child: Text(
-                        'Buyer will pick up the order  from your\nlocation',
+                        AppStrings.trOf(
+                          context,
+                          'Buyer will pick up the order  from your\nlocation',
+                        ),
                         style: AppTextStyles.orderSubText,
                       ),
                     ),
@@ -1115,11 +1186,11 @@ class _DeliveryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     left: 63,
                     top: 69,
                     child: _Label(
-                      'Expected Pickup Date',
+                      AppStrings.trOf(context, 'Expected Pickup Date'),
                       AppTextStyles.orderSubText,
                       width: 160,
                     ),
@@ -1155,11 +1226,11 @@ class _DeliveryCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 56,
             top: 205,
             child: _Label(
-              'Buyer Note',
+              AppStrings.trOf(context, 'Buyer Note'),
               AppTextStyles.orderCardTitle,
               width: 90,
             ),
@@ -1194,14 +1265,14 @@ class _DeliveryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     left: 63,
                     top: 13,
                     child: SizedBox(
-                      width: 238,
+                      width: 256,
                       height: 34,
                       child: Text(
-                        'Please ensure fresh quality and proper\npacking. Call me before ready for pickup.',
+                        AppStrings.trOf(context, 'Please ensure fresh quality and proper\npacking. Call me before ready for pickup.'),
                         style: AppTextStyles.orderNoteText,
                       ),
                     ),
@@ -1263,7 +1334,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
       setState(() => _knobX = _end);
-      goToOrderReady(context);
+      goToOrderPickupCode(context);
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -1274,11 +1345,11 @@ class _SlideAcceptState extends State<_SlideAccept>
   Widget build(BuildContext context) {
     return HoverPress.slide(
       child: SlideDragDetector(
-        onTap: () => goToOrderReady(context),
+        onTap: () => goToOrderPickupCode(context),
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
-          width: 368,
+          width: 364,
           height: 58,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(28)),
@@ -1324,11 +1395,11 @@ class _SlideAcceptState extends State<_SlideAccept>
                   ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 112,
                 top: 15,
                 child: _Label(
-                  'Slide to accept order',
+                  AppStrings.trOf(context, 'Slide to accept order'),
                   AppTextStyles.orderSlideLabel,
                   width: 180,
                 ),

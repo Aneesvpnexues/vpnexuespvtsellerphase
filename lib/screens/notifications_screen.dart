@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
+
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
@@ -7,7 +9,7 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(AppStrings.trOf(context, 'Notifications')),
         centerTitle: true,
         backgroundColor: const Color(0xFFE8F2E0),
         elevation: 0,
@@ -16,13 +18,16 @@ class NotificationsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _NotificationCard(
-            title: '2 new orders',
-            subtitle: 'Review and accept to grow your business!',
+            title: AppStrings.trOf(context, '2 new orders'),
+            subtitle: AppStrings.trOf(
+              context,
+              'Review and accept to grow your business!',
+            ),
             icon: Icons.shopping_bag_outlined,
           ),
           _NotificationCard(
-            title: 'Your store is verified',
-            subtitle: 'You can now accept orders.',
+            title: AppStrings.trOf(context, 'Your store is verified'),
+            subtitle: AppStrings.trOf(context, 'You can now accept orders.'),
             icon: Icons.verified_user_outlined,
           ),
         ],

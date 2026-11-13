@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/api_error.dart';
+import '../data/cloudinary_upload_api.dart';
+import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'bank_detaile.dart';
+import 'business_details_screen.dart';
+import 'seller_home_screen.dart';
+import 'verify_detaile.dart';
 
 /// Personal Details - editable replica of Zeplin "Android Compact - 159"
 /// (project 6a8d49709e27bd8b35213d35,
@@ -40,6 +48,8 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   late final TextEditingController _mobile;
   late final TextEditingController _email;
   late SellerType _sellerType;
+  String? _avatarUrl;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -65,23 +75,73 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final bytes = await picked.readAsBytes();
+      final uploader = CloudinaryUploadApi(folder: 'seller_avatars');
+      final url = await uploader.upload(
+        ProductPhoto(
+          bytes: Uint8List.fromList(bytes),
+          mimeType: 'image/jpeg',
+          filename: picked.name,
+        ),
+      );
+
+      setState(() => _avatarUrl = url);
+
+      // Save avatar URL to Supabase
+      await SupabaseProductApi().saveSellerProfile(
+        name: _name.text.trim(),
+        mobile: _mobile.text.trim(),
+        sellerType: _sellerType.dbValue,
+        businessName: _name.text.trim(),
+        businessLocation: '',
+        businessAddress: '',
+        avatarUrl: url,
+      );
+
+      SellerProfileStore.instance.save(
+        name: _name.text.trim(),
+        mobile: _mobile.text.trim(),
+        email: _email.text.trim(),
+        sellerType: _sellerType,
+        avatarUrl: url,
+      );
+    } catch (e) {
+      if (mounted) _showMessage(AppStrings.trOf(context, 'Failed to upload avatar. Please try again.'));
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
   Future<void> _save() async {
     final String name = _name.text.trim();
     final String mobile = _mobile.text.trim();
     final String email = _email.text.trim();
 
     if (name.isEmpty) {
-      _showMessage('Enter your full name.');
+      _showMessage(AppStrings.trOf(context, 'Enter your full name.'));
       return;
     }
     final int mobileDigits = mobile.replaceAll(RegExp(r'\D'), '').length;
     if (mobileDigits < 10 || mobileDigits > 13) {
-      _showMessage('Enter a valid mobile number.');
+      _showMessage(AppStrings.trOf(context, 'Enter a valid mobile number.'));
       return;
     }
     if (email.isNotEmpty &&
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      _showMessage('Enter a valid email address.');
+      _showMessage(AppStrings.trOf(context, 'Enter a valid email address.'));
       return;
     }
 
@@ -94,17 +154,29 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
         name: name,
         mobile: mobile,
         sellerType: _sellerType.dbValue,
-        businessName: '',
+        businessName: name,
         businessLocation: '',
         businessAddress: '',
       );
+      // Save avatar URL separately if available
+      if (_avatarUrl != null && _avatarUrl!.trim().isNotEmpty) {
+        await SupabaseProductApi().saveSellerProfile(
+          name: name,
+          mobile: mobile,
+          sellerType: _sellerType.dbValue,
+          businessName: name,
+          businessLocation: '',
+          businessAddress: '',
+          avatarUrl: _avatarUrl,
+        );
+      }
     } on ApiException catch (error) {
       if (!mounted) return;
       _showMessage(error.message);
       return;
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Could not save profile. Please try again.');
+      _showMessage(AppStrings.trOf(context, 'Could not save profile. Please try again.'));
       return;
     }
     SellerProfileStore.instance.save(
@@ -114,8 +186,28 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       sellerType: _sellerType,
     );
     if (!mounted) return;
-    _showMessage('Personal details saved');
-    Navigator.of(context).maybePop();
+    _showMessage(AppStrings.trOf(context, 'Personal details saved'));
+
+    // Navigate forward based on completion status — skip already-completed
+    // pages so a returning seller never re-enters them.
+    final profile = SellerProfileStore.instance;
+    if (!profile.verificationComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+      );
+    } else if (!profile.profileComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const Step03BusinessDetailsScreen()),
+      );
+    } else if (!profile.bankComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      );
+    }
   }
 
   static Future<String> _saveToSupabase({
@@ -125,6 +217,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     required String businessName,
     required String businessLocation,
     required String businessAddress,
+    String? avatarUrl,
   }) {
     return SupabaseProductApi().saveSellerProfile(
       name: name,
@@ -133,6 +226,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       businessName: businessName,
       businessLocation: businessLocation,
       businessAddress: businessAddress,
+      avatarUrl: avatarUrl,
     );
   }
 
@@ -148,11 +242,11 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
           trimTop: PersonalDetailsScreen.trimTop,
           child: Stack(
             children: [
-              const Positioned(
+              Positioned(
                 left: 0,
                 top: 73,
                 child: PageHeader(
-                  title: 'Personal Details',
+                  title: AppStrings.trOf(context, 'Personal Details'),
                   backButtonKey: ValueKey<String>('personal-details-back'),
                 ),
               ),
@@ -162,7 +256,12 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                 child: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _name,
                   builder: (context, value, _) =>
-                      _Avatar(initials: initialsForName(value.text)),
+                      _Avatar(
+                        initials: initialsForName(value.text),
+                        avatarUrl: _avatarUrl,
+                        isUploading: _isUploading,
+                        onCameraTap: _pickAndUploadAvatar,
+                      ),
                 ),
               ),
               Positioned(
@@ -187,9 +286,17 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.initials});
+  const _Avatar({
+    required this.initials,
+    this.avatarUrl,
+    this.isUploading = false,
+    this.onCameraTap,
+  });
 
   final String initials;
+  final String? avatarUrl;
+  final bool isUploading;
+  final VoidCallback? onCameraTap;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +309,7 @@ class _Avatar extends StatelessWidget {
             width: 105,
             height: 105,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -213,24 +320,60 @@ class _Avatar extends StatelessWidget {
                 ],
               ),
             ),
-            child: Text(initials, style: AppTextStyles.personalInitials),
+            child: avatarUrl != null
+                ? ClipOval(
+                    child: Image.network(
+                      avatarUrl!,
+                      width: 105,
+                      height: 105,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          Text(initials, style: AppTextStyles.personalInitials),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
+                    ),
+                  )
+                : Text(initials, style: AppTextStyles.personalInitials),
           ),
           Positioned(
             left: 71,
             top: 70,
-            child: Container(
-              width: 33,
-              height: 33,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.personalCameraBorder),
-              ),
-              child: const Image(
-                image: AssetImage('assets/personal/ic_camera.png'),
-                width: 17,
-                height: 17,
+            child: GestureDetector(
+              onTap: isUploading ? null : onCameraTap,
+              child: Container(
+                width: 33,
+                height: 33,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.personalCameraBorder),
+                ),
+                child: Stack(
+                  children: [
+                    const Image(
+                      image: AssetImage('assets/personal/ic_camera.png'),
+                      width: 17,
+                      height: 17,
+                    ),
+                    if (isUploading)
+                      Container(
+                        width: 33,
+                        height: 33,
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(
+                            AppColors.personalAvatarEnd,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -267,18 +410,18 @@ class _FormCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
+          Positioned(
             left: 21,
             top: 17,
             child: LabelText(
-              'Full Name',
+              AppStrings.trOf(context, 'Full Name'),
               AppTextStyles.personalLabel,
               width: 120,
             ),
           ),
           const Positioned(left: 21, top: 43, child: _InputField()),
           const Positioned(
-            left: 14,
+            left: 31,
             top: 55,
             child: Image(
               image: AssetImage('assets/personal/ic_user.png'),
@@ -292,24 +435,24 @@ class _FormCard extends StatelessWidget {
             child: _PersonalTextField(
               fieldKey: const ValueKey('personal-name-field'),
               controller: name,
-              hintText: 'Your full name',
+              hintText: AppStrings.trOf(context, 'Your full name'),
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
               maxLength: 40,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 21,
             top: 93,
             child: LabelText(
-              'Mobile Number',
+              AppStrings.trOf(context, 'Mobile Number'),
               AppTextStyles.personalLabel,
               width: 140,
             ),
           ),
           const Positioned(left: 21, top: 119, child: _InputField()),
           const Positioned(
-            left: 15,
+            left: 31,
             top: 130,
             child: Image(
               image: AssetImage('assets/personal/ic_phone.png'),
@@ -323,7 +466,7 @@ class _FormCard extends StatelessWidget {
             child: _PersonalTextField(
               fieldKey: const ValueKey('personal-mobile-field'),
               controller: mobile,
-              hintText: 'Enter mobile number',
+              hintText: AppStrings.trOf(context, 'Enter mobile number'),
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
               maxLength: 16,
@@ -332,23 +475,23 @@ class _FormCard extends StatelessWidget {
               ],
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 21,
             top: 169,
-            child: LabelText('Email', AppTextStyles.personalLabel, width: 60),
+            child: LabelText(AppStrings.trOf(context, 'Email'), AppTextStyles.personalLabel, width: 60),
           ),
-          const Positioned(
+          Positioned(
             left: 55,
             top: 170,
             child: LabelText(
-              '(optional)',
+              AppStrings.trOf(context, '(optional)'),
               AppTextStyles.personalOptional,
               width: 80,
             ),
           ),
           const Positioned(left: 21, top: 195, child: _InputField()),
           const Positioned(
-            left: 14,
+            left: 31,
             top: 207,
             child: Image(
               image: AssetImage('assets/personal/ic_mail.png'),
@@ -358,21 +501,21 @@ class _FormCard extends StatelessWidget {
           ),
           Positioned(
             left: 67,
-            top: 207,
+            top: 202,
             child: _PersonalTextField(
               fieldKey: const ValueKey('personal-email-field'),
               controller: email,
-              hintText: 'you@example.com',
+              hintText: AppStrings.trOf(context, 'you@example.com'),
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               maxLength: 80,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 21,
             top: 245,
             child: LabelText(
-              'Seller Type',
+              AppStrings.trOf(context, 'Seller Type'),
               AppTextStyles.personalLabel,
               width: 120,
             ),
@@ -383,7 +526,7 @@ class _FormCard extends StatelessWidget {
             child: _SellerTypePill(
               pillKey: const ValueKey('seller-type-farmer'),
               width: 77,
-              label: 'Farmer',
+              label: AppStrings.trOf(context, 'Farmer'),
               selected: sellerType == SellerType.farmer,
               onTap: () => onSellerTypeSelected(SellerType.farmer),
             ),
@@ -394,7 +537,7 @@ class _FormCard extends StatelessWidget {
             child: _SellerTypePill(
               pillKey: const ValueKey('seller-type-trader'),
               width: 89,
-              label: 'Trader',
+              label: AppStrings.trOf(context, 'Trader'),
               selected: sellerType == SellerType.trader,
               onTap: () => onSellerTypeSelected(SellerType.trader),
             ),
@@ -405,7 +548,7 @@ class _FormCard extends StatelessWidget {
             child: _SellerTypePill(
               pillKey: const ValueKey('seller-type-fpo'),
               width: 111,
-              label: 'FPO / Group',
+              label: AppStrings.trOf(context, 'FPO / Group'),
               selected: sellerType == SellerType.fpo,
               onTap: () => onSellerTypeSelected(SellerType.fpo),
             ),
@@ -546,7 +689,7 @@ class _SaveBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Save changes',
+      label: AppStrings.trOf(context, 'Save changes'),
       child: GestureDetector(
         key: const ValueKey('save-personal-details'),
         behavior: HitTestBehavior.opaque,
@@ -560,8 +703,8 @@ class _SaveBar extends StatelessWidget {
               color: AppColors.orderDark,
               borderRadius: BorderRadius.all(Radius.circular(26)),
             ),
-            child: const Text(
-              'Save changes',
+            child: Text(
+              AppStrings.trOf(context, 'Save changes'),
               style: AppTextStyles.personalSave,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'write_review_screen.dart';
 
+import '../data/review_store.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
@@ -31,10 +32,12 @@ class ReviewRatingsPage extends StatelessWidget {
           designHeight: designHeight,
           child: Stack(
             children: [
-              const Positioned(
+              Positioned(
                 left: 0,
                 top: 24,
-                child: PageHeader(title: 'Review & Ratings'),
+                child: PageHeader(
+                  title: AppStrings.trOf(context, 'Review & Ratings'),
+                ),
               ),
               const Positioned(left: 22, top: 65, child: _RatingSummaryCard()),
               const Positioned(left: 22, top: 265, child: _ReviewsCard()),
@@ -72,10 +75,8 @@ class _RatingSummaryCard extends StatelessWidget {
     color: AppColors.surface,
   );
 
-  /// Review counts per star (5★ → 1★); bar widths are proportional to the
-  /// 98-vote max on a 96px track.
-  static const _counts = [98, 18, 5, 3, 1];
-  static const _barWidths = [96.0, 17.6, 4.9, 2.9, 1.0];
+  /// Review counts per star (5★ → 1★) and bar widths are computed
+  /// dynamically from the combined submitted + seed reviews.
 
   @override
   Widget build(BuildContext context) {
@@ -103,88 +104,125 @@ class _RatingSummaryCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 226,
-              top: -70,
-              child: Container(
-                width: 190,
-                height: 190,
-                decoration: const BoxDecoration(
-                  color: AppColors.walletCardDecor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            const Positioned(
-              left: 21,
-              top: 20,
-              child: Text('Average rating', style: _label),
-            ),
-            const Positioned(
-              left: 22,
-              top: 44,
-              child: Text('4.8', style: AppTextStyles.balanceAmount),
-            ),
-            const Positioned(
-              left: 88,
-              top: 48,
-              child: Icon(Icons.star, size: 30, color: AppColors.limeAccent),
-            ),
-            const Positioned(
-              left: 21,
-              top: 100,
-              child: Text('125 reviews', style: _sub),
-            ),
-            for (var i = 0; i < _counts.length; i++)
-              Positioned(
-                left: 185,
-                top: 24 + 26.0 * i,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('${5 - i}', style: _barLabel),
-                    const SizedBox(width: 1),
-                    const Icon(
-                      Icons.star,
-                      size: 9,
-                      color: AppColors.limeAccent,
+        child: ListenableBuilder(
+          listenable: ReviewStore.instance,
+          builder: (context, _) {
+            // Combine submitted reviews + seed rows (same list the
+            // reviews card shows) so every stat matches what is on screen.
+            final List<ReviewEntry> submitted = ReviewStore.instance.reviews;
+            final List<int> ratings = <int>[
+              for (final ReviewEntry r in submitted) r.rating,
+              for (final _Review r in _ReviewsCard._reviews) r.rating,
+            ];
+
+            final int totalCount = ratings.length;
+            final double avg = totalCount == 0
+                ? 0.0
+                : ratings.fold<int>(0, (int a, int b) => a + b) / totalCount;
+
+            // starCounts[0] = 5★ … starCounts[4] = 1★
+            final List<int> starCounts = List<int>.filled(5, 0);
+            for (final int r in ratings) {
+              if (r >= 1 && r <= 5) starCounts[5 - r]++;
+            }
+            final int maxCount =
+                starCounts.fold<int>(0, (int a, int b) => a > b ? a : b);
+
+            return Stack(
+              children: [
+                Positioned(
+                  left: 226,
+                  top: -70,
+                  child: Container(
+                    width: 190,
+                    height: 190,
+                    decoration: const BoxDecoration(
+                      color: AppColors.walletCardDecor,
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-              ),
-            for (var i = 0; i < _counts.length; i++)
-              Positioned(
-                left: 209,
-                top: 27 + 26.0 * i,
-                child: Container(
-                  width: 96,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppColors.transactionsBtnSoft,
-                    borderRadius: BorderRadius.circular(3),
                   ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
+                ),
+                Positioned(
+                  left: 21,
+                  top: 20,
+                  child: Text(
+                    AppStrings.trOf(context, 'Average rating'),
+                    style: _label,
+                  ),
+                ),
+                Positioned(
+                  left: 22,
+                  top: 44,
+                  child: Text(
+                    avg.toStringAsFixed(1),
+                    style: AppTextStyles.balanceAmount,
+                  ),
+                ),
+                const Positioned(
+                  left: 88,
+                  top: 48,
+                  child: Icon(Icons.star, size: 30, color: AppColors.limeAccent),
+                ),
+                Positioned(
+                  left: 21,
+                  top: 100,
+                  child: Text(
+                    AppStrings.trOf(context, '$totalCount reviews'),
+                    style: _sub,
+                  ),
+                ),
+                for (var i = 0; i < starCounts.length; i++)
+                  Positioned(
+                    left: 185,
+                    top: 24 + 26.0 * i,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${5 - i}', style: _barLabel),
+                        const SizedBox(width: 1),
+                        const Icon(
+                          Icons.star,
+                          size: 9,
+                          color: AppColors.limeAccent,
+                        ),
+                      ],
+                    ),
+                  ),
+                for (var i = 0; i < starCounts.length; i++)
+                  Positioned(
+                    left: 209,
+                    top: 27 + 26.0 * i,
                     child: Container(
-                      width: _barWidths[i],
+                      width: 96,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: AppColors.limeAccent,
+                        color: AppColors.transactionsBtnSoft,
                         borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: maxCount == 0
+                              ? 0.0
+                              : starCounts[i] / maxCount * 96.0,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: AppColors.limeAccent,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            for (var i = 0; i < _counts.length; i++)
-              Positioned(
-                left: 313,
-                top: 24 + 26.0 * i,
-                child: Text('${_counts[i]}', style: _barLabel),
-              ),
-          ],
+                for (var i = 0; i < starCounts.length; i++)
+                  Positioned(
+                    left: 313,
+                    top: 24 + 26.0 * i,
+                    child: Text('${starCounts[i]}', style: _barLabel),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -254,31 +292,50 @@ class _ReviewsCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
+          Positioned(
             left: 22,
             top: 17,
-            child: Text('Reviews', style: _cardTitle),
-          ),
-          for (var i = 0; i < _reviews.length; i++) ...[
-            Positioned(
-              left: 0, right: 0,
-              top: 55 + 112.0 * i,
-              child: SizedBox(height: 112, child: _ReviewRow(review: _reviews[i])),
+            child: Text(
+              AppStrings.trOf(context, 'Reviews'),
+              style: _cardTitle,
             ),
-            if (i < _reviews.length - 1)
-              Positioned(left: 22, right: 17, top: 166 + 112.0 * i, child: const _Divider()),
-          ],
+          ),
           Positioned(
-            left: 22, bottom: 20,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WriteReviewScreen())),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.darkCard,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              child: const Text('Write a Review'),
+            left: 0,
+            right: 0,
+            top: 55,
+            bottom: 20,
+            child: ListenableBuilder(
+              listenable: ReviewStore.instance,
+              builder: (context, _) {
+                // Submitted reviews appear first, then the seed rows fill
+                // the remaining slots so the card layout stays fixed.
+                final List<_Review> submitted = ReviewStore.instance.reviews
+                    .map(
+                      (r) => _Review(
+                        initials: r.initials,
+                        name: r.name,
+                        rating: r.rating,
+                        date: r.date,
+                        comment: r.comment,
+                      ),
+                    )
+                    .toList();
+                final List<_Review> all = <_Review>[
+                  ...submitted,
+                  ..._reviews,
+                ].take(_reviews.length).toList();
+                return ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: all.length,
+                  separatorBuilder: (_, _) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: const _Divider(),
+                  ),
+                  itemBuilder: (context, index) =>
+                      SizedBox(height: 112, child: _ReviewRow(review: all[index])),
+                );
+              },
             ),
           ),
         ],

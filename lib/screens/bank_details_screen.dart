@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
+import '../l10n/app_strings.dart';
+import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
+import 'bank_detaile.dart';
 
-/// Bank Details — static replica of Zeplin "Android Compact - 162"
-/// (project 6a8d49709e27bd8b35213d35,
-/// screen 6ad1af83accbf212263edabb).
+/// Bank Details — Zeplin "Android Compact - 162"
+/// (project 6a8d49709e27bd8b35213d35, screen 6ad1af83accbf212263edabb).
 ///
-/// Built against a 412x917 artboard. Same zoom-scroll pattern as
-/// 117/123/132/135/151/159/160/161: fit width, scroll vertically. Visual only.
-class BankDetailsScreen extends StatelessWidget {
+/// Built against a 412x917 artboard. Shows the account(s) saved in Supabase
+/// (`seller_bank_details`): the primary account in the card, extra accounts
+/// as tappable "Set primary" rows, and a working "Add another bank account"
+/// button. When signed out (design replica / tests) the Zeplin mock content
+/// is shown instead.
+class BankDetailsScreen extends StatefulWidget {
   const BankDetailsScreen({super.key});
 
   static const double designWidth = 412;
@@ -20,33 +27,187 @@ class BankDetailsScreen extends StatelessWidget {
   static const double trimTop = 49;
 
   @override
+  State<BankDetailsScreen> createState() => _BankDetailsScreenState();
+}
+
+class _BankDetailsScreenState extends State<BankDetailsScreen> {
+  List<Map<String, dynamic>> _accounts = const [];
+  int _activeIndex = 0;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBankAccounts();
+  }
+
+  Future<void> _loadBankAccounts() async {
+    try {
+      final List<String> ids = <String>{
+        AuthFlow.instance.firebaseUid ?? '',
+        SellerProfileStore.instance.userId,
+      }.where((String id) => id.trim().isNotEmpty).toList();
+      if (ids.isEmpty) return;
+
+      final List<Map<String, dynamic>> rows =
+          await SupabaseProductApi().getBankDetailsForUsers(ids);
+      if (!mounted) return;
+
+      final SellerProfileStore store = SellerProfileStore.instance;
+      store.setBankAccounts(rows);
+      setState(() {
+        _accounts = rows;
+        _activeIndex = rows.isEmpty ? 0 : store.activeBankIndex;
+        _loaded = true;
+      });
+    } catch (_) {
+      // Offline / not configured — keep the design mock.
+    }
+  }
+
+  Future<void> _addAccount() async {
+    final bool? added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => const BankDetaileScreen(addMode: true),
+      ),
+    );
+    if (added != true || !mounted) return;
+    await _loadBankAccounts();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(AppStrings.trOf(context, 'Bank account added successfully'))),
+      );
+  }
+
+  Future<void> _setPrimary(int index) async {
+    if (index == _activeIndex) return;
+    setState(() => _activeIndex = index);
+
+    final SellerProfileStore store = SellerProfileStore.instance;
+    store.setActiveBankIndex(index);
+
+    final String id =
+        (_accounts[index]['id'] ?? '').toString().trim();
+    if (id.isEmpty) return;
+    try {
+      final SupabaseProductApi api = SupabaseProductApi();
+      if (store.userId.isNotEmpty) api.userId = store.userId;
+      await api.updateActiveBankAccountId(id);
+    } catch (_) {
+      // Persistence is best-effort; the UI already switched.
+    }
+  }
+
+  Future<void> _showAllAccountsSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _AllAccountsSheet(),
+    );
+    if (mounted) await _loadBankAccounts();
+  }
+
+  String _field(Map<String, dynamic>? row, String key, String fallback) {
+    final String value =
+        row == null ? '' : (row[key] ?? '').toString().trim();
+    return value.isEmpty ? fallback : value;
+  }
+
+  String _accountTail(Map<String, dynamic>? row, String fallback) {
+    final String number = row == null
+        ? ''
+        : (row['account_number'] ?? '').toString().replaceAll(' ', '');
+    if (number.length < 4) return fallback;
+    return number.substring(number.length - 4);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bool mock = !_loaded;
+    final Map<String, dynamic>? active =
+        _accounts.isEmpty ? null : _accounts[_activeIndex];
+    final List<int> otherIndexes = <int>[
+      for (int i = 0; i < _accounts.length; i++)
+        if (i != _activeIndex) i,
+    ];
+    final double extra = otherIndexes.length * 64.0;
+
+    final String bankName = mock
+        ? 'State Bank of India'
+        : _field(active, 'bank_name', AppStrings.trOf(context, 'No bank account yet'));
+    final String tail = mock ? '3421' : _accountTail(active, '----');
+    final String holder = mock
+        ? 'Ramesh Kumar'
+        : _field(active, 'account_houlder_name', '-');
+    final String ifsc =
+        mock ? 'SBINOOO1234' : _field(active, 'IFSC_code', '-');
+
     return Scaffold(
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
         child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
+          designWidth: BankDetailsScreen.designWidth,
+          designHeight: BankDetailsScreen.designHeight,
+          trimTop: BankDetailsScreen.trimTop,
           child: Stack(
-            children: const [
+            children: [
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: 'Bank Details'),
+                child: PageHeader(title: AppStrings.trOf(context, 'Bank Details')),
               ),
-              Positioned(left: 25, top: 127, child: _BankCard()),
-              Positioned(left: 25, top: 316, child: _UpiCard()),
-              Positioned(left: 25, top: 456, child: _AddAccountRow()),
+              Positioned(
+                left: 25,
+                top: 127,
+                child: _BankCard(
+                  bankName: bankName,
+                  accountTail: tail,
+                  holderName: holder,
+                  ifsc: ifsc,
+                ),
+              ),
+              for (int i = 0; i < otherIndexes.length; i++)
+                Positioned(
+                  left: 25,
+                  top: 308 + i * 64.0,
+                  child: _OtherAccountRow(
+                    bankName: _field(
+                      _accounts[otherIndexes[i]],
+                      'bank_name',
+                      AppStrings.trOf(context, 'Bank account'),
+                    ),
+                    accountTail: _accountTail(
+                      _accounts[otherIndexes[i]],
+                      '----',
+                    ),
+                    onTap: () => _setPrimary(otherIndexes[i]),
+                  ),
+                ),
+              Positioned(
+                left: 25,
+                top: 316 + extra,
+                child: _UpiCard(onTap: _showAllAccountsSheet),
+              ),
+              Positioned(
+                left: 25,
+                top: 456 + extra,
+                child: _AddAccountRow(onTap: _addAccount),
+              ),
               Positioned(
                 left: 87,
-                top: 523,
+                top: 523 + extra,
                 width: 238,
                 height: 40,
                 child: Text(
-                  'Withdrawals go to your primary account \n'
-                  'within 1 working day',
+                  AppStrings.trOf(context, 'Withdrawals go to your primary account \nwithin 1 working day'),
                   style: AppTextStyles.bankNote,
                   textAlign: TextAlign.center,
                 ),
@@ -60,7 +221,17 @@ class BankDetailsScreen extends StatelessWidget {
 }
 
 class _BankCard extends StatelessWidget {
-  const _BankCard();
+  const _BankCard({
+    required this.bankName,
+    required this.accountTail,
+    required this.holderName,
+    required this.ifsc,
+  });
+
+  final String bankName;
+  final String accountTail;
+  final String holderName;
+  final String ifsc;
 
   @override
   Widget build(BuildContext context) {
@@ -95,30 +266,34 @@ class _BankCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(24)),
         child: Stack(
-          children: const [
+          children: [
             Positioned(
               left: 20,
               top: 21,
               child: LabelText(
-                'State Bank of India',
+                bankName,
                 AppTextStyles.bankName,
-                width: 150,
+                width: 240,
                 height: 13,
               ),
             ),
-            Positioned(left: 278, top: 17, child: _PrimaryPill()),
-            Positioned(left: 20, top: 75.7, child: _CardDots()),
-            Positioned(left: 110, top: 75.7, child: _CardDots()),
+            const Positioned(left: 278, top: 17, child: _PrimaryPill()),
+            const Positioned(left: 20, top: 75.7, child: _CardDots()),
+            const Positioned(left: 110, top: 75.7, child: _CardDots()),
             Positioned(
               left: 203,
               top: 67,
-              child: LabelText('3421', AppTextStyles.bankNumber, width: 49),
+              child: LabelText(
+                accountTail,
+                AppTextStyles.bankNumber,
+                width: 49,
+              ),
             ),
             Positioned(
               left: 20,
               top: 115,
               child: LabelText(
-                'Account holder',
+                AppStrings.trOf(context, 'Account holder'),
                 AppTextStyles.bankLabel,
                 width: 90,
               ),
@@ -127,24 +302,20 @@ class _BankCard extends StatelessWidget {
               left: 20,
               top: 133,
               child: LabelText(
-                'Ramesh Kumar',
+                holderName,
                 AppTextStyles.bankValue,
-                width: 103,
+                width: 200,
               ),
             ),
             Positioned(
               left: 318,
               top: 115,
-              child: LabelText('IFSC', AppTextStyles.bankLabel, width: 28),
+              child: LabelText(AppStrings.trOf(context, 'IFSC'), AppTextStyles.bankLabel, width: 28),
             ),
             Positioned(
               left: 245,
               top: 133,
-              child: LabelText(
-                'SBINOOO1234',
-                AppTextStyles.bankValue,
-                width: 101,
-              ),
+              child: LabelText(ifsc, AppTextStyles.bankValue, width: 101),
             ),
           ],
         ),
@@ -180,11 +351,11 @@ class _PrimaryPill extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 22,
             top: -2,
             child: LabelText(
-              'Primary',
+              AppStrings.trOf(context, 'Primary'),
               AppTextStyles.profilePillText,
               width: 48,
               height: 20,
@@ -209,6 +380,7 @@ class _CardDots extends StatelessWidget {
       width: 4 * _dot + 3 * _gap,
       height: _dot,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           for (int i = 0; i < 4; i++)
             Container(
@@ -226,68 +398,161 @@ class _CardDots extends StatelessWidget {
   }
 }
 
-class _UpiCard extends StatelessWidget {
-  const _UpiCard();
+/// A secondary bank account row shown when the seller has more than one
+/// account. Tapping it makes it the primary (card) account.
+class _OtherAccountRow extends StatelessWidget {
+  const _OtherAccountRow({
+    required this.bankName,
+    required this.accountTail,
+    required this.onTap,
+  });
+
+  final String bankName;
+  final String accountTail;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 362,
-      height: 113,
-      decoration: const BoxDecoration(
-        color: AppColors.profileCardBg,
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1AB8B8B8),
-            offset: Offset(0, 1),
-            blurRadius: 3,
-          ),
-          BoxShadow(
-            color: Color(0x17B8B8B8),
-            offset: Offset(0, 6),
-            blurRadius: 6,
-          ),
-          BoxShadow(
-            color: Color(0x0DB8B8B8),
-            offset: Offset(0, 13),
-            blurRadius: 8,
-          ),
-          BoxShadow(
-            color: Color(0x03B8B8B8),
-            offset: Offset(0, 23),
-            blurRadius: 9,
-          ),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 362,
+        height: 56,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              offset: Offset(0, 2),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 16,
+              top: 8,
+              child: SizedBox(
+                width: 210,
+                child: Text(
+                  bankName,
+                  style: AppTextStyles.profileMenuTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              top: 31,
+              child: SizedBox(
+                width: 140,
+                child: Text(
+                  '•••• $accountTail',
+                  style: AppTextStyles.profileMenuSub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 14,
+              top: 17,
+              child: Container(
+                width: 86,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.orderTile,
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  border: Border.fromBorderSide(
+                    BorderSide(color: Color(0x12000000)),
+                  ),
+                ),
+                child: Text(
+                  AppStrings.trOf(context, 'Set primary'),
+                  style: AppTextStyles.kycPillText,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Stack(
-        children: const [
-          Positioned(
-            left: 22,
-            top: 13,
-            child: LabelText('UPI', AppTextStyles.orderCardTitle, width: 36),
-          ),
-          Positioned(left: 21, top: 56, child: _UpiTile()),
-          Positioned(
-            left: 66,
-            top: 53,
-            child: LabelText(
-              'ramesh@upi',
-              AppTextStyles.profileMenuTitle,
-              width: 75,
+    );
+  }
+}
+
+class _UpiCard extends StatelessWidget {
+  const _UpiCard({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 362,
+        height: 113,
+        decoration: const BoxDecoration(
+          color: AppColors.profileCardBg,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x1AB8B8B8),
+              offset: Offset(0, 1),
+              blurRadius: 3,
             ),
-          ),
-          Positioned(
-            left: 67,
-            top: 68,
-            child: LabelText(
-              'Linked to this account',
-              AppTextStyles.bankUpiSub,
-              width: 107,
+            BoxShadow(
+              color: Color(0x17B8B8B8),
+              offset: Offset(0, 6),
+              blurRadius: 6,
             ),
-          ),
-          Positioned(left: 283, top: 63, child: _ActivePill()),
-        ],
+            BoxShadow(
+              color: Color(0x0DB8B8B8),
+              offset: Offset(0, 13),
+              blurRadius: 8,
+            ),
+            BoxShadow(
+              color: Color(0x03B8B8B8),
+              offset: Offset(0, 23),
+              blurRadius: 9,
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 22,
+              top: 13,
+              child: LabelText(AppStrings.trOf(context, 'UPI'), AppTextStyles.orderCardTitle, width: 36),
+            ),
+            const Positioned(left: 21, top: 56, child: _UpiTile()),
+            Positioned(
+              left: 66,
+              top: 53,
+              child: LabelText(
+                'ramesh@upi',
+                AppTextStyles.profileMenuTitle,
+                width: 75,
+              ),
+            ),
+            Positioned(
+              left: 67,
+              top: 68,
+              child: LabelText(
+                AppStrings.trOf(context, 'Linked to this account'),
+                AppTextStyles.bankUpiSub,
+                width: 107,
+              ),
+            ),
+            Positioned(left: 283, top: 63, child: _ActivePill()),
+          ],
+        ),
       ),
     );
   }
@@ -342,11 +607,11 @@ class _ActivePill extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16.9,
             top: -3,
             child: LabelText(
-              'Active',
+              AppStrings.trOf(context, 'Active'),
               AppTextStyles.kycPillText,
               width: 37,
               height: 20,
@@ -359,35 +624,300 @@ class _ActivePill extends StatelessWidget {
 }
 
 class _AddAccountRow extends StatelessWidget {
-  const _AddAccountRow();
+  const _AddAccountRow({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 362,
-      height: 53,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(26)),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 362,
+        height: 53,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(26)),
+        ),
+        child: Stack(
+          children: [
+            const Positioned(
+              left: 78,
+              top: 21,
+              child: Image(
+                image: AssetImage('assets/bank/ic_plus.png'),
+                width: 11,
+                height: 11,
+              ),
+            ),
+            Positioned(
+              left: 99,
+              top: 14,
+              child: LabelText(
+                AppStrings.trOf(context, 'Add another bank account'),
+                AppTextStyles.bankAdd,
+                width: 185,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Stack(
-        children: const [
-          Positioned(
-            left: 78,
-            top: 21,
-            child: Image(
-              image: AssetImage('assets/bank/ic_plus.png'),
-              width: 11,
-              height: 11,
+    );
+  }
+}
+
+/// Bottom sheet opened by tapping the UPI card: shows every saved bank
+/// account with full details, lets the seller pick the primary account and
+/// add more accounts.
+class _AllAccountsSheet extends StatefulWidget {
+  const _AllAccountsSheet();
+
+  @override
+  State<_AllAccountsSheet> createState() => _AllAccountsSheetState();
+}
+
+class _AllAccountsSheetState extends State<_AllAccountsSheet> {
+  List<Map<String, dynamic>> _accounts = const [];
+  int _activeIndex = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final List<String> ids = <String>{
+        AuthFlow.instance.firebaseUid ?? '',
+        SellerProfileStore.instance.userId,
+      }.where((String id) => id.trim().isNotEmpty).toList();
+
+      if (ids.isEmpty) {
+        // Signed out — mirror the design mock shown on the screen.
+        setState(() {
+          _accounts = <Map<String, dynamic>>[
+            <String, dynamic>{
+              'bank_name': 'State Bank of India',
+              'account_number': '3421',
+              'account_houlder_name': 'Ramesh Kumar',
+              'IFSC_code': 'SBINOOO1234',
+            },
+          ];
+          _activeIndex = 0;
+          _loading = false;
+        });
+        return;
+      }
+
+      final List<Map<String, dynamic>> rows =
+          await SupabaseProductApi().getBankDetailsForUsers(ids);
+      if (!mounted) return;
+
+      final SellerProfileStore store = SellerProfileStore.instance;
+      store.setBankAccounts(rows);
+      setState(() {
+        _accounts = rows;
+        _activeIndex = rows.isEmpty ? 0 : store.activeBankIndex;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _setPrimary(int index) async {
+    if (index == _activeIndex) return;
+    setState(() => _activeIndex = index);
+
+    final SellerProfileStore store = SellerProfileStore.instance;
+    store.setActiveBankIndex(index);
+
+    final String id = (_accounts[index]['id'] ?? '').toString().trim();
+    if (id.isEmpty) return;
+    try {
+      final SupabaseProductApi api = SupabaseProductApi();
+      if (store.userId.isNotEmpty) api.userId = store.userId;
+      await api.updateActiveBankAccountId(id);
+    } catch (_) {
+      // Best-effort persistence; the badge already moved.
+    }
+  }
+
+  Future<void> _addAccount() async {
+    final bool? added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => const BankDetaileScreen(addMode: true),
+      ),
+    );
+    if (added == true && mounted) await _load();
+  }
+
+  String _field(Map<String, dynamic> row, String key) =>
+      (row[key] ?? '').toString().trim();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0x33000000),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          Positioned(
-            left: 99,
-            top: 14,
-            child: LabelText(
-              'Add another bank account',
-              AppTextStyles.bankAdd,
-              width: 185,
+          const SizedBox(height: 16),
+          Text(AppStrings.trOf(context, 'All bank accounts'), style: AppTextStyles.title),
+          const SizedBox(height: 4),
+          Text(
+            AppStrings.trOf(context, 'Your saved bank details'),
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_accounts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                AppStrings.trOf(context, 'No bank account yet'),
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _accounts.length,
+                itemBuilder: (BuildContext context, int index) =>
+                    _accountTile(index),
+              ),
+            ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 53,
+            child: ElevatedButton.icon(
+              onPressed: _loading ? null : _addAccount,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.darkGreen,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.orderTile,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(AppStrings.trOf(context, 'Add bank account')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _accountTile(int index) {
+    final Map<String, dynamic> row = _accounts[index];
+    final bool primary = index == _activeIndex;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _setPrimary(index),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.profileCardBg,
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          border: Border.all(
+            color: primary ? AppColors.pillBorder : const Color(0x14000000),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _field(row, 'bank_name').isEmpty
+                        ? AppStrings.trOf(context, 'Bank account')
+                        : _field(row, 'bank_name'),
+                    style: AppTextStyles.profileMenuTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (primary)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.chipBg,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    child: Text(
+                      AppStrings.trOf(context, 'Primary'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.iconDark,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _detailRow(AppStrings.trOf(context, 'Account number'), _field(row, 'account_number')),
+            _detailRow(AppStrings.trOf(context, 'Account holder'), _field(row, 'account_houlder_name')),
+            _detailRow(AppStrings.trOf(context, 'IFSC'), _field(row, 'IFSC_code')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: AppTextStyles.orderRowLabel),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: AppTextStyles.orderRowValue,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

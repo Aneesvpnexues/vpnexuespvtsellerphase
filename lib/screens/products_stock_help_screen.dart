@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import 'help_topic_screen.dart';
 import 'product_help_article_screen.dart';
 
@@ -28,12 +29,22 @@ class ProductsStockHelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HelpTopicScreen(
-      header: 'Products & stock',
-      heroTitle: 'Stock help',
-      heroSubtitle: 'Add, update and manage products.',
+    return HelpTopicScreen(
+      header: AppStrings.trOf(context, 'Products & stock'),
+      heroTitle: AppStrings.trOf(context, 'Stock help'),
+      heroSubtitle: AppStrings.trOf(
+        context,
+        'Add, update and manage products.',
+      ),
       icon: 'assets/help/tile_products.png',
-      articles: _articles,
+      articles: <HelpTopicArticle>[
+        for (final HelpTopicArticle article in _articles)
+          HelpTopicArticle(
+            title: AppStrings.trOf(context, article.title),
+            subtitle: AppStrings.trOf(context, article.subtitle),
+            page: article.page,
+          ),
+      ],
     );
   }
 }

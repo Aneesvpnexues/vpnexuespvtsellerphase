@@ -16,6 +16,10 @@ abstract final class StorageKeys {
   /// the app clears the preferences, so a fresh install shows the splash
   /// exactly once again.
   static const String splashSeenKey = 'splash_seen';
+
+  /// Cached country code from GeoIP/GPS cascade (ISO 3166-1 alpha-2).
+  /// Used to determine currency for price formatting.
+  static const String geoCountryKey = 'geo_country';
 }
 
 /// Minimal synchronous-read / async-write key-value surface the stores

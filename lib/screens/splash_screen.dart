@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -8,11 +7,12 @@ import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/supabase_product_api.dart';
+import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
-import '../services/seller_backend_sync.dart';
 import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
+import '../screens/personal_details_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
@@ -105,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // Clear any stale data from a previous login session.
       SellerProfileStore.instance.resetCompletionFlags();
       ProductStore.instance.clear();
+      WalletStore.instance.reset();
 
       // Set the user_id for product queries and all user-scoped lookups.
       ProductStore.instance.userId = uid;
@@ -118,6 +119,9 @@ class _SplashScreenState extends State<SplashScreen> {
         // Home still opens with whatever products are cached locally.
       }
 
+      // Pull the wallet ledger in the background — Profile reads it later.
+      unawaited(WalletStore.instance.refresh());
+
       // Look up this seller's Supabase rows by the verified phone number.
       // Number-agnostic: exact E.164 -> last 10 digits -> Firebase UID, and
       // bank/KYC are always checked under both candidate ids.
@@ -125,11 +129,13 @@ class _SplashScreenState extends State<SplashScreen> {
         try {
           final api = SupabaseProductApi();
           api.userId = uid;
-          final profile = await api.getProfileByPhone(phone ?? '', userId: uid);
+          final profile = await api.getProfileByPhone(
+            phone ?? '',
+            userId: uid,
+          );
 
-          final String profileUserId = (profile?['user_id'] ?? '')
-              .toString()
-              .trim();
+          final String profileUserId =
+              (profile?['user_id'] ?? '').toString().trim();
 
           // Products live under the Firebase UID; profile/bank/KYC rows may
           // also carry a legacy backend id, so check both.
@@ -141,70 +147,58 @@ class _SplashScreenState extends State<SplashScreen> {
           Map<String, dynamic>? bankDetails;
           Map<String, dynamic>? verificationDetails;
           if (candidateIds.isNotEmpty) {
-            bankDetails = await api.getBankDetailsForUsers(candidateIds);
-            verificationDetails = await api.getVerificationForUsers(
-              candidateIds,
-            );
+            final accounts = await api.getBankDetailsForUsers(candidateIds);
+            bankDetails = accounts.isNotEmpty ? accounts.first : null;
+            verificationDetails =
+                await api.getVerificationForUsers(candidateIds);
+
+            // Load active bank account ID from seller_profiles
+            if (SellerProfileStore.instance.userId.isNotEmpty) {
+              final activeBankId = await api.getActiveBankAccountId(
+                SellerProfileStore.instance.userId,
+              );
+              SellerProfileStore.instance.setActiveBankAccountId(
+                activeBankId,
+              );
+            }
           }
 
-          if (profile != null) {
-            _populateProfileStore(profile);
-          }
+          final bool foundAnyRow = profile != null ||
+              bankDetails != null ||
+              verificationDetails != null;
+
+          if (foundAnyRow && mounted) {
+            if (profile != null) {
+              _populateProfileStore(profile);
+            }
 
           final bool profileComplete =
               profile != null && _isProfileComplete(profile);
+          final bool personalComplete =
+              profile != null && _isPersonalComplete(profile);
           final bool bankComplete =
               bankDetails != null && _isBankComplete(bankDetails);
-          final bool verificationComplete =
-              verificationDetails != null &&
+          final bool verificationComplete = verificationDetails != null &&
               _isVerificationComplete(verificationDetails);
 
           SellerProfileStore.instance.setCompletion(
             profileComplete: profileComplete,
             bankComplete: bankComplete,
             verificationComplete: verificationComplete,
+            personalComplete: personalComplete,
           );
 
-          final bool supabaseHasProgress =
-              profileComplete || bankComplete || verificationComplete;
-          if (supabaseHasProgress) {
-            // Supabase already knows this seller; sync the backend in the
-            // background so a cold Render instance does not delay startup.
-            unawaited(SellerBackendSync.mergeCompletion());
-          } else {
-            await SellerBackendSync.mergeCompletion();
-          }
-
-          if (!mounted) return;
-          final SellerProfileStore merged = SellerProfileStore.instance;
-          final bool foundAnyRow =
-              merged.profileComplete ||
-              merged.bankComplete ||
-              merged.verificationComplete;
-
-          if (foundAnyRow) {
-            _navigateBasedOnCompletion(
-              profileComplete: merged.profileComplete,
-              bankComplete: merged.bankComplete,
-              verificationComplete: merged.verificationComplete,
-            );
+          _navigateBasedOnCompletion(
+            profileComplete: profileComplete,
+            bankComplete: bankComplete,
+            verificationComplete: verificationComplete,
+            personalComplete: personalComplete,
+          );
             return;
           }
         } catch (_) {
-          // Supabase lookup failed — try the backend before falling back.
-          await SellerBackendSync.mergeCompletion();
-          if (!mounted) return;
-          final SellerProfileStore merged = SellerProfileStore.instance;
-          if (merged.profileComplete ||
-              merged.bankComplete ||
-              merged.verificationComplete) {
-            _navigateBasedOnCompletion(
-              profileComplete: merged.profileComplete,
-              bankComplete: merged.bankComplete,
-              verificationComplete: merged.verificationComplete,
-            );
-            return;
-          }
+          // Supabase lookup failed — treat the seller as having no saved
+          // rows and restart onboarding below.
         }
       }
 
@@ -224,13 +218,25 @@ class _SplashScreenState extends State<SplashScreen> {
   /// required Supabase fields being non-empty.
   bool _isProfileComplete(Map<String, dynamic> profile) {
     final fields = <String>[
-      profile['display_name'] ?? '',
       profile['business_name'] ?? '',
-      profile['phone_number'] ?? '',
       profile['location'] ?? '',
       profile['business_address'] ?? '',
     ];
-    return fields.every((value) => value.toString().trim().isNotEmpty);
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Determines whether the Personal Details section is complete based on
+  /// required Supabase fields being non-empty.
+  bool _isPersonalComplete(Map<String, dynamic> profile) {
+    final fields = <String>[
+      profile['display_name'] ?? '',
+      profile['phone_number'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
   }
 
   /// Determines whether bank details are complete based on required fields.
@@ -241,7 +247,9 @@ class _SplashScreenState extends State<SplashScreen> {
       bank['account_number'] ?? '',
       bank['IFSC_code'] ?? '',
     ];
-    return fields.every((value) => value.toString().trim().isNotEmpty);
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
   }
 
   /// Determines whether verification/KYC is complete based on at least one
@@ -252,23 +260,39 @@ class _SplashScreenState extends State<SplashScreen> {
       verification['pan_card'] ?? '',
       verification['business_registration'] ?? '',
     ];
-    return fields.any((value) => value.toString().trim().isNotEmpty);
+    return fields.any(
+      (value) => value.toString().trim().isNotEmpty,
+    );
   }
 
   /// Navigates to the first incomplete onboarding step (Verify Your Details ->
-  /// Registration -> Bank Details), or to Home if all sections are complete.
+  /// Personal Details -> Registration -> Bank Details), or to Home if all
+  /// sections are complete.
   void _navigateBasedOnCompletion({
     required bool profileComplete,
     required bool bankComplete,
     required bool verificationComplete,
+    required bool personalComplete,
   }) {
     if (!mounted) return;
 
-    // Onboarding order is Verify -> Registration (STEP 03) -> Bank -> Home,
-    // so verification is always the first section to check.
+    // Onboarding order is Verify -> Personal Details -> Registration
+    // (STEP 03) -> Bank -> Home, so verification is always the first section
+    // to check.
     if (!verificationComplete) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const VerifyDetaileScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (!personalComplete) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const PersonalDetailsScreen(),
+        ),
       );
       return;
     }
@@ -284,7 +308,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!bankComplete) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const BankDetaileScreen(),
+        ),
       );
       return;
     }
@@ -299,10 +325,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    final String sellerTypeStr = (profile['seller_type'] ?? 'farmer')
-        .toString()
-        .trim()
-        .toLowerCase();
+    final String sellerTypeStr =
+        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
     SellerType sellerType;
     switch (sellerTypeStr) {
       case 'trader':
@@ -313,12 +337,14 @@ class _SplashScreenState extends State<SplashScreen> {
         sellerType = SellerType.farmer;
     }
     if (name.isNotEmpty) {
-      SellerProfileStore.instance.save(
-        name: name,
-        mobile: mobile,
-        email: '',
-        sellerType: sellerType,
-      );
+    SellerProfileStore.instance.saveBusinessDetails(
+      name: name,
+      business: name,
+      phone: mobile,
+      location: '',
+      address: '',
+      farmSize: '',
+    );
     } else {
       SellerProfileStore.instance.mobile = mobile;
     }

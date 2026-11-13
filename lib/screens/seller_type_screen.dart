@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../data/seller_profile_store.dart';
-import '../services/seller_backend_sync.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_navigation.dart';
@@ -31,36 +28,9 @@ class Step02SellerTypeScreen extends StatefulWidget {
 }
 
 class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
-  static const List<String> _backendSellerTypes = <String>[
-    'FARMER',
-    'SHOP_OWNER',
-    'RESTAURANT_SUPPLIER',
-    'WHOLESALER',
-    'BUSINESS_SELLER',
-  ];
-
   int? _selectedIndex;
 
   void _select(int index) => setState(() => _selectedIndex = index);
-
-  void _continue() {
-    FocusScope.of(context).unfocus();
-    final int? index = _selectedIndex;
-    if (index != null && index >= 0 && index < _backendSellerTypes.length) {
-      final SellerType type = index == 0
-          ? SellerType.farmer
-          : SellerType.trader;
-      final SellerProfileStore profile = SellerProfileStore.instance;
-      profile.save(
-        name: profile.name,
-        mobile: profile.mobile,
-        email: profile.email,
-        sellerType: type,
-      );
-      unawaited(SellerBackendSync.saveSellerType(_backendSellerTypes[index]));
-    }
-    goToBusinessDetails(context);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +55,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                   child: _SellerTypePill(
                     width: 151.5,
                     icon: Icons.spa,
-                    label: 'Farmer',
+                    label: AppStrings.trOf(context, 'Farmer'),
                     selected: _selectedIndex == 0,
                     onTap: () => _select(0),
                   ),
@@ -96,7 +66,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                   child: _SellerTypePill(
                     width: 151.5,
                     icon: Icons.storefront,
-                    label: 'Shop Owner',
+                    label: AppStrings.trOf(context, 'Shop Owner'),
                     selected: _selectedIndex == 1,
                     onTap: () => _select(1),
                   ),
@@ -107,7 +77,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                   child: _SellerTypePill(
                     width: 223.5,
                     icon: Icons.local_dining,
-                    label: 'Restaurant Supplier',
+                    label: AppStrings.trOf(context, 'Restaurant Supplier'),
                     selected: _selectedIndex == 2,
                     onTap: () => _select(2),
                   ),
@@ -118,7 +88,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                   child: _SellerTypePill(
                     width: 151.5,
                     icon: Icons.inventory_2,
-                    label: 'Wholesaler',
+                    label: AppStrings.trOf(context, 'Wholesaler'),
                     selected: _selectedIndex == 3,
                     onTap: () => _select(3),
                   ),
@@ -129,7 +99,7 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
                   child: _SellerTypePill(
                     width: 183.5,
                     icon: Icons.apartment,
-                    label: 'Business seller',
+                    label: AppStrings.trOf(context, 'Business seller'),
                     selected: _selectedIndex == 4,
                     onTap: () => _select(4),
                   ),
@@ -139,7 +109,10 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
           ),
           ContinueButton(
             buttonKey: const Key('seller-type-continue'),
-            onTap: _continue,
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              goToBusinessDetails(context);
+            },
           ),
         ],
       ),
@@ -152,7 +125,7 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('STEP 02', style: AppTextStyles.stepLabel);
+    return Text(AppStrings.trOf(context, 'STEP 02'), style: AppTextStyles.stepLabel);
   }
 }
 
@@ -214,7 +187,7 @@ class _TitleLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('What best', style: AppTextStyles.heading);
+    return Text(AppStrings.trOf(context, 'What best'), style: AppTextStyles.heading);
   }
 }
 
@@ -223,7 +196,7 @@ class _TitleAccent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('describes you?', style: AppTextStyles.headingAccent);
+    return Text(AppStrings.trOf(context, 'describes you?'), style: AppTextStyles.headingAccent);
   }
 }
 
@@ -232,9 +205,8 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Choose your seller type\n'
-      'to get started.',
+    return Text(
+      AppStrings.trOf(context, 'Choose your seller type\nto get started.'),
       style: AppTextStyles.stepSubtitle,
     );
   }

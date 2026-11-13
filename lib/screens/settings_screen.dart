@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
+import '../data/wallet_store.dart';
+import '../l10n/app_languages.dart';
+import '../l10n/app_strings.dart';
+import '../l10n/locale_service.dart';
 import '../services/auth_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -51,6 +55,7 @@ class SettingsScreen extends StatelessWidget {
                     final navigator = Navigator.of(context);
                     ProductStore.instance.clear();
                     SellerProfileStore.instance.reset();
+                    WalletStore.instance.reset();
                     await AuthFlow.instance.signOut();
                     navigator.pushReplacement(
                       MaterialPageRoute<void>(
@@ -63,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: 'Settings'),
+                child: PageHeader(title: AppStrings.trOf(context, 'Settings')),
               ),
             ],
           ),
@@ -84,13 +89,13 @@ class _PreferencesCardState extends State<_PreferencesCard> {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      height: 112,
+      height: 120,
       children: [
-        const Positioned(
+        Positioned(
           left: 22,
           top: 13,
           child: LabelText(
-            'Preferences',
+            AppStrings.trOf(context, 'Preferences'),
             AppTextStyles.orderCardTitle,
             width: 100,
           ),
@@ -106,17 +111,25 @@ class _PreferencesCardState extends State<_PreferencesCard> {
                 builder: (_) => const AppLanguageScreen(),
               ),
             ),
-            child: const _MenuRow(
-              icon: 'assets/settings/ic_globe.png',
-              iconSize: 16,
-              title: 'Language',
-              titleWidth: 59,
-              subtitle: 'English',
-              subtitleWidth: 35,
-              chevron: true,
+            // Rebuilds when a language is applied so the subtitle shows the
+            // native name of the active selection ('English' by default).
+            child: ValueListenableBuilder<Locale>(
+              valueListenable: LocaleService.instance.locale,
+              builder: (context, locale, _) => _MenuRow(
+                icon: 'assets/settings/ic_globe.png',
+                iconSize: 16,
+                title: AppStrings.trOf(context, 'Language'),
+                titleWidth: 59,
+                subtitle:
+                    AppLanguages.nativeNames[locale.languageCode] ??
+                    'English',
+                subtitleWidth: 35,
+                chevron: true,
+              ),
             ),
           ),
         ),
+        Positioned(left: 21, top: 93, child: _Divider()),
       ],
     );
   }
@@ -145,7 +158,7 @@ class _NotificationsCardState extends State<_NotificationsCard> {
           left: 22,
           top: 13,
           child: LabelText(
-            'Notifications',
+            AppStrings.trOf(context, 'Notifications'),
             AppTextStyles.orderCardTitle,
             width: 104,
           ),
@@ -156,9 +169,12 @@ class _NotificationsCardState extends State<_NotificationsCard> {
           child: _MenuRow(
             icon: 'assets/settings/ic_box.png',
             iconSize: 20,
-            title: 'New orders',
+            title: AppStrings.trOf(context, 'New orders'),
             titleWidth: 68,
-            subtitle: 'Alert me the moment an order arrives',
+            subtitle: AppStrings.trOf(
+              context,
+              'Alert me the moment an order arrives',
+            ),
             subtitleWidth: 181,
             toggle: _toggleStates[0],
             onToggleChanged: () => _onToggleChanged(0),
@@ -171,9 +187,9 @@ class _NotificationsCardState extends State<_NotificationsCard> {
           child: _MenuRow(
             icon: 'assets/settings/ic_bell.png',
             iconSize: 16,
-            title: 'Stock alerts',
+            title: AppStrings.trOf(context, 'Stock alerts'),
             titleWidth: 71,
-            subtitle: 'When a product is running low',
+            subtitle: AppStrings.trOf(context, 'When a product is running low'),
             subtitleWidth: 146,
             toggle: _toggleStates[1],
             onToggleChanged: () => _onToggleChanged(1),
@@ -186,9 +202,9 @@ class _NotificationsCardState extends State<_NotificationsCard> {
           child: _MenuRow(
             icon: 'assets/settings/ic_card.png',
             iconSize: 16,
-            title: 'Stock alerts',
+            title: AppStrings.trOf(context, 'Stock alerts'),
             titleWidth: 71,
-            subtitle: 'When a product is running low',
+            subtitle: AppStrings.trOf(context, 'When a product is running low'),
             subtitleWidth: 146,
             toggle: _toggleStates[2],
             onToggleChanged: () => _onToggleChanged(2),
@@ -207,11 +223,11 @@ class _SupportCard extends StatelessWidget {
     return _Card(
       height: 112,
       children: [
-        const Positioned(
+        Positioned(
           left: 22,
           top: 13,
           child: LabelText(
-            'Preferences',
+            AppStrings.trOf(context, 'Preferences'),
             AppTextStyles.orderCardTitle,
             width: 100,
           ),
@@ -227,12 +243,12 @@ class _SupportCard extends StatelessWidget {
                 builder: (_) => const AboutVpnexuesScreen(),
               ),
             ),
-            child: const _MenuRow(
+            child: _MenuRow(
               icon: 'assets/settings/ic_alert.png',
               iconSize: 16,
-              title: 'About VP NEXUES',
+              title: AppStrings.trOf(context, 'About VP NEXUES'),
               titleWidth: 108,
-              subtitle: 'version 1.0',
+              subtitle: AppStrings.trOf(context, 'version 1.0'),
               subtitleWidth: 52,
               chevron: true,
             ),
@@ -253,7 +269,7 @@ class _LogoutCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: const _Card(
+      child: _Card(
         height: 81,
         children: [
           Positioned(
@@ -264,7 +280,7 @@ class _LogoutCard extends StatelessWidget {
               height: 34,
               child: Stack(
                 children: [
-                  Positioned(
+                  const Positioned(
                     left: 0,
                     top: 0,
                     child: _Tile(
@@ -277,7 +293,7 @@ class _LogoutCard extends StatelessWidget {
                     left: 45,
                     top: 4,
                     child: LabelText(
-                      'Log out',
+                      AppStrings.trOf(context, 'Log out'),
                       AppTextStyles.settingsLogout,
                       width: 45,
                     ),
