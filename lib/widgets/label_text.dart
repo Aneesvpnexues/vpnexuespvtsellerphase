@@ -19,13 +19,18 @@ class LabelText extends StatelessWidget {
     this.text,
     this.style, {
     super.key,
-    required this.width,
+    this.width,
     this.height = 25,
   });
 
   final String text;
   final TextStyle style;
-  final double width;
+
+  /// Fixed Zeplin box width. When `null` the box hugs the text, which is
+  /// what inline label rows (e.g. "Email (optional)") need so a trailing
+  /// sibling can sit a real gap after the glyphs instead of overlapping a
+  /// pre-measured box.
+  final double? width;
   final double height;
 
   @override

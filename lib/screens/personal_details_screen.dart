@@ -402,159 +402,156 @@ class _FormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 362,
-      height: 324,
       decoration: BoxDecoration(
         color: AppColors.profileCardBg,
         borderRadius: const BorderRadius.all(Radius.circular(20)),
         border: Border.all(color: Color(0x14000000)),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 21,
-            top: 17,
-            child: LabelText(
-              AppStrings.trOf(context, 'Full Name'),
-              AppTextStyles.personalLabel,
-              width: 120,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(21, 17, 22, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _FormField(
+              label: AppStrings.trOf(context, 'Full Name'),
+              child: _InputSurface(
+                icon: const Image(
+                  image: AssetImage('assets/personal/ic_user.png'),
+                  width: 16,
+                  height: 16,
+                ),
+                field: _PersonalTextField(
+                  fieldKey: const ValueKey('personal-name-field'),
+                  controller: name,
+                  hintText: AppStrings.trOf(context, 'Your full name'),
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  maxLength: 40,
+                ),
+              ),
             ),
-          ),
-          const Positioned(left: 21, top: 43, child: _InputField()),
-          const Positioned(
-            left: 31,
-            top: 55,
-            child: Image(
-              image: AssetImage('assets/personal/ic_user.png'),
-              width: 16,
-              height: 16,
+            const SizedBox(height: 9),
+            _FormField(
+              label: AppStrings.trOf(context, 'Mobile Number'),
+              child: _InputSurface(
+                icon: const Image(
+                  image: AssetImage('assets/personal/ic_phone.png'),
+                  width: 14,
+                  height: 18,
+                ),
+                field: _PersonalTextField(
+                  fieldKey: const ValueKey('personal-mobile-field'),
+                  controller: mobile,
+                  hintText: AppStrings.trOf(context, 'Enter mobile number'),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  maxLength: 16,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]')),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Positioned(
-            left: 67,
-            top: 51,
-            child: _PersonalTextField(
-              fieldKey: const ValueKey('personal-name-field'),
-              controller: name,
-              hintText: AppStrings.trOf(context, 'Your full name'),
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
-              maxLength: 40,
+            const SizedBox(height: 9),
+            _FormField(
+              label: AppStrings.trOf(context, 'Email'),
+              optionalLabel: AppStrings.trOf(context, '(optional)'),
+              child: _InputSurface(
+                icon: const Image(
+                  image: AssetImage('assets/personal/ic_mail.png'),
+                  width: 16,
+                  height: 16,
+                ),
+                field: _PersonalTextField(
+                  fieldKey: const ValueKey('personal-email-field'),
+                  controller: email,
+                  hintText: AppStrings.trOf(context, 'you@example.com'),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 80,
+                ),
+              ),
             ),
-          ),
-          Positioned(
-            left: 21,
-            top: 93,
-            child: LabelText(
-              AppStrings.trOf(context, 'Mobile Number'),
-              AppTextStyles.personalLabel,
-              width: 140,
-            ),
-          ),
-          const Positioned(left: 21, top: 119, child: _InputField()),
-          const Positioned(
-            left: 31,
-            top: 130,
-            child: Image(
-              image: AssetImage('assets/personal/ic_phone.png'),
-              width: 14,
-              height: 18,
-            ),
-          ),
-          Positioned(
-            left: 67,
-            top: 127,
-            child: _PersonalTextField(
-              fieldKey: const ValueKey('personal-mobile-field'),
-              controller: mobile,
-              hintText: AppStrings.trOf(context, 'Enter mobile number'),
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              maxLength: 16,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]')),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 21,
-            top: 169,
-            child: LabelText(AppStrings.trOf(context, 'Email'), AppTextStyles.personalLabel, width: 60),
-          ),
-          Positioned(
-            left: 55,
-            top: 170,
-            child: LabelText(
-              AppStrings.trOf(context, '(optional)'),
-              AppTextStyles.personalOptional,
-              width: 80,
-            ),
-          ),
-          const Positioned(left: 21, top: 195, child: _InputField()),
-          const Positioned(
-            left: 31,
-            top: 207,
-            child: Image(
-              image: AssetImage('assets/personal/ic_mail.png'),
-              width: 16,
-              height: 16,
-            ),
-          ),
-          Positioned(
-            left: 67,
-            top: 202,
-            child: _PersonalTextField(
-              fieldKey: const ValueKey('personal-email-field'),
-              controller: email,
-              hintText: AppStrings.trOf(context, 'you@example.com'),
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              maxLength: 80,
-            ),
-          ),
-          Positioned(
-            left: 21,
-            top: 245,
-            child: LabelText(
-              AppStrings.trOf(context, 'Seller Type'),
-              AppTextStyles.personalLabel,
-              width: 120,
-            ),
-          ),
-          Positioned(
-            left: 21,
-            top: 271,
-            child: _SellerTypePill(
-              pillKey: const ValueKey('seller-type-farmer'),
-              width: 77,
-              label: AppStrings.trOf(context, 'Farmer'),
-              selected: sellerType == SellerType.farmer,
-              onTap: () => onSellerTypeSelected(SellerType.farmer),
-            ),
-          ),
-          Positioned(
-            left: 119,
-            top: 271,
-            child: _SellerTypePill(
-              pillKey: const ValueKey('seller-type-trader'),
-              width: 89,
-              label: AppStrings.trOf(context, 'Trader'),
-              selected: sellerType == SellerType.trader,
-              onTap: () => onSellerTypeSelected(SellerType.trader),
-            ),
-          ),
-          Positioned(
-            left: 228,
-            top: 271,
-            child: _SellerTypePill(
-              pillKey: const ValueKey('seller-type-fpo'),
-              width: 111,
-              label: AppStrings.trOf(context, 'FPO / Group'),
-              selected: sellerType == SellerType.fpo,
-              onTap: () => onSellerTypeSelected(SellerType.fpo),
-            ),
-          ),
-        ],
+            const SizedBox(height: 9),
+            
+_FormField(
+  label: AppStrings.trOf(context, 'Seller Type'),
+  child: Row(
+    children: [
+      _SellerTypePill(
+        pillKey: const ValueKey('seller-type-farmer'),
+        width: 77,
+        label: AppStrings.trOf(context, 'Farmer'),
+        selected: sellerType == SellerType.farmer,
+        onTap: () => onSellerTypeSelected(SellerType.farmer),
       ),
+      const SizedBox(width: 20),
+      _SellerTypePill(
+        pillKey: const ValueKey('seller-type-trader'),
+        width: 89,
+        label: AppStrings.trOf(context, 'Trader'),
+        selected: sellerType == SellerType.trader,
+        onTap: () => onSellerTypeSelected(SellerType.trader),
+      ),
+      const SizedBox(width: 19),
+      _SellerTypePill(
+        pillKey: const ValueKey('seller-type-fpo'),
+        width: 111,
+        label: AppStrings.trOf(context, 'FPO / Group'),
+        selected: sellerType == SellerType.fpo,
+        onTap: () => onSellerTypeSelected(SellerType.fpo),
+      ),
+    ],
+  ),
+),
+
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One label/control block of the personal-details form: a 25 px label row
+/// (with an optional trailing hint such as "(optional)"), a 1 px gap, then
+/// the control. Shared by every field so label alignment, label→control gap
+/// and the 9 px gap between blocks (applied by the parent column) are
+/// identical for all rows instead of being re-typed per field.
+class _FormField extends StatelessWidget {
+  const _FormField({
+    required this.label,
+    required this.child,
+    this.optionalLabel,
+  });
+
+  final String label;
+  final String? optionalLabel;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 25,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              LabelText(label, AppTextStyles.personalLabel),
+              if (optionalLabel != null) ...[
+                const SizedBox(width: 6),
+                LabelText(optionalLabel!, AppTextStyles.personalOptional),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 1),
+        child,
+      ],
     );
   }
 }
@@ -614,8 +611,14 @@ class _PersonalTextField extends StatelessWidget {
   }
 }
 
-class _InputField extends StatelessWidget {
-  const _InputField();
+/// The 319x41 field background with its leading icon and text field laid
+/// out in one row so icon and text share a single vertical center instead
+/// of being positioned separately against the box.
+class _InputSurface extends StatelessWidget {
+  const _InputSurface({required this.icon, required this.field});
+
+  final Widget icon;
+  final Widget field;
 
   @override
   Widget build(BuildContext context) {
@@ -625,6 +628,20 @@ class _InputField extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.orderPale,
         borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(width: 10),
+          // Fixed 16 px slot so every icon starts at the same x and the
+          // text always begins at the same x, whatever the icon width.
+          SizedBox(
+            width: 16,
+            child: Align(alignment: Alignment.centerLeft, child: icon),
+          ),
+          const SizedBox(width: 20),
+          field,
+        ],
       ),
     );
   }
