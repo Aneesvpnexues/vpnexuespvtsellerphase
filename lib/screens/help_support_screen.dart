@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
-import '../widgets/design_canvas.dart';
-import '../widgets/label_text.dart';
+import '../widgets/help_widgets.dart';
+import '../widgets/page_header.dart';
 import 'account_help_article_screen.dart';
 import 'account_verification_help_screen.dart';
 import 'orders_delivery_help_screen.dart';
@@ -12,439 +14,571 @@ import 'product_help_article_screen.dart';
 import 'products_stock_help_screen.dart';
 import 'report_problem_screen.dart';
 
-/// Help & Support — Zeplin "Android Compact - 199" (Topics tab),
-/// "Android Compact - 221" (Questions tab) and "Android Compact - 222"
-/// (Tickets tab), project 6a8d49709e27bd8b35213d35.
+/// Help & Support home (Zeplin "Android Compact - 199/221/222").
 ///
-/// All tabs share the hero and the segmented control. Topics lists the five
-/// help categories; Questions lists four frequently asked articles; Tickets
-/// shows the open support ticket.
+/// Layout follows `review_ratings_page.dart`: a `CustomScrollView` with a
+/// fixed page padding, a real `PageHeader`, content-driven cards and flex
+/// rows — so nothing overlaps or clips regardless of text length, language or
+/// screen width.
+///
+/// Tabs: 0 = Topics, 1 = Questions, 2 = Tickets. The hero search field
+/// filters all three lists in place.
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
 
-  static const double designWidth = 412;
-  static const double designHeight = 917;
-  static const double trimTop = 49;
+  @override
+  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
+}
 
-  static const _darkGreen = Color(0xFF0D3B20);
-  static const _lime = Color(0xFFC6E96D);
-  static const _muted = Color(0xFF6B7B6F);
-  static const _rowInk = Color(0x7A000000);
+class _HelpEntry {
+  const _HelpEntry({
+    required this.title,
+    this.subtitle,
+    this.icon,
+    this.page,
+    this.titleStyle,
+  });
 
-  static const _titleStyle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.2,
-    color: Colors.black,
-  );
-  static const _heroKicker = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.12,
-    color: Color(0xFFB6C5BC),
-  );
-  static const _heroTitle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 26,
-    fontWeight: FontWeight.w900,
-    letterSpacing: 0.26,
-    color: _lime,
-  );
-  static const _heroSubtitle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.12,
-    color: Color(0xFFB6C5BC),
-  );
-  static const _support = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 8,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.08,
-    color: Color(0xFFCDEB6B),
-  );
-  static const _search = TextStyle(
-    fontFamily: 'Inder',
-    fontSize: 12,
-    color: Colors.white,
-  );
-  static const _action = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.12,
-    color: _darkGreen,
-  );
-  static const _whatsapp = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 10,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.1,
-    color: Colors.white,
-  );
-  static const _tabSelected = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.12,
-    color: Color(0xFF144326),
-  );
-  static const _tabIdle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.12,
-    color: _muted,
-  );
-  static const _rowTitle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.12,
-    color: Colors.black,
-  );
-  static const _rowSubtitle = TextStyle(
-    fontFamily: 'Inter',
-    fontSize: 10,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.1,
-    color: _rowInk,
-  );
-  static const _questionTitle = TextStyle(
+  final String title;
+  final String? subtitle;
+  final String? icon;
+  final Widget? page;
+  final TextStyle? titleStyle;
+}
+
+class _HelpSupportScreenState extends State<HelpSupportScreen> {
+  /// 0 = Topics, 1 = Questions, 2 = Tickets.
+  int _tab = 0;
+
+  late final TextEditingController _search;
+
+  /// Support contact used by the hero's Call / WhatsApp buttons.
+  static const String _phone = '+917810077636';
+
+  static const TextStyle _questionTitle = TextStyle(
     fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: Colors.black,
   );
+  /// The banner headline is one step smaller than the topic/article heroes
+  /// (26px) so "How can we help?" sits on a single line beside the pill.
+  static const TextStyle _heroTitle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: FontWeight.w900,
+    letterSpacing: 0.26,
+    color: Color(0xFFC6E96D),
+  );
+  static const TextStyle _tabSelected = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.12,
+    color: Color(0xFF144326),
+  );
+  static const TextStyle _tabIdle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.12,
+    color: Color(0xFF6B7B6F),
+  );
 
   @override
-  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
-}
+  void initState() {
+    super.initState();
+    _search = TextEditingController();
+  }
 
-class _HelpSupportScreenState extends State<HelpSupportScreen> {
-  /// 0 = Topics (Zeplin 199), 1 = Questions (Zeplin 221),
-  /// 2 = Tickets (Zeplin 222).
-  int _tab = 0;
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
-  double get _pillLeft => _tab == 0 ? 28 : (_tab == 1 ? 150 : 271);
+  String _tr(String key) => AppStrings.trOf(context, key);
 
   void _selectTab(int tab) {
     if (_tab == tab) return;
     setState(() => _tab = tab);
   }
 
+  void _open(_HelpEntry entry) {
+    final Widget? page = entry.page;
+    if (page == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+  }
+
+  Future<void> _launch(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(_tr('Could not open this right now.'))),
+          );
+      }
+    }
+  }
+
+  void _callSupport() => _launch('tel:$_phone');
+
+  void _whatsappSupport() => _launch('https://wa.me/${_phone.substring(1)}');
+
+  // ---------------------------------------------------------------- lists
+
+  List<_HelpEntry> _topics() => <_HelpEntry>[
+        _HelpEntry(
+          title: _tr('Orders & delivery'),
+          subtitle: _tr('3 articles'),
+          icon: 'assets/help/tile_orders.png',
+          page: const OrdersDeliveryHelpScreen(),
+        ),
+        _HelpEntry(
+          title: _tr('Products & stock'),
+          subtitle: _tr('3 articles'),
+          icon: 'assets/help/tile_products.png',
+          page: const ProductsStockHelpScreen(),
+        ),
+        _HelpEntry(
+          title: _tr('Payments & wallet'),
+          subtitle: _tr('3 articles'),
+          icon: 'assets/help/tile_payments.png',
+          page: const PaymentsWalletHelpScreen(),
+        ),
+        _HelpEntry(
+          title: _tr('Account & verification'),
+          subtitle: _tr('3 articles'),
+          icon: 'assets/help/tile_account.png',
+          page: const AccountVerificationHelpScreen(),
+        ),
+        _HelpEntry(
+          title: _tr('Report a problem'),
+          subtitle: _tr('Tell us what went wrong'),
+          icon: 'assets/help/tile_report.png',
+          page: const ReportProblemScreen(),
+        ),
+      ];
+
+  List<_HelpEntry> _questions() => <_HelpEntry>[
+        _HelpEntry(
+          title: _tr('When will i get my money?'),
+          page: const PayoutTimingHelpScreen(),
+          titleStyle: _questionTitle,
+        ),
+        _HelpEntry(
+          title: _tr('How do i update my stock?'),
+          page: const UpdateStockHelpScreen(),
+          titleStyle: _questionTitle,
+        ),
+        _HelpEntry(
+          title: _tr('How do i accept a new order?'),
+          page: const OrdersDeliveryHelpScreen(),
+          titleStyle: _questionTitle,
+        ),
+        _HelpEntry(
+          title: _tr('How do i get verified?'),
+          page: const VerifyAccountHelpScreen(),
+          titleStyle: _questionTitle,
+        ),
+      ];
+
+  List<_HelpEntry> _tickets() => <_HelpEntry>[
+        _HelpEntry(
+          title: _tr('Payout delayed'),
+          subtitle: _tr('#HS-2026, 3Mar'),
+          icon: 'assets/help/tile_orders.png',
+        ),
+      ];
+
+  // --------------------------------------------------------------- search
+
+  List<_HelpEntry> _results(String query) {
+    final String q = query.trim().toLowerCase();
+    if (q.isEmpty) return const <_HelpEntry>[];
+    return <_HelpEntry>[
+      ..._topics(),
+      ..._questions(),
+      ..._tickets(),
+    ].where((_HelpEntry e) {
+      final String title = e.title.toLowerCase();
+      final String subtitle = e.subtitle?.toLowerCase() ?? '';
+      return title.contains(q) || subtitle.contains(q);
+    }).toList();
+  }
+
+  Widget _entryCard(List<_HelpEntry> entries) {
+    return HelpCard(
+      child: helpRowList(<Widget>[
+        for (final _HelpEntry entry in entries)
+          HelpListRow(
+            icon: entry.icon,
+            title: entry.title,
+            subtitle: entry.subtitle,
+            titleStyle: entry.titleStyle,
+            onTap: entry.page == null ? null : () => _open(entry),
+          ),
+      ]),
+    );
+  }
+
+  Widget _emptyResults() {
+    return HelpCard(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _tr('No results found'),
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _tr('Try another word, or tell us what went wrong.'),
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: Color(0xB3000000),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Material(
+            color: AppColors.limeCard,
+            borderRadius: const BorderRadius.all(Radius.circular(15)),
+            child: InkWell(
+              key: const Key('help-empty-report'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReportProblemScreen(),
+                ),
+              ),
+              borderRadius: const BorderRadius.all(Radius.circular(15)),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                child: Text(
+                  'Report a problem',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0D3B20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------- build
+
   @override
   Widget build(BuildContext context) {
+    final String query = _search.text;
+    final bool searching = query.trim().isNotEmpty;
+    final List<_HelpEntry> results = _results(query);
+
     return Scaffold(
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
         bottom: false,
-        child: DesignCanvas(
-          designWidth: HelpSupportScreen.designWidth,
-          designHeight: HelpSupportScreen.designHeight,
-          trimTop: HelpSupportScreen.trimTop,
-          child: Stack(
-            children: [
-              const Positioned(left: 22, top: 73, child: _BackCircle()),
-              const Positioned(
-                left: 68,
-                top: 73,
-                child: LabelText(
-                  'Help & Support',
-                  HelpSupportScreen._titleStyle,
-                  width: 149,
-                ),
-              ),
-              const Positioned(left: 25, top: 121, child: _HelpHero()),
-              Positioned(
-                left: 22,
-                top: 433,
-                width: 368,
-                height: 45,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xB8E3F1CC),
-                    borderRadius: const BorderRadius.all(Radius.circular(28)),
-                    border: Border.all(color: const Color(0x14000000)),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: <Widget>[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(<Widget>[
+                  Transform.translate(
+                    offset: const Offset(-22, 0),
+                    child: PageHeader(title: _tr('Help & Support')),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  _buildHero(),
+                  const SizedBox(height: 20),
+                  _buildTabs(),
+                  const SizedBox(height: 20),
+                  if (searching) ...<Widget>[
+                    if (results.isEmpty)
+                      _emptyResults()
+                    else ...<Widget>[
+                      HelpSectionLabel(_tr('Results')),
+                      const SizedBox(height: 8),
+                      _entryCard(results),
+                    ],
+                  ] else
+                    _entryCard(switch (_tab) {
+                      0 => _topics(),
+                      1 => _questions(),
+                      _ => _tickets(),
+                    }),
+                  const SizedBox(height: 24),
+                ]),
               ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                left: _pillLeft,
-                top: 437,
-                child: const _SelectedTab(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHero() {
+    return HelpHero(
+      kicker: _tr('Help center'),
+      title: _tr('How can we help?'),
+      titleStyle: _heroTitle,
+      titleSingleLine: true,
+      subtitle: _tr('Search answers or talk to our team.'),
+      // Tighter than the topic/article heroes: this banner has to hold the
+      // search field and both contact buttons without getting tall.
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      glowCenter: const Alignment(0.823, -0.734),
+      glowRadius: 0.438,
+      children: <Widget>[
+        const SizedBox(height: 12),
+        _SearchField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          onClear: () {
+            _search.clear();
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 14),
+        const Align(alignment: Alignment.centerLeft, child: _Wave()),
+        const SizedBox(height: 14),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _HeroButton(
+                label: _tr('Call'),
+                iconAsset: 'assets/help/phone.png',
+                dark: false,
+                onTap: _callSupport,
               ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                left: _tab == 0 ? 64 : 61,
-                top: 443,
-                child: GestureDetector(
-                  key: const Key('help-tab-topics'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(0),
-                  child: LabelText(
-                    'Topics',
-                    _tab == 0
-                        ? HelpSupportScreen._tabSelected
-                        : HelpSupportScreen._tabIdle,
-                    width: 40,
-                  ),
-                ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: _HeroButton(
+                label: _tr('WhatsApp'),
+                iconAsset: 'assets/help/chat.png',
+                dark: true,
+                onTap: _whatsappSupport,
               ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                left: _tab == 0 ? 182 : 175,
-                top: 442,
-                child: GestureDetector(
-                  key: const Key('help-tab-questions'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(1),
-                  child: LabelText(
-                    'Questions',
-                    _tab == 1
-                        ? HelpSupportScreen._tabSelected
-                        : HelpSupportScreen._tabIdle,
-                    width: 64,
-                  ),
-                ),
-              ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                left: _tab == 2 ? 305 : 314,
-                top: 442,
-                child: GestureDetector(
-                  key: const Key('help-tab-tickets'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectTab(2),
-                  child: LabelText(
-                    'Tickets',
-                    _tab == 2
-                        ? HelpSupportScreen._tabSelected
-                        : HelpSupportScreen._tabIdle,
-                    width: 44,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 25,
-                top: 492,
-                width: 362,
-                height: _tab == 0 ? 300 : (_tab == 1 ? 210 : 67),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEFEFE),
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    border: Border.all(color: const Color(0x14000000)),
-                    boxShadow: const [
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabs() {
+    return Container(
+      width: double.infinity,
+      height: 45,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xB8E3F1CC),
+        borderRadius: const BorderRadius.all(Radius.circular(28)),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Row(
+        children: <Widget>[
+          _tabButton(0, 'help-tab-topics', _tr('Topics')),
+          _tabButton(1, 'help-tab-questions', _tr('Questions')),
+          _tabButton(2, 'help-tab-tickets', _tr('Tickets')),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabButton(int index, String key, String label) {
+    final bool selected = _tab == index;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: Key(key),
+          onTap: () => _selectTab(index),
+          borderRadius: const BorderRadius.all(Radius.circular(23)),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            height: 37,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : Colors.transparent,
+              borderRadius: const BorderRadius.all(Radius.circular(23)),
+              boxShadow: selected
+                  ? const <BoxShadow>[
                       BoxShadow(
-                        color: Color(0x1AB8B8B8),
-                        offset: Offset(0, 1),
-                        blurRadius: 3,
+                        color: Color(0x1A00570E),
+                        offset: Offset(1, 1),
+                        blurRadius: 4,
                       ),
                       BoxShadow(
-                        color: Color(0x17B8B8B8),
-                        offset: Offset(0, 6),
-                        blurRadius: 6,
-                      ),
-                      BoxShadow(
-                        color: Color(0x0DB8B8B8),
-                        offset: Offset(0, 13),
+                        color: Color(0x1700570E),
+                        offset: Offset(5, 6),
                         blurRadius: 8,
                       ),
                       BoxShadow(
-                        color: Color(0x03B8B8B8),
-                        offset: Offset(0, 23),
-                        blurRadius: 9,
-                      ),
-                      BoxShadow(
-                        color: Color(0x00B8B8B8),
-                        offset: Offset(0, 36),
+                        color: Color(0x0D00570E),
+                        offset: Offset(11, 13),
                         blurRadius: 10,
                       ),
-                    ],
-                  ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              style: selected ? _tabSelected : _tabIdle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hero search field
+// ---------------------------------------------------------------------------
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  static const TextStyle _textStyle = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: Colors.white,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 45,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C5A3D),
+        borderRadius: const BorderRadius.all(Radius.circular(15)),
+        border: Border.all(color: const Color(0xFF496B56)),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Image(
+            image: AssetImage('assets/help/search.png'),
+            width: 12,
+            height: 12,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: TextField(
+              key: const Key('help-search-field'),
+              controller: controller,
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              cursorColor: const Color(0xFFC6E96D),
+              style: _textStyle,
+              decoration: InputDecoration.collapsed(
+                hintText: 'Search for help',
+                hintStyle: _textStyle.copyWith(color: Colors.white70),
+              ),
+            ),
+          ),
+          if (controller.text.isNotEmpty)
+            Semantics(
+              button: true,
+              label: 'Clear search',
+              child: GestureDetector(
+                key: const Key('help-search-clear'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onClear,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(Icons.close, size: 15, color: Colors.white70),
                 ),
               ),
-              if (_tab == 0) ...[
-                for (final double y in <double>[554, 611, 670, 728])
-                  Positioned(
-                    left: 47,
-                    top: y,
-                    child: Container(
-                      width: 324,
-                      height: 1,
-                      color: const Color(0x12000000),
-                    ),
-                  ),
-                Positioned(
-                  left: 46,
-                  top: 505,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_orders.png',
-                    title: 'Orders & delivery',
-                    titleWidth: 103,
-                    subtitle: '3 articles',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const OrdersDeliveryHelpScreen(),
-                      ),
-                    ),
-                  ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hero action buttons
+// ---------------------------------------------------------------------------
+
+class _HeroButton extends StatelessWidget {
+  const _HeroButton({
+    required this.label,
+    required this.iconAsset,
+    required this.dark,
+    required this.onTap,
+  });
+
+  final String label;
+  final String iconAsset;
+  final bool dark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: dark ? const Color(0xFF326344) : const Color(0xFFC6E96D),
+      borderRadius: const BorderRadius.all(Radius.circular(15)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(Radius.circular(15)),
+        child: Container(
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(15)),
+            border: dark
+                ? null
+                : Border.all(color: const Color(0x12000000)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Image.asset(iconAsset, width: 10, height: 10),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: dark ? 10 : 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.11,
+                  color: dark ? Colors.white : const Color(0xFF0D3B20),
                 ),
-                Positioned(
-                  left: 46,
-                  top: 563,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_products.png',
-                    title: 'Products & stock',
-                    titleWidth: 101,
-                    subtitle: '3 articles',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ProductsStockHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 46,
-                  top: 621,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_payments.png',
-                    title: 'Payments & wallet',
-                    titleWidth: 109,
-                    subtitle: '3 articles',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PaymentsWalletHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 46,
-                  top: 679,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_account.png',
-                    title: 'Account & verification',
-                    titleWidth: 131,
-                    subtitle: '3 articles',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const AccountVerificationHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 46,
-                  top: 737,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_report.png',
-                    title: 'Report a problem',
-                    titleWidth: 102,
-                    subtitle: 'Tell us what went wrong',
-                    subtitleWidth: 117,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ReportProblemScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-              ] else if (_tab == 1) ...[
-                for (final double y in <double>[549, 600, 645])
-                  Positioned(
-                    left: 42,
-                    top: y,
-                    child: Container(
-                      width: 324,
-                      height: 1,
-                      color: const Color(0x12000000),
-                    ),
-                  ),
-                Positioned(
-                  left: 25,
-                  top: 492,
-                  child: _QuestionRow(
-                    title: 'When will i get my money?',
-                    textTop: 25,
-                    chevronTop: 27.5,
-                    height: 57,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PayoutTimingHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 25,
-                  top: 549,
-                  child: _QuestionRow(
-                    title: 'How do i update my stock?',
-                    textTop: 17,
-                    chevronTop: 19.5,
-                    height: 51,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const UpdateStockHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 25,
-                  top: 600,
-                  child: _QuestionRow(
-                    title: 'How do i accept a new order?',
-                    textTop: 15,
-                    chevronTop: 17.5,
-                    height: 45,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const OrdersDeliveryHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 25,
-                  top: 645,
-                  child: _QuestionRow(
-                    title: 'How do i get verified?',
-                    textTop: 15,
-                    chevronTop: 17.5,
-                    height: 57,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const VerifyAccountHelpScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Positioned(
-                  left: 46,
-                  top: 505,
-                  child: _TopicRow(
-                    icon: 'assets/help/tile_orders.png',
-                    title: 'Payout delayed',
-                    titleWidth: 91,
-                    subtitle: '#HS-2026, 3Mar',
-                    subtitleWidth: 90,
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
@@ -453,295 +587,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   }
 }
 
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 25,
-        height: 25,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Color(0x1A000000), blurRadius: 1),
-            BoxShadow(
-              color: Color(0x17000000),
-              offset: Offset(0, 1),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x0D000000),
-              offset: Offset(1, 2),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x03000000),
-              offset: Offset(1, 3),
-              blurRadius: 1,
-            ),
-            BoxShadow(
-              color: Color(0x00000000),
-              offset: Offset(2, 5),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: Center(
-          child: Image.asset('assets/order/ic_back.png', width: 15, height: 15),
-        ),
-      ),
-    );
-  }
-}
-
-class _HelpHero extends StatelessWidget {
-  const _HelpHero();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 362,
-      height: 301,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        gradient: LinearGradient(
-          begin: Alignment(-0.704419945067802, -0.5811517293366738),
-          end: Alignment(0.4779005750097418, 0.380281631141034),
-          colors: [Color(0xFF0B341B), Color(0xFF135029)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1A000000),
-            offset: Offset(0, 7),
-            blurRadius: 15,
-          ),
-          BoxShadow(
-            color: Color(0x17000000),
-            offset: Offset(0, 27),
-            blurRadius: 27,
-          ),
-          BoxShadow(
-            color: Color(0x0D000000),
-            offset: Offset(0, 60),
-            blurRadius: 36,
-          ),
-          BoxShadow(
-            color: Color(0x03000000),
-            offset: Offset(0, 107),
-            blurRadius: 43,
-          ),
-          BoxShadow(
-            color: Color(0x00000000),
-            offset: Offset(0, 167),
-            blurRadius: 47,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(24)),
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0.823, -0.734),
-                    radius: 0.438,
-                    colors: [
-                      Color(0xD13CA35A),
-                      Color(0xA33CA35A),
-                      Color(0x6B3CA35A),
-                      Color(0x1A3CA35A),
-                      Color(0x003CA35A),
-                    ],
-                    stops: [0, 0.19, 0.42, 0.56, 1],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 274,
-              top: 16,
-              child: Container(
-                width: 68,
-                height: 21,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(14)),
-                  border: Border.all(color: const Color(0x63CDEB6B)),
-                ),
-              ),
-            ),
-            const Positioned(left: 285, top: 23, child: _LimeDot()),
-            const Positioned(
-              left: 296,
-              top: 14,
-              child: LabelText(
-                'Support',
-                HelpSupportScreen._support,
-                width: 48,
-                height: 20,
-              ),
-            ),
-            const Positioned(
-              left: 20,
-              top: 20,
-              child: LabelText(
-                'Help center',
-                HelpSupportScreen._heroKicker,
-                width: 68,
-                height: 13,
-              ),
-            ),
-            const Positioned(
-              left: 20,
-              top: 52,
-              child: LabelText(
-                'How can we help?',
-                HelpSupportScreen._heroTitle,
-                width: 237,
-              ),
-            ),
-            const Positioned(
-              left: 20,
-              top: 77,
-              child: LabelText(
-                'Search answers or talk to our team.',
-                HelpSupportScreen._heroSubtitle,
-                width: 208,
-              ),
-            ),
-            Positioned(
-              left: 20,
-              top: 119,
-              child: Container(
-                width: 322,
-                height: 43,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C5A3D),
-                  borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  border: Border.all(color: const Color(0xFF496B56)),
-                ),
-              ),
-            ),
-            const Positioned(
-              left: 37,
-              top: 135,
-              child: Image(
-                image: AssetImage('assets/help/search.png'),
-                width: 12,
-                height: 12,
-              ),
-            ),
-            const Positioned(
-              left: 58,
-              top: 133,
-              child: LabelText(
-                'Search for help',
-                HelpSupportScreen._search,
-                width: 87,
-                height: 15,
-              ),
-            ),
-            const Positioned(left: 20, top: 185, child: _Wave()),
-            Positioned(
-              left: 20,
-              top: 242,
-              child: Container(
-                width: 152,
-                height: 39.091,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC6E96D),
-                  borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  border: Border.all(color: const Color(0x12000000)),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 190,
-              top: 242,
-              child: Container(
-                width: 152,
-                height: 39.091,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF326344),
-                  borderRadius: BorderRadius.all(Radius.circular(15)),
-                ),
-              ),
-            ),
-            const Positioned(
-              left: 77,
-              top: 258,
-              child: Image(
-                image: AssetImage('assets/help/phone.png'),
-                width: 10,
-                height: 10,
-              ),
-            ),
-            const Positioned(
-              left: 92,
-              top: 250,
-              child: LabelText(
-                'Call',
-                HelpSupportScreen._action,
-                width: 23,
-                height: 20,
-              ),
-            ),
-            const Positioned(
-              left: 231,
-              top: 257,
-              child: Image(
-                image: AssetImage('assets/help/chat.png'),
-                width: 10,
-                height: 10,
-              ),
-            ),
-            const Positioned(
-              left: 244,
-              top: 250,
-              child: LabelText(
-                'WhatsApp',
-                HelpSupportScreen._whatsapp,
-                width: 72,
-                height: 20,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LimeDot extends StatelessWidget {
-  const _LimeDot();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: const BoxDecoration(
-        color: Color(0xFFCDEB6B),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Decorative wave between the search field and the buttons
+// ---------------------------------------------------------------------------
 
 class _Wave extends StatelessWidget {
   const _Wave();
 
+  /// Compressed from the 38px Zeplin height to keep the banner short; the
+  /// painter scales its curve to whatever box it is given.
+  static const double height = 24;
+
   @override
   Widget build(BuildContext context) {
+    // Stretches to the hero's content width and scales the curve with it, so
+    // the decoration never pokes outside the card on narrow screens.
     return CustomPaint(
-      size: const Size(322, 38),
+      size: Size(double.infinity, height),
       painter: const _WavePainter(),
     );
   }
@@ -750,8 +612,13 @@ class _Wave extends StatelessWidget {
 class _WavePainter extends CustomPainter {
   const _WavePainter();
 
+  static const double _designWidth = 322;
+  static const double _designHeight = 38;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final double sx = size.width <= 0 ? 1 : size.width / _designWidth;
+    final double sy = size.height <= 0 ? 1 : size.height / _designHeight;
     const List<Offset> points = <Offset>[
       Offset(0, 0.25),
       Offset(20, 8.25),
@@ -771,19 +638,19 @@ class _WavePainter extends CustomPainter {
       Offset(300, 32.75),
       Offset(321, 38),
     ];
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    final path = Path()..moveTo(points.first.dx * sx, points.first.dy * sy);
     for (int i = 0; i < points.length - 1; i++) {
       final Offset p0 = points[i == 0 ? 0 : i - 1];
       final Offset p1 = points[i];
       final Offset p2 = points[i + 1];
       final Offset p3 = points[i + 2 >= points.length ? i + 1 : i + 2];
       path.cubicTo(
-        p1.dx + (p2.dx - p0.dx) / 6,
-        p1.dy + (p2.dy - p0.dy) / 6,
-        p2.dx - (p3.dx - p1.dx) / 6,
-        p2.dy - (p3.dy - p1.dy) / 6,
-        p2.dx,
-        p2.dy,
+        (p1.dx + (p2.dx - p0.dx) / 6) * sx,
+        (p1.dy + (p2.dy - p0.dy) / 6) * sy,
+        (p2.dx - (p3.dx - p1.dx) / 6) * sx,
+        (p2.dy - (p3.dy - p1.dy) / 6) * sy,
+        p2.dx * sx,
+        p2.dy * sy,
       );
     }
 
@@ -792,13 +659,13 @@ class _WavePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    canvas.drawPath(path.shift(const Offset(0, 5)), glow);
+    canvas.drawPath(path.shift(Offset(0, 5 * sy)), glow);
     final softGlow = Paint()
       ..color = const Color(0x0FC6E96D)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
-    canvas.drawPath(path.shift(const Offset(0, 18)), softGlow);
+    canvas.drawPath(path.shift(Offset(0, 18 * sy)), softGlow);
 
     final stroke = Paint()
       ..color = const Color(0xFFC6E96D)
@@ -811,172 +678,3 @@ class _WavePainter extends CustomPainter {
   @override
   bool shouldRepaint(_WavePainter oldDelegate) => false;
 }
-
-class _SelectedTab extends StatelessWidget {
-  const _SelectedTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 112,
-      height: 37,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(23)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1A00570E),
-            offset: Offset(1, 1),
-            blurRadius: 4,
-          ),
-          BoxShadow(
-            color: Color(0x1700570E),
-            offset: Offset(5, 6),
-            blurRadius: 8,
-          ),
-          BoxShadow(
-            color: Color(0x0D00570E),
-            offset: Offset(11, 13),
-            blurRadius: 10,
-          ),
-          BoxShadow(
-            color: Color(0x0300570E),
-            offset: Offset(20, 24),
-            blurRadius: 12,
-          ),
-          BoxShadow(
-            color: Color(0x0000570E),
-            offset: Offset(31, 37),
-            blurRadius: 13,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuestionRow extends StatelessWidget {
-  const _QuestionRow({
-    required this.title,
-    required this.textTop,
-    required this.chevronTop,
-    required this.height,
-    this.onTap,
-  });
-
-  final String title;
-  final double textTop;
-  final double chevronTop;
-  final double height;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget content = SizedBox(
-      width: 362,
-      height: height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 17,
-            top: textTop,
-            child: LabelText(
-              title,
-              HelpSupportScreen._questionTitle,
-              width: 300,
-              height: 17,
-            ),
-          ),
-          Positioned(
-            left: 331.5,
-            top: chevronTop,
-            child: Image.asset(
-              'assets/help/chevron.png',
-              width: 12,
-              height: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) return content;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: content,
-    );
-  }
-}
-
-class _TopicRow extends StatelessWidget {
-  const _TopicRow({
-    required this.icon,
-    required this.title,
-    required this.titleWidth,
-    required this.subtitle,
-    this.subtitleWidth = 45,
-    this.onTap,
-  });
-
-  final String icon;
-  final String title;
-  final double titleWidth;
-  final String subtitle;
-  final double subtitleWidth;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget content = SizedBox(
-      width: 327,
-      height: 40,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            top: 3,
-            child: Image.asset(icon, width: 34, height: 34),
-          ),
-          Positioned(
-            left: 45,
-            top: 0,
-            child: LabelText(
-              title,
-              HelpSupportScreen._rowTitle,
-              width: titleWidth,
-            ),
-          ),
-          Positioned(
-            left: 45,
-            top: 15,
-            child: LabelText(
-              subtitle,
-              HelpSupportScreen._rowSubtitle,
-              width: subtitleWidth,
-            ),
-          ),
-          const Positioned(
-            left: 309,
-            top: 11,
-            child: Image(
-              image: AssetImage('assets/help/chevron.png'),
-              width: 18,
-              height: 18,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) return content;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: content,
-    );
-  }
-}
-

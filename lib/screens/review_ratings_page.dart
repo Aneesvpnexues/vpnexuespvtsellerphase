@@ -1,248 +1,298 @@
-import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
+import '../widgets/page_header.dart';
 import '../data/review_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/artboard.dart';
-import '../widgets/page_header.dart';
 
-/// "Review & Ratings" — seller ratings page (Zeplin screen
-/// 6ad1af82c2491ce58636d479; the API token no longer resolves, so the page
-/// is built to the dashboard design language shared by 152/156).
-///
-/// Standalone artboard (412x917) with a back header, a dark-green gradient
-/// summary card (average rating, star distribution bars) and a white
-/// reviews card with reviewer rows (avatar initials, stars, comment).
-/// Opened from Profile / Business "Review & Ratings".
 class ReviewRatingsPage extends StatelessWidget {
   const ReviewRatingsPage({super.key});
-
-  static const double designWidth = 412;
-  static const double designHeight = 917;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dashboardBg,
       body: SafeArea(
-        bottom: false,
-        child: Artboard(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 24,
-                child: PageHeader(
-                  title: AppStrings.trOf(context, 'Review & Ratings'),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    Transform.translate(
+  offset: const Offset(-22, 0),
+  child: PageHeader(
+    title: AppStrings.trOf(
+      context,
+      'Review & Ratings',
+    ),
+  ),
+),
+
+                    const SizedBox(height: 24),
+
+                    const _RatingSummaryCard(),
+
+                    const SizedBox(height: 20),
+
+                    const _ReviewsCard(),
+
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
-              const Positioned(left: 22, top: 65, child: _RatingSummaryCard()),
-              const Positioned(left: 22, top: 265, child: _ReviewsCard()),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Summary card: gradient like the 156 balance card (x24..388, y121..297,
-/// 364x176, r24) with the decorative corner circle. Left block has the
-/// average (f40 lime), a lime star and the review count; the right block
-/// is the 5→1 star distribution with soft-white tracks and lime fills.
+// --------------------------------------------------
+// RATING SUMMARY CARD
+// --------------------------------------------------
+
 class _RatingSummaryCard extends StatelessWidget {
   const _RatingSummaryCard();
 
-  static const _label = TextStyle(
-    fontSize: 14,
+  static const TextStyle _labelStyle = TextStyle(
+    fontSize: 13,
     fontWeight: FontWeight.w500,
-    height: 1.0,
     color: AppColors.balanceSoft,
   );
-  static const _sub = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    height: 1.0,
-    color: AppColors.balanceSoft,
-  );
-  static const _barLabel = TextStyle(
-    fontSize: 10,
+
+  static const TextStyle _barLabelStyle = TextStyle(
+    fontSize: 11,
     fontWeight: FontWeight.w500,
-    height: 1.0,
     color: AppColors.surface,
   );
 
-  /// Review counts per star (5★ → 1★) and bar widths are computed
-  /// dynamically from the combined submitted + seed reviews.
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 368,
-      height: 176,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.balanceCardStart,
-            AppColors.balanceCardMid,
-            AppColors.balanceCardEnd,
-          ],
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+    return ListenableBuilder(
+      listenable: ReviewStore.instance,
+      builder: (context, _) {
+        final List<int> ratings = [
+          for (final ReviewEntry r in ReviewStore.instance.reviews)
+            r.rating,
+          for (final _Review r in _ReviewsCard.reviews)
+            r.rating,
+        ];
+
+        final int totalCount = ratings.length;
+
+        final double average = totalCount == 0
+            ? 0
+            : ratings.fold<int>(0, (a, b) => a + b) /
+                totalCount;
+
+        final List<int> starCounts = List<int>.filled(5, 0);
+
+        for (final int rating in ratings) {
+          if (rating >= 1 && rating <= 5) {
+            starCounts[5 - rating]++;
+          }
+        }
+
+        final int maxCount = starCounts.fold<int>(
+          0,
+          (a, b) => a > b ? a : b,
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.balanceCardStart,
+                AppColors.balanceCardMid,
+                AppColors.balanceCardEnd,
+              ],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: ListenableBuilder(
-          listenable: ReviewStore.instance,
-          builder: (context, _) {
-            // Combine submitted reviews + seed rows (same list the
-            // reviews card shows) so every stat matches what is on screen.
-            final List<ReviewEntry> submitted = ReviewStore.instance.reviews;
-            final List<int> ratings = <int>[
-              for (final ReviewEntry r in submitted) r.rating,
-              for (final _Review r in _ReviewsCard._reviews) r.rating,
-            ];
+          child: Stack(
+            children: [
+              Positioned(
+                right: -65,
+                top: -75,
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: const BoxDecoration(
+                    color: AppColors.walletCardDecor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
 
-            final int totalCount = ratings.length;
-            final double avg = totalCount == 0
-                ? 0.0
-                : ratings.fold<int>(0, (int a, int b) => a + b) / totalCount;
-
-            // starCounts[0] = 5★ … starCounts[4] = 1★
-            final List<int> starCounts = List<int>.filled(5, 0);
-            for (final int r in ratings) {
-              if (r >= 1 && r <= 5) starCounts[5 - r]++;
-            }
-            final int maxCount =
-                starCounts.fold<int>(0, (int a, int b) => a > b ? a : b);
-
-            return Stack(
-              children: [
-                Positioned(
-                  left: 226,
-                  top: -70,
-                  child: Container(
-                    width: 190,
-                    height: 190,
-                    decoration: const BoxDecoration(
-                      color: AppColors.walletCardDecor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 21,
-                  top: 20,
-                  child: Text(
-                    AppStrings.trOf(context, 'Average rating'),
-                    style: _label,
-                  ),
-                ),
-                Positioned(
-                  left: 22,
-                  top: 44,
-                  child: Text(
-                    avg.toStringAsFixed(1),
-                    style: AppTextStyles.balanceAmount,
-                  ),
-                ),
-                const Positioned(
-                  left: 88,
-                  top: 48,
-                  child: Icon(Icons.star, size: 30, color: AppColors.limeAccent),
-                ),
-                Positioned(
-                  left: 21,
-                  top: 100,
-                  child: Text(
-                    AppStrings.trOf(context, '$totalCount reviews'),
-                    style: _sub,
-                  ),
-                ),
-                for (var i = 0; i < starCounts.length; i++)
-                  Positioned(
-                    left: 185,
-                    top: 24 + 26.0 * i,
-                    child: Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('${5 - i}', style: _barLabel),
-                        const SizedBox(width: 1),
-                        const Icon(
-                          Icons.star,
-                          size: 9,
-                          color: AppColors.limeAccent,
+                        Text(
+                          AppStrings.trOf(
+                            context,
+                            'Average rating',
+                          ),
+                          style: _labelStyle,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  average.toStringAsFixed(1),
+                                  style: AppTextStyles.balanceAmount,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 5),
+
+                            const Icon(
+                              Icons.star,
+                              color: AppColors.limeAccent,
+                              size: 27,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Text(
+                          AppStrings.trOf(
+                            context,
+                            '$totalCount reviews',
+                          ),
+                          style: _labelStyle,
                         ),
                       ],
                     ),
                   ),
-                for (var i = 0; i < starCounts.length; i++)
-                  Positioned(
-                    left: 209,
-                    top: 27 + 26.0 * i,
-                    child: Container(
-                      width: 96,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: AppColors.transactionsBtnSoft,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          width: maxCount == 0
-                              ? 0.0
-                              : starCounts[i] / maxCount * 96.0,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: AppColors.limeAccent,
-                            borderRadius: BorderRadius.circular(3),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        final count = starCounts[index];
+
+                        final progress = maxCount == 0
+                            ? 0.0
+                            : count / maxCount;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 6,
                           ),
-                        ),
-                      ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                child: Text(
+                                  '${5 - index}',
+                                  style: _barLabelStyle,
+                                ),
+                              ),
+
+                              const Icon(
+                                Icons.star,
+                                size: 11,
+                                color: AppColors.limeAccent,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  child: Container(
+                                    height: 7,
+                                    color: AppColors.transactionsBtnSoft,
+                                    alignment: Alignment.centerLeft,
+                                    child: FractionallySizedBox(
+                                      widthFactor: progress,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.limeAccent,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              SizedBox(
+                                width: 20,
+                                child: Text(
+                                  '$count',
+                                  textAlign: TextAlign.end,
+                                  style: _barLabelStyle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     ),
                   ),
-                for (var i = 0; i < starCounts.length; i++)
-                  Positioned(
-                    left: 313,
-                    top: 24 + 26.0 * i,
-                    child: Text('${starCounts[i]}', style: _barLabel),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-/// Reviews card (white, x24..388, y321..841, 364x520, r24) with a title
-/// and four reviewer rows on a 112px pitch: 36px initials avatar, name +
-/// right-aligned date, 5 stars, and a two-line comment.
+// --------------------------------------------------
+// REVIEWS CARD
+// --------------------------------------------------
+
 class _ReviewsCard extends StatelessWidget {
   const _ReviewsCard();
 
-  static const _cardTitle = TextStyle(
-    fontSize: 16,
+  static const TextStyle _titleStyle = TextStyle(
+    fontSize: 17,
     fontWeight: FontWeight.w700,
-    height: 1.0,
     color: AppColors.textPrimary,
   );
 
-  static const _reviews = <_Review>[
+  static const List<_Review> reviews = [
     _Review(
       initials: 'AN',
       name: 'Anees',
@@ -256,33 +306,36 @@ class _ReviewsCard extends StatelessWidget {
       name: 'Jhon',
       rating: 5,
       date: '10 Mar 2024',
-      comment: 'Best seller in the market. Always delivers on time.',
+      comment:
+          'Best seller in the market. Always delivers on time.',
     ),
     _Review(
       initials: 'AJ',
       name: 'Anjith',
       rating: 4,
       date: '2 Mar 2024',
-      comment: 'Good produce overall. Packing could be better.',
+      comment:
+          'Good produce overall. Packing could be better.',
     ),
     _Review(
       initials: 'SE',
       name: 'Senthil',
       rating: 5,
       date: '25 Feb 2024',
-      comment: 'Consistent quality on every single order.',
+      comment:
+          'Consistent quality on every single order.',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 368,
-      height: 620,
-      decoration: const BoxDecoration(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 8),
+      decoration: BoxDecoration(
         color: AppColors.cardWhite,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
           BoxShadow(
             color: Color(0x0F000000),
             blurRadius: 10,
@@ -290,53 +343,62 @@ class _ReviewsCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            left: 22,
-            top: 17,
-            child: Text(
-              AppStrings.trOf(context, 'Reviews'),
-              style: _cardTitle,
-            ),
+          Text(
+            AppStrings.trOf(context, 'Reviews'),
+            style: _titleStyle,
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 55,
-            bottom: 20,
-            child: ListenableBuilder(
-              listenable: ReviewStore.instance,
-              builder: (context, _) {
-                // Submitted reviews appear first, then the seed rows fill
-                // the remaining slots so the card layout stays fixed.
-                final List<_Review> submitted = ReviewStore.instance.reviews
-                    .map(
-                      (r) => _Review(
-                        initials: r.initials,
-                        name: r.name,
-                        rating: r.rating,
-                        date: r.date,
-                        comment: r.comment,
-                      ),
-                    )
-                    .toList();
-                final List<_Review> all = <_Review>[
-                  ...submitted,
-                  ..._reviews,
-                ].take(_reviews.length).toList();
-                return ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: all.length,
-                  separatorBuilder: (_, _) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: const _Divider(),
-                  ),
-                  itemBuilder: (context, index) =>
-                      SizedBox(height: 112, child: _ReviewRow(review: all[index])),
+
+          const SizedBox(height: 12),
+
+          ListenableBuilder(
+            listenable: ReviewStore.instance,
+            builder: (context, _) {
+              final List<_Review> submitted =
+                  ReviewStore.instance.reviews.map((r) {
+                return _Review(
+                  initials: r.initials,
+                  name: r.name,
+                  rating: r.rating,
+                  date: r.date,
+                  comment: r.comment,
                 );
-              },
-            ),
+              }).toList();
+
+              final List<_Review> all = [
+                ...submitted,
+                ...reviews,
+              ].take(reviews.length).toList();
+
+              if (all.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 30),
+                  child: Center(
+                    child: Text('No reviews yet'),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (int i = 0; i < all.length; i++) ...[
+                    _ReviewRow(review: all[i]),
+
+                    if (i != all.length - 1)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: AppColors.listDivider,
+                        ),
+                      ),
+                  ],
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -344,7 +406,10 @@ class _ReviewsCard extends StatelessWidget {
   }
 }
 
-/// Immutable review row data.
+// --------------------------------------------------
+// REVIEW MODEL
+// --------------------------------------------------
+
 class _Review {
   const _Review({
     required this.initials,
@@ -361,92 +426,114 @@ class _Review {
   final String comment;
 }
 
+// --------------------------------------------------
+// REVIEW ROW
+// --------------------------------------------------
+
 class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({required this.review});
+  const _ReviewRow({
+    required this.review,
+  });
 
   final _Review review;
 
-  static const _name = TextStyle(
+  static const TextStyle _nameStyle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w700,
-    height: 1.0,
     color: AppColors.textPrimary,
   );
-  static const _date = TextStyle(
+
+  static const TextStyle _dateStyle = TextStyle(
     fontSize: 10,
     fontWeight: FontWeight.w400,
-    height: 1.0,
     color: AppColors.listSubtitle,
   );
-  static const _comment = TextStyle(
-    fontSize: 14,
+
+  static const TextStyle _commentStyle = TextStyle(
+    fontSize: 13,
+    height: 1.45,
     fontWeight: FontWeight.w400,
-    height: 1.4,
     color: AppColors.listSubtitle,
   );
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          left: 22,
-          top: 8,
-          child: Container(
-            width: 36,
-            height: 36,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
               color: AppColors.listIconTile,
               shape: BoxShape.circle,
             ),
-            child: Text(review.initials, style: _name),
+            child: Text(
+              review.initials,
+              style: _nameStyle,
+            ),
           ),
-        ),
-        Positioned(left: 70, top: 10, child: Text(review.name, style: _name)),
-        Positioned(right: 22, top: 11, child: Text(review.date, style: _date)),
-        Positioned(
-          left: 70,
-          top: 30,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var s = 0; s < 5; s++) ...[
-                Icon(
-                  Icons.star,
-                  size: 12,
-                  color: s < review.rating
-                      ? AppColors.ratingStar
-                      : AppColors.chipBorder,
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        review.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _nameStyle,
+                      ),
+                    ),
+
+                    const SizedBox(width: 6),
+
+                    Text(
+                      review.date,
+                      style: _dateStyle,
+                      textAlign: TextAlign.end,
+                    ),
+                  ],
                 ),
-                if (s < 4) const SizedBox(width: 2),
+
+                const SizedBox(height: 5),
+
+                Row(
+                  children: List.generate(5, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(
+                        Icons.star,
+                        size: 13,
+                        color: index < review.rating
+                            ? AppColors.ratingStar
+                            : AppColors.chipBorder,
+                      ),
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: 7),
+
+                Text(
+                  review.comment,
+                  style: _commentStyle,
+                  softWrap: true,
+                ),
               ],
-            ],
+            ),
           ),
-        ),
-        Positioned(
-          left: 70,
-          top: 50,
-          child: SizedBox(
-            width: 272,
-            child: Text(review.comment, style: _comment),
-          ),
-        ),
-        const SizedBox.shrink(),
-      ],
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 1,
-      child: ColoredBox(color: AppColors.listDivider),
+        ],
+      ),
     );
   }
 }
