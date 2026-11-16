@@ -349,7 +349,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       top: 587.8,
                       child: _WelcomeBack(),
                     ),
-                    const Positioned(left: 166, top: 579, child: _Wave()),
+                    // const Positioned(left: 166, top: 579, child: _Wave()),
                     const Positioned(
                       left: 24,
                       right: 0,
@@ -556,23 +556,23 @@ class _WelcomeBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(AppStrings.trOf(context, 'Welcome back'), style: AppTextStyles.welcomeBack);
+    return Text(AppStrings.trOf(context, 'Welcome back 👋'), style: AppTextStyles.welcomeBack);
   }
 }
 
-class _Wave extends StatelessWidget {
-  const _Wave();
+// class _Wave extends StatelessWidget {
+//   const _Wave();
 
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      WelcomeSellerScreen.waveAsset,
-      width: 28,
-      height: 28,
-      fit: BoxFit.fill,
-    );
-  }
-}
+//   @override
+//   // Widget build(BuildContext context) {
+//   //   return Image.asset(
+//   //     WelcomeSellerScreen.waveAsset,
+//   //     width: 28,
+//   //     height: 28,
+//   //     fit: BoxFit.fill,
+//   //   );
+//   // }
+// }
 
 class _PhoneHint extends StatelessWidget {
   const _PhoneHint();

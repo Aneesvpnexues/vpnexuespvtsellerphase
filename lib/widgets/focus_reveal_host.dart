@@ -95,13 +95,20 @@ class _FocusRevealHostState extends State<FocusRevealHost>
       ancestor: viewportObject,
     );
 
-    final double limit = position.viewportDimension - widget.margin;
-    double delta = 0;
-    if (bottom.dy > limit) {
-      delta = bottom.dy - limit;
-    } else if (top.dy < widget.margin) {
-      delta = top.dy - widget.margin;
-    }
+    // Keep extra space below the focused field so the Send OTP
+// button is also visible above the keyboard.
+const double extraScrollSpace = 90;
+
+final double limit =
+    position.viewportDimension - widget.margin - extraScrollSpace;
+
+double delta = 0;
+
+if (bottom.dy > limit) {
+  delta = bottom.dy - limit;
+} else if (top.dy < widget.margin) {
+  delta = top.dy - widget.margin;
+}
     if (delta == 0) return;
 
     final double target = (position.pixels + delta).clamp(
