@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/api_config.dart';
 import 'data/app_storage.dart';
 import 'data/product_store.dart';
+import 'data/seller_profile_store.dart';
 import 'data/session_store.dart';
 import 'data/user_store.dart';
 import 'l10n/app_languages.dart';
@@ -58,8 +59,9 @@ Future<void> _initFirebase() async {
 
 /// Loads the persistent local storage once before the first frame, so the
 /// one-time splash flag ([SplashScreen.hasSeenSplash]), the restored session
-/// (whether it was opened by login or sign-up) and every registered sign-up
-/// account are readable synchronously from the very first build.
+/// (whether it was opened by login or sign-up), every registered sign-up
+/// account and the saved onboarding progress are readable synchronously from
+/// the very first build.
 ///
 /// If storage is unavailable (e.g. a broken platform channel or a widget
 /// test without a mock) the app still boots with in-memory defaults: the
@@ -70,8 +72,12 @@ Future<void> _hydrateStorage() async {
     final AppStorage storage = await AppStorage.create();
     await SessionStore.instance.attachStorage(storage);
     await UserStore.instance.attachStorage(storage);
-  } catch (_) {
-    // Run in-memory; every store keeps its defaults.
+    await SellerProfileStore.instance.attachStorage(storage);
+  } catch (error) {
+    // Run in-memory; every store keeps its defaults. The debug log matters:
+    // without persisted storage a restart looks like a fresh install and the
+    // seller is asked to sign in again, so the cause must be visible.
+    debugPrint('Local storage unavailable, running in-memory: $error');
   }
 }
 

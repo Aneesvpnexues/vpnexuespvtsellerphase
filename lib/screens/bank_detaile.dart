@@ -267,6 +267,19 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
     }
 
     if (!mounted) return;
+
+    // Bank Details is the last onboarding section, so record it the way the
+    // business and KYC screens do: a relaunch then resumes on Home instead
+    // of asking for the account all over again. Saving locally counts as
+    // done — the same rule the offline onboarding path uses everywhere else.
+    final SellerProfileStore store = SellerProfileStore.instance;
+    store.setCompletion(
+      profileComplete: store.profileComplete,
+      bankComplete: true,
+      verificationComplete: store.verificationComplete,
+      personalComplete: store.personalComplete,
+    );
+
     if (widget.addMode) {
       Navigator.pop(context, true);
       return;

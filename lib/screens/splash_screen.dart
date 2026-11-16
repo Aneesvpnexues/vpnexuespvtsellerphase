@@ -14,7 +14,6 @@ import '../theme/app_colors.dart';
 import '../screens/bank_detaile.dart';
 import '../screens/business_details_screen.dart';
 import '../screens/location_confirm_screen.dart';
-import '../screens/location_screen.dart';
 import '../screens/seller_home_screen.dart';
 import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
@@ -39,13 +38,14 @@ import '../screens/welcome_seller_screen.dart';
 /// navigation uses `pushReplacement`, so the splash never stays in the back
 /// stack.
 ///
-/// On cold start, [_SplashScreenState] checks whether a Firebase Auth session
-/// already exists. A session opened by **login** (OTP) resumes straight on the
-/// home page — the same destination the OTP flow uses — while a session opened
-/// by **sign-up** resumes at the first incomplete onboarding section (or STEP
-/// 01 when nothing has been saved yet), so a pending page is never skipped in
-/// favour of Home. Without a session the splash remains and tapping the arrow
-/// opens the login flow.
+/// On cold start, [_SplashScreenState] restores the locally persisted
+/// session ([SessionStore]) — the record that the Login (OTP) and Sign Up
+/// flows both write and that only Logout removes. A session opened by
+/// **login** resumes straight on the home page — the same destination the
+/// OTP flow uses — while a session opened by **sign-up** resumes at the
+/// first incomplete onboarding section, read from the flags saved on this
+/// device, so a pending page is never skipped in favour of Home. Without a
+/// session the splash remains and tapping the arrow opens the login flow.
 ///
 /// The splash is shown only once per install: the first launch after
 /// installing. Tapping the arrow (or an automatic session resume) persists
@@ -123,54 +123,94 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  /// On cold start, check whether a Firebase Auth session already exists.
-  /// If signed in, restore [AuthFlow.instance.firebaseUid], re-fetch that
-  /// user's products from Supabase and check Supabase for an existing profile
-  /// matching the verified phone number. A session opened by login (OTP)
-  /// continues straight on Home — exactly like the OTP flow — while a
-  /// sign-up session resumes at the first incomplete onboarding section (or
-  /// STEP 01 when nothing has been saved yet), so a pending page cannot be
-  /// skipped. Without a session a first run stays on the splash so the user
-  /// can tap to log in; a later run skips the artwork and opens Welcome.
+  /// On cold start, decide where this launch continues.
+  ///
+  /// The locally persisted [SessionStore] is the authority: it is written by
+  /// both the OTP login flow and the Sign Up form, and removed only by
+  /// Logout, so an authenticated seller is never sent back to the Welcome
+  /// screen. Firebase Auth is consulted only to enrich that record with the
+  /// live UID and verified phone number — a sign-up session has no Firebase
+  /// user, and a Firebase session that failed to restore is not a logout.
+  ///
+  /// A session opened by **login** (OTP) continues straight on Home — exactly
+  /// like the OTP flow — after that seller's rows have been re-fetched. A
+  /// session opened by **sign-up** resumes at the first incomplete onboarding
+  /// section, decided from the flags persisted on this device (merged with
+  /// Supabase when a UID exists to query it with), so a pending page cannot
+  /// be skipped. Without a session a first run stays on the splash so the
+  /// user can tap to log in; a later run skips the artwork and opens Welcome.
   Future<void> _restoreSession() async {
     if (!mounted) return;
 
-    String? uid;
-    String? phone;
+    final SessionStore session = SessionStore.instance;
     final ({String uid, String phone})? debugSeller =
         SplashScreen.debugSignedInSeller;
+
+    // No persisted record means there is nothing to resume — Logout deletes
+    // that record, which is exactly what makes signing out stick across
+    // restarts.
+    if (!session.isAuthenticated && debugSeller == null) {
+      if (_firstRun) {
+        // First run without a session: the artwork stays up and the arrow
+        // button opens the login flow.
+        setState(() => _checking = false);
+      } else {
+        // Later launch without a session: no artwork at all — continue on
+        // the Welcome / login screen as soon as the first frame is on
+        // screen.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _openWelcome());
+      }
+      return;
+    }
+
+    // UID and phone: the live Firebase user when there is one, otherwise the
+    // values the session recorded when the seller signed in.
+    String uid = session.uid.trim();
+    String phone = session.phone;
     if (debugSeller != null) {
-      uid = debugSeller.uid;
+      uid = debugSeller.uid.trim();
       phone = debugSeller.phone;
     } else {
-      User? currentUser;
-      try {
-        currentUser = FirebaseAuth.instance.currentUser;
-      } catch (_) {
-        currentUser = null;
+      final User? firebaseUser = await _firebaseUser();
+      if (firebaseUser != null) {
+        uid = firebaseUser.uid.trim();
+        phone = firebaseUser.phoneNumber ?? phone;
       }
-      uid = currentUser?.uid;
-      phone = currentUser?.phoneNumber;
     }
 
     if (!mounted) return;
-    if (uid != null && uid.isNotEmpty) {
+
+    // A resumed session means the one-time splash has been served, so the
+    // next launch goes straight to the destination instead of the artwork.
+    SplashScreen.markSplashSeen();
+
+    if (uid.isNotEmpty) {
       AuthFlow.instance.firebaseUid = uid;
       AuthFlow.instance.verified = true;
+    }
 
-      // A resumed session means the one-time splash has been served, so the
-      // next launch goes straight to the destination instead of the artwork.
-      SplashScreen.markSplashSeen();
+    final SellerProfileStore store = SellerProfileStore.instance;
 
-      // Clear any stale data from a previous login session.
-      SellerProfileStore.instance.resetCompletionFlags();
-      ProductStore.instance.clear();
-      WalletStore.instance.reset();
+    // Capture what this device has already finished *before* the flags are
+    // cleared below: the clear stops stale in-memory state leaking into the
+    // refetch, and a refetch that never arrives (offline start) must not
+    // wipe a section the seller has completed.
+    bool locationComplete = store.locationComplete;
+    bool profileComplete = store.profileComplete;
+    bool bankComplete = store.bankComplete;
+    bool verificationComplete = store.verificationComplete;
+    bool personalComplete = store.personalComplete;
 
-      // Set the user_id for product queries and all user-scoped lookups.
-      ProductStore.instance.userId = uid;
-      SellerProfileStore.instance.userId = uid;
+    // Clear any stale data from a previous login session.
+    store.resetCompletionFlags();
+    ProductStore.instance.clear();
+    WalletStore.instance.reset();
 
+    // Set the user_id for product queries and all user-scoped lookups.
+    ProductStore.instance.userId = uid;
+    store.userId = uid;
+
+    if (uid.isNotEmpty) {
       // Retry a location write that failed while offline (marker left by
       // LocationConfirmScreen). Runs in the background; the store hydration
       // below still shows the last-known address meanwhile.
@@ -190,14 +230,16 @@ class _SplashScreenState extends State<SplashScreen> {
       // Look up this seller's Supabase rows by the verified phone number.
       // Number-agnostic: exact E.164 -> last 10 digits -> Firebase UID, and
       // bank/KYC are always checked under both candidate ids.
+      //
+      // A sign-up session usually has neither a UID nor a Firebase user, and
+      // then no lookup runs at all: its route comes from the flags persisted
+      // on this device, and a phone-only match could land on somebody else's
+      // row.
       if (mounted) {
         try {
           final api = SupabaseProductApi();
           api.userId = uid;
-          final profile = await api.getProfileByPhone(
-            phone ?? '',
-            userId: uid,
-          );
+          final profile = await api.getProfileByPhone(phone, userId: uid);
 
           final String profileUserId =
               (profile?['user_id'] ?? '').toString().trim();
@@ -220,18 +262,16 @@ class _SplashScreenState extends State<SplashScreen> {
             bankDetails = SupabaseProductApi.mostCompleteBankAccount(accounts);
             // Publish every row to the store so Profile / Bank screens show
             // the saved account immediately instead of a placeholder.
-            SellerProfileStore.instance.setBankAccounts(accounts);
+            store.setBankAccounts(accounts);
             verificationDetails =
                 await api.getVerificationForUsers(candidateIds);
 
             // Load active bank account ID from seller_profiles
-            if (SellerProfileStore.instance.userId.isNotEmpty) {
+            if (store.userId.isNotEmpty) {
               final activeBankId = await api.getActiveBankAccountId(
-                SellerProfileStore.instance.userId,
+                store.userId,
               );
-              SellerProfileStore.instance.setActiveBankAccountId(
-                activeBankId,
-              );
+              store.setActiveBankAccountId(activeBankId);
             }
           }
 
@@ -244,71 +284,75 @@ class _SplashScreenState extends State<SplashScreen> {
               _populateProfileStore(profile);
             }
 
-          final bool locationComplete =
-              profile != null && _isLocationComplete(profile);
-          final bool profileComplete =
-              profile != null && _isProfileComplete(profile);
-          final bool personalComplete =
-              profile != null && _isPersonalComplete(profile);
-          final bool bankComplete =
-              bankDetails != null && _isBankComplete(bankDetails);
-          final bool verificationComplete = verificationDetails != null &&
-              _isVerificationComplete(verificationDetails);
-
-          SellerProfileStore.instance.setCompletion(
-            profileComplete: profileComplete,
-            bankComplete: bankComplete,
-            verificationComplete: verificationComplete,
-            personalComplete: personalComplete,
-          );
-
-          // A login session continues straight on Home (the OTP flow sends
-          // the seller to the same place); a sign-up session still walks the
-          // onboarding steps so no pending page is skipped.
-          if (SessionStore.instance.method == SessionStore.loginMethod) {
-            _openHome();
-          } else {
-            _navigateBasedOnCompletion(
-              profileComplete: profileComplete,
-              bankComplete: bankComplete,
-              verificationComplete: verificationComplete,
-              personalComplete: personalComplete,
-              locationComplete: locationComplete,
-            );
-          }
-          return;
+            // Merge with what this device already recorded: a section the
+            // seller finished here is never asked for again, even when the
+            // backend row lags behind (the same rule
+            // SellerBackendSync.mergeCompletion applies).
+            locationComplete = locationComplete ||
+                (profile != null && _isLocationComplete(profile));
+            profileComplete = profileComplete ||
+                (profile != null && _isProfileComplete(profile));
+            personalComplete = personalComplete ||
+                (profile != null && _isPersonalComplete(profile));
+            bankComplete =
+                bankComplete || (bankDetails != null && _isBankComplete(bankDetails));
+            verificationComplete = verificationComplete ||
+                (verificationDetails != null &&
+                    _isVerificationComplete(verificationDetails));
           }
         } catch (_) {
-          // Supabase lookup failed — treat the seller as having no saved
-          // rows and restart onboarding below.
+          // Supabase lookup failed — the flags saved on this device still
+          // decide the route below.
         }
       }
+    }
 
-      // No Supabase data found for this seller. A login session lands on
-      // Home — the OTP flow sends the seller to the same place — while a
-      // sign-up session restarts the onboarding steps at STEP 01. A session
-      // with no recorded method (saved by an older build) keeps the original
-      // behavior and restarts at Verify Your Details, so a pending onboarding
-      // page is never skipped in favour of Home.
-      if (!mounted) return;
-      final String method = SessionStore.instance.method;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => method == SessionStore.loginMethod
-              ? const SellerHomeScreen()
-              : method == SessionStore.signupMethod
-                  ? const Step01LocationScreen()
-                  : const VerifyDetaileScreen(),
-        ),
-      );
-    } else if (_firstRun) {
-      // First run without a session: the artwork stays up and the arrow
-      // button opens the login flow.
-      setState(() => _checking = false);
+    if (!mounted) return;
+
+    // Persist the merged answer so the next launch resumes from exactly
+    // here, even when the backend could not be reached on this one.
+    store.setCompletion(
+      profileComplete: profileComplete,
+      bankComplete: bankComplete,
+      verificationComplete: verificationComplete,
+      personalComplete: personalComplete,
+    );
+    store.setLocationComplete(locationComplete);
+
+    // A login session continues straight on Home (the OTP flow sends the
+    // seller to the same place); a sign-up session — and a record saved by
+    // an older build, which stored no method — still walks the onboarding
+    // steps so no pending page is skipped in favour of Home.
+    if (session.method == SessionStore.loginMethod) {
+      _openHome();
     } else {
-      // Later launch without a session: no artwork at all — continue on the
-      // Welcome / login screen as soon as the first frame is on screen.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openWelcome());
+      _navigateBasedOnCompletion(
+        profileComplete: profileComplete,
+        bankComplete: bankComplete,
+        verificationComplete: verificationComplete,
+        personalComplete: personalComplete,
+        locationComplete: locationComplete,
+      );
+    }
+  }
+
+  /// Returns the Firebase user for this device, or null.
+  ///
+  /// Waits for the first auth-state event before reading [currentUser]: on a
+  /// cold start Firebase may still be restoring its own persisted user while
+  /// the splash is building, and mistaking that instant for "signed out"
+  /// would send a logged-in seller back to the Welcome screen. A missing
+  /// Firebase app, an error or a timeout all just mean "no Firebase user" —
+  /// the local session still decides the route.
+  Future<User?> _firebaseUser() async {
+    try {
+      await FirebaseAuth.instance.authStateChanges().first.timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => null,
+          );
+      return FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return null;
     }
   }
 

@@ -350,6 +350,9 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     // reads businessLocation/businessAddress — mirror the pick so all of
     // them switch to it right away.
     store.setBusinessLocation(location: label, address: address);
+    // STEP 01 is done the moment the pick is confirmed — record it so a
+    // relaunch mid-onboarding resumes on the next unfinished page, not here.
+    store.setLocationComplete(true);
     unawaited(_saveLocation());
 
     // Supabase is the source the app reads back on every login. Capture the

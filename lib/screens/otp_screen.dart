@@ -188,12 +188,15 @@ class _OtpScreenState extends State<OtpScreen> {
 
     // Record that this session was opened through Login (OTP). The splash
     // screen uses it on the next launch to continue on Home instead of
-    // restarting the onboarding steps. Recorded before the Supabase lookup
-    // so an unreachable backend can never send a login back to onboarding.
+    // restarting the onboarding steps — and, because the UID is stored with
+    // it, to re-run every user-scoped lookup even if Firebase has not
+    // restored its own session yet. Recorded before the Supabase lookup so
+    // an unreachable backend can never send a login back to onboarding.
     SessionStore.instance.startSession(
       phone: firebasePhone ?? widget.phone,
       userName: SellerProfileStore.instance.name,
       method: SessionStore.loginMethod,
+      uid: firebaseUid,
     );
 
     // Look up the seller's Supabase rows for whatever phone number was just
@@ -228,6 +231,7 @@ class _OtpScreenState extends State<OtpScreen> {
             phone: firebasePhone ?? widget.phone,
             userName: SellerProfileStore.instance.name,
             method: SessionStore.loginMethod,
+            uid: firebaseUid,
           );
         }
 

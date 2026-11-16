@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
+import 'app_storage.dart';
 
 /// Persists a seller profile and returns the `user_id` the
 /// `public.seller_profiles` row is keyed by.
@@ -53,6 +57,11 @@ class SellerProfileStore extends ChangeNotifier {
 
   static final SellerProfileStore instance = SellerProfileStore();
 
+  /// Persistent backing for the onboarding flags, attached once at boot from
+  /// `main()`. Null before that (and in tests without a fake), in which case
+  /// the flags live in memory only.
+  KeyValueStore? _storage;
+
   static const String defaultName = 'Ramesh Kumar';
   static const String defaultMobile = '+91 12345 67890';
 
@@ -88,6 +97,12 @@ class SellerProfileStore extends ChangeNotifier {
 
   /// Completion status of each onboarding section, populated from Supabase
   /// after Firebase OTP login. Used to skip already-completed pages.
+  ///
+  /// All five flags are mirrored into [StorageKeys.onboardingKey] (see
+  /// [attachStorage]), so a sign-up session — which has no Firebase UID to
+  /// read them back from Supabase — still resumes at the right step after a
+  /// relaunch.
+  bool _locationComplete = false;
   bool _profileComplete = false;
   bool _bankComplete = false;
   bool _verificationComplete = false;
@@ -191,6 +206,9 @@ class SellerProfileStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether STEP 01 (location picked on the map) has been confirmed.
+  bool get locationComplete => _locationComplete;
+
   /// Whether the seller profile section is complete (name, business name,
   /// phone, location, address all populated).
   bool get profileComplete => _profileComplete;
@@ -221,8 +239,27 @@ class SellerProfileStore extends ChangeNotifier {
   /// Line under the profile name: seller type + confirmed location.
   String get sellerSummary => '${_sellerType.label}, $locationDisplay';
 
+  /// Attaches persistent [storage] and reloads the saved onboarding flags
+  /// (app relaunch). Called once at boot from `main()`.
+  Future<void> attachStorage(KeyValueStore storage) async {
+    _storage = storage;
+    final Map<String, Object?> saved =
+        _decodeFlags(storage.readString(StorageKeys.onboardingKey));
+    _locationComplete = saved['location'] == true;
+    _profileComplete = saved['profile'] == true;
+    _bankComplete = saved['bank'] == true;
+    _verificationComplete = saved['verification'] == true;
+    _personalComplete = saved['personal'] == true;
+    notifyListeners();
+  }
+
   /// Marks all completion flags as incomplete — used when logging out or
   /// switching accounts so stale data doesn't leak between users.
+  ///
+  /// Memory only, on purpose: Splash clears the flags before it re-reads the
+  /// sections from Supabase, and a failed refetch (offline start) must not
+  /// wipe what the seller already finished. [reset] is the variant that also
+  /// clears the persisted record.
   void resetCompletionFlags() {
     _profileComplete = false;
     _bankComplete = false;
@@ -230,7 +267,16 @@ class SellerProfileStore extends ChangeNotifier {
     _personalComplete = false;
   }
 
-  /// Sets completion flags from fetched Supabase data.
+  /// Records that STEP 01 (location) was confirmed and persists it, so the
+  /// sign-up flow does not restart on the map page after a relaunch.
+  void setLocationComplete(bool value) {
+    if (_locationComplete == value) return;
+    _locationComplete = value;
+    notifyListeners();
+    _persistOnboarding();
+  }
+
+  /// Sets completion flags from fetched Supabase data (and persists them).
   void setCompletion({
     required bool profileComplete,
     required bool bankComplete,
@@ -242,6 +288,7 @@ class SellerProfileStore extends ChangeNotifier {
     _verificationComplete = verificationComplete;
     _personalComplete = personalComplete;
     notifyListeners();
+    _persistOnboarding();
   }
 
   /// Sets delivery options (buyer pickup / delivery toggles).
@@ -285,6 +332,9 @@ class SellerProfileStore extends ChangeNotifier {
     _sellerType = sellerType;
     _personalComplete = name.trim().isNotEmpty && mobile.trim().isNotEmpty;
     notifyListeners();
+    // Personal Details is an onboarding section like any other: record it so
+    // the seller is not sent through it again after a relaunch.
+    _persistOnboarding();
   }
 
   /// Saves Business & Farm details entered on the Business & Farm screen.
@@ -337,7 +387,41 @@ class SellerProfileStore extends ChangeNotifier {
     _pickedLongitude = null;
     _bankAccounts = [];
     _activeBankIndex = 0;
+    _locationComplete = false;
     resetCompletionFlags();
     notifyListeners();
+    // Logging out drops the saved onboarding record too, so the next seller
+    // to sign up on this device starts at STEP 01 instead of inheriting the
+    // sections the previous one finished.
+    _persistOnboarding();
+  }
+
+  static Map<String, Object?> _decodeFlags(String? raw) {
+    if (raw == null || raw.isEmpty) return const <String, Object?>{};
+    try {
+      final Object? decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic>
+          ? decoded
+          : const <String, Object?>{};
+    } catch (_) {
+      return const <String, Object?>{};
+    }
+  }
+
+  void _persistOnboarding() {
+    final KeyValueStore? storage = _storage;
+    if (storage == null) return;
+    storage
+        .writeString(
+          StorageKeys.onboardingKey,
+          jsonEncode(<String, Object?>{
+            'location': _locationComplete,
+            'profile': _profileComplete,
+            'bank': _bankComplete,
+            'verification': _verificationComplete,
+            'personal': _personalComplete,
+          }),
+        )
+        .ignore();
   }
 }

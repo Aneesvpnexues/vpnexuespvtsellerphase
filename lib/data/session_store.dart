@@ -37,6 +37,7 @@ class SessionStore extends ChangeNotifier {
   String _phone = '';
   String _userName = '';
   String _method = '';
+  String _uid = '';
 
   bool get isAuthenticated => _authenticated;
 
@@ -48,6 +49,12 @@ class SessionStore extends ChangeNotifier {
 
   /// How the session was opened: 'signup' or 'login'.
   String get method => _method;
+
+  /// Firebase UID recorded when the session was opened, so user-scoped
+  /// lookups (products, profile, bank, KYC) still work after a relaunch even
+  /// when Firebase itself has not restored its own session yet. Empty for
+  /// sign-up sessions, which never create a Firebase user.
+  String get uid => _uid;
 
   /// Whether [phone] + [otp] is the fixed credential pair this build accepts.
   static bool credentialsValid({required String phone, required String otp}) =>
@@ -70,6 +77,7 @@ class SessionStore extends ChangeNotifier {
       _phone = map['phone'] as String? ?? '';
       _userName = map['userName'] as String? ?? '';
       _method = map['method'] as String? ?? '';
+      _uid = map['uid'] as String? ?? '';
       notifyListeners();
     } catch (_) {
       // Corrupt session record — treat as signed out.
@@ -79,18 +87,25 @@ class SessionStore extends ChangeNotifier {
 
   /// Opens a session for the phone number [phone] and notifies listeners.
   ///
-  /// [method] records how the session started ('signup' or 'login') and
-  /// [userName] is the seller's display name. The session is persisted so an
-  /// app relaunch restores it.
+  /// [method] records how the session started ('signup' or 'login'),
+  /// [userName] is the seller's display name and [uid] is the Firebase UID
+  /// behind the session when one is known. An empty [uid] keeps whatever the
+  /// session already recorded, so a later `startSession` call that only
+  /// refreshes the display name never drops the id. The session is persisted
+  /// so an app relaunch restores it.
   void startSession({
     required String phone,
     required String userName,
     required String method,
+    String uid = '',
   }) {
     _authenticated = true;
     _phone = phone.trim();
     _userName = userName.trim();
     _method = method;
+    if (uid.trim().isNotEmpty) {
+      _uid = uid.trim();
+    }
     notifyListeners();
     _persist();
   }
@@ -102,6 +117,7 @@ class SessionStore extends ChangeNotifier {
     _phone = '';
     _userName = '';
     _method = '';
+    _uid = '';
     notifyListeners();
     final KeyValueStore? storage = _storage;
     if (storage != null) {
@@ -120,6 +136,7 @@ class SessionStore extends ChangeNotifier {
             'phone': _phone,
             'userName': _userName,
             'method': _method,
+            'uid': _uid,
           }),
         )
         .ignore();

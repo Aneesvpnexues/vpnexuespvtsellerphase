@@ -12,6 +12,15 @@ abstract final class StorageKeys {
   static const String sellerProfileKey = 'seller_profile';
   static const String productsKey = 'products';
 
+  /// JSON `location/profile/bank/verification/personal` booleans recording
+  /// which onboarding sections this device has already finished.
+  ///
+  /// Kept apart from [sessionKey] because it is business data, not session
+  /// state — but it is what lets a sign-up session resume at the first
+  /// incomplete step after a relaunch, when there is no Firebase UID to read
+  /// the same answer back from Supabase.
+  static const String onboardingKey = 'onboarding_progress';
+
   /// Set once the one-time splash screen has been dismissed. Uninstalling
   /// the app clears the preferences, so a fresh install shows the splash
   /// exactly once again.
