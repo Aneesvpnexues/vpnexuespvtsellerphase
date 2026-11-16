@@ -27,28 +27,8 @@ class OrderDetailsScreen extends StatelessWidget {
   Future<void> _confirmReject(BuildContext context) async {
     final bool? reject = await showDialog<bool>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(AppStrings.trOf(dialogContext, 'Reject this order?')),
-        content: Text(
-          AppStrings.trOf(
-            dialogContext,
-            'The buyer will be notified that you declined this order.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(AppStrings.trOf(dialogContext, 'Cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(
-              AppStrings.trOf(dialogContext, 'Reject'),
-              style: const TextStyle(color: AppColors.attentionRed),
-            ),
-          ),
-        ],
-      ),
+      barrierColor: const Color(0x66000000),
+      builder: (BuildContext dialogContext) => const _RejectConfirmDialog(),
     );
     if (reject == true && context.mounted) {
       Navigator.of(context).pop();
@@ -84,23 +64,9 @@ class OrderDetailsScreen extends StatelessWidget {
                 left: 21,
                 top: 1424,
                 width: 364,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                height: 48,
+                child: _RejectButton(
                   onTap: () => _confirmReject(context),
-              child: SizedBox(
-                height: 16,
-                child: Text(
-                  AppStrings.trOf(context, 'Reject order'),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.attentionRed,
-                  ),
-                ),
-              ),
                 ),
               ),
               Positioned(left: 21, top: 1494, child: const _SlideAccept()),
@@ -108,6 +74,162 @@ class OrderDetailsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Destructive "Reject order" action below the content cards.
+///
+/// It is drawn as a full-width tinted pill that shares the exact horizontal
+/// box of the slide-to-accept bar below it (`left: 21, width: 364` on the
+/// 412-wide artboard), so the two bottom actions line up edge to edge.
+class _RejectButton extends StatelessWidget {
+  const _RejectButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: HoverPress.button(
+        child: Container(
+          key: const ValueKey('reject-order-button'),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.attentionRedBg,
+            borderRadius: const BorderRadius.all(Radius.circular(24)),
+            border: Border.all(color: const Color(0x59E4604F)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.close_rounded, size: 17, color: AppColors.attentionRed),
+              const SizedBox(width: 7),
+              Text(
+                AppStrings.trOf(context, 'Reject order'),
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                  color: AppColors.attentionRed,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Confirmation sheet for rejecting an order: rounded white card, warning
+/// icon tile, and a neutral/confirm action pair (outlined "Cancel" +
+/// filled red "Reject").
+
+class _RejectConfirmDialog extends StatelessWidget {
+  const _RejectConfirmDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('reject-order-dialog'),
+      backgroundColor: AppColors.cardWhite,
+      elevation: 8,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+      ),
+
+      // Overall dialog spacing
+      titlePadding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(28, 16, 28, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+      actionsAlignment: MainAxisAlignment.center,
+      actionsOverflowButtonSpacing: 12,
+
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: AppColors.attentionRedBg,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.highlight_off_rounded,
+              size: 30,
+              color: AppColors.attentionRed,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            AppStrings.trOf(context, 'Reject this order?'),
+            textAlign: TextAlign.center,
+            style: AppTextStyles.sectionHeader,
+          ),
+        ],
+      ),
+
+      content: Text(
+        AppStrings.trOf(
+          context,
+          'The buyer will be notified that you declined this order.',
+        ),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 14,
+          height: 1.6,
+          color: AppColors.textSecondary,
+        ),
+      ),
+
+      actions: [
+        SizedBox(
+          width: 116,
+          height: 46,
+          child: HoverPress.button(
+            child: OutlinedButton(
+              key: const ValueKey('reject-dialog-cancel'),
+              onPressed: () => Navigator.of(context).pop(false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.darkGreenInk,
+                side: const BorderSide(
+                  color: AppColors.fieldBorder,
+                ),
+                backgroundColor: AppColors.surface,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(23)),
+                ),
+              ),
+              child: Text(AppStrings.trOf(context, 'Cancel')),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 116,
+          height: 46,
+          child: HoverPress.button(
+            child: FilledButton(
+              key: const ValueKey('reject-dialog-confirm'),
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.attentionRed,
+                foregroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(23)),
+                ),
+              ),
+              child: Text(AppStrings.trOf(context, 'Reject')),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
