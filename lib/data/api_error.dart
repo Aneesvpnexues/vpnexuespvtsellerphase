@@ -10,6 +10,18 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+
+  /// TEMPORARY offline-onboarding switch.
+  ///
+  /// True when a call failed only because backend configuration is missing
+  /// ("Supabase is not configured." / "Cloudinary is not configured.").
+  /// While Supabase is still being set up, the sign-up steps use this to
+  /// continue to the next page instead of blocking on the save, so the whole
+  /// STEP 01 -> Home walk can be tested.
+  ///
+  /// Flip this to `false` once Supabase is configured to restore the
+  /// original blocking behavior everywhere (the call sites keep working).
+  bool get isMissingConfiguration => message.endsWith('not configured.');
 }
 
 String apiErrorMessage(http.Response response, String fallback) {

@@ -24,6 +24,14 @@ class SessionStore extends ChangeNotifier {
   /// The only OTP the Login flow accepts.
   static const String validOtp = '786123';
 
+  /// [method] of a session opened by the Login (OTP) flow: the seller
+  /// continues straight on the home page, on this launch and on relaunch.
+  static const String loginMethod = 'login';
+
+  /// [method] of a session opened through the Sign Up form: the seller walks
+  /// the onboarding steps and only reaches Home once every step is done.
+  static const String signupMethod = 'signup';
+
   KeyValueStore? _storage;
   bool _authenticated = false;
   String _phone = '';

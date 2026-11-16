@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
+import '../data/session_store.dart';
 import '../data/wallet_store.dart';
 import '../l10n/app_languages.dart';
 import '../l10n/app_strings.dart';
@@ -56,6 +57,9 @@ class SettingsScreen extends StatelessWidget {
                     ProductStore.instance.clear();
                     SellerProfileStore.instance.reset();
                     WalletStore.instance.reset();
+                    // Drop the local session too, so the next launch has no
+                    // login/sign-up method to resume and starts fresh.
+                    SessionStore.instance.endSession();
                     await AuthFlow.instance.signOut();
                     navigator.pushReplacement(
                       MaterialPageRoute<void>(

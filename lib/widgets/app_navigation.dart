@@ -13,6 +13,7 @@ import '../screens/order_privew.dart';
 import '../screens/product_details_screen.dart';
 import '../screens/review_ratings_page.dart';
 import '../screens/verify_detaile.dart';
+import '../screens/verification_kyc_screen.dart';
 import '../screens/wallet_page.dart';
 import '../screens/profile_screen.dart';
 import '../screens/seller_home_screen.dart';
@@ -228,6 +229,16 @@ void goToVerifyDetails(BuildContext context) {
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.verifyDetails),
       builder: (_) => const VerifyDetaileScreen(),
+    ),
+  );
+}
+
+/// Opens the verification (KYC) details screen (Zeplin 161).
+void goToVerificationKyc(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.verificationKyc),
+      builder: (_) => const VerificationKycScreen(),
     ),
   );
 }

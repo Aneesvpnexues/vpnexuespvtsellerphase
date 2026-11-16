@@ -5,7 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/api_config.dart';
+import 'data/app_storage.dart';
 import 'data/product_store.dart';
+import 'data/session_store.dart';
+import 'data/user_store.dart';
 import 'l10n/app_languages.dart';
 import 'l10n/app_strings.dart';
 import 'l10n/locale_service.dart';
@@ -17,6 +20,7 @@ import 'services/notification_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiConfig.load();
+  await _hydrateStorage();
   await LocaleService.instance.hydrate();
   await _initFirebase();
   SystemChrome.setSystemUIOverlayStyle(
@@ -49,6 +53,25 @@ Future<void> _initFirebase() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (error) {
     debugPrint('Firebase unavailable, skipping init: $error');
+  }
+}
+
+/// Loads the persistent local storage once before the first frame, so the
+/// one-time splash flag ([SplashScreen.hasSeenSplash]), the restored session
+/// (whether it was opened by login or sign-up) and every registered sign-up
+/// account are readable synchronously from the very first build.
+///
+/// If storage is unavailable (e.g. a broken platform channel or a widget
+/// test without a mock) the app still boots with in-memory defaults: the
+/// splash flag then reads as "not seen" and the splash shows again, which
+/// matches the pre-persistence behavior.
+Future<void> _hydrateStorage() async {
+  try {
+    final AppStorage storage = await AppStorage.create();
+    await SessionStore.instance.attachStorage(storage);
+    await UserStore.instance.attachStorage(storage);
+  } catch (_) {
+    // Run in-memory; every store keeps its defaults.
   }
 }
 

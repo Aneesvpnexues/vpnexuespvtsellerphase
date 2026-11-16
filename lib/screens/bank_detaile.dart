@@ -252,19 +252,29 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       );
       if (!mounted) return;
       if (saved != null) _mergeSavedRow(saved);
-      if (widget.addMode) {
-        Navigator.pop(context, true);
+    } on ApiException catch (error) {
+      // TEMPORARY (offline onboarding): while Supabase is not configured,
+      // the last step continues as if the save succeeded instead of
+      // blocking — see ApiException.isMissingConfiguration.
+      if (!error.isMissingConfiguration) {
+        if (mounted) _showMessage(error.message);
         return;
       }
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-        (route) => false,
-      );
-    } on ApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      debugPrint('Bank: skipping remote save (${error.message})');
     } catch (_) {
       if (mounted) _showMessage(AppStrings.trOf(context, 'Could not save bank details. Please try again.'));
+      return;
     }
+
+    if (!mounted) return;
+    if (widget.addMode) {
+      Navigator.pop(context, true);
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
+      (route) => false,
+    );
   }
 
   /// Keeps [SellerProfileStore] in sync with the row just written so the
