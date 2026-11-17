@@ -648,13 +648,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 top: 717.7,
               ),
               _Text(
-                SellerProfileStore.instance.locationDisplay,
+                SellerProfileStore.instance.displayLocation,
                 _Styles.rowValue,
                 left: 89,
                 top: 731.8,
                 width: 240,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.start,
               ),
               const _Text(
                 'Performance',

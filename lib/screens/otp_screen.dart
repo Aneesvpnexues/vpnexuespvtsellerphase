@@ -359,8 +359,9 @@ class _OtpScreenState extends State<OtpScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    // Location/address live on the profile row too — without them every
-    // home/profile/order screen shows the hardcoded placeholder forever.
+    // The seller's chosen location travels with the profile row: it must be
+    // restored, otherwise every screen falls back to a placeholder city and
+    // the place picked during login disappears (BUG_SELLER_023).
     final String location =
         (profile['location'] ?? '').toString().trim();
     final String address =

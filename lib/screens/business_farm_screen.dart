@@ -35,7 +35,18 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
   final MapController _mapController = MapController();
   List<Marker> _markers = [];
+
+  /// Where the map opens. Starts on the placeholder city only until the
+  /// seller's own coordinates are seeded in [initState] (BUG_SELLER_023).
   LatLng _center = const LatLng(12.9716, 77.5946);
+
+  /// True once the map can be moved. A geocode that finishes before the map
+  /// finishes rendering is queued in [_pendingMove] and applied on ready,
+  /// instead of being dropped (which left the map on another city).
+  bool _mapReady = false;
+  LatLng? _pendingMove;
+  double _pendingZoom = 14;
+
   Timer? _geocodeDebounce;
   bool _syncingFromMap = false;
   int _geocodeSeq = 0;
@@ -81,11 +92,10 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           : '5',
     );
 
-    _locationController = TextEditingController(
-      text: profile.businessLocation.isNotEmpty
-          ? profile.businessLocation
-          : 'Salem, Tamil Nadu',
-    );
+    // Address & Location opens on the place the seller already chose — the
+    // login location pick first, then a previously saved address — never on
+    // a hardcoded city (BUG_SELLER_023).
+    _locationController = TextEditingController(text: profile.displayLocation);
 
     _manualCropController = TextEditingController();
 
@@ -97,9 +107,15 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     _locationController.addListener(_refresh);
     _locationController.addListener(_onLocationEdited);
 
-    // Place a pin at the saved address on first build.
-    _geocodeDebounce =
-        Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
+    // Place a pin at the saved address on first build. Saved coordinates are
+    // used straight away so the map cannot open on some other city; without
+    // them the address text is geocoded instead.
+    if (profile.pickedLatitude != null && profile.pickedLongitude != null) {
+      _setPin(LatLng(profile.pickedLatitude!, profile.pickedLongitude!));
+    } else {
+      _geocodeDebounce =
+          Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
+    }
   }
 
   void _refresh() {
@@ -145,15 +161,41 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
 
   void _placePin(LatLng point) {
-    setState(() {
-      _center = point;
-      _markers = [
-        Marker(
-          point: point,
-          child: const Icon(Icons.location_on, size: 36, color: Colors.red),
-        ),
-      ];
-    });
+    _setPin(point);
+    setState(() {});
+  }
+
+  /// Records the pin without triggering a rebuild — used from [initState],
+  /// where the first build is still on its way.
+  void _setPin(LatLng point) {
+    _center = point;
+    _markers = [
+      Marker(
+        point: point,
+        child: const Icon(Icons.location_on, size: 36, color: Colors.red),
+      ),
+    ];
+  }
+
+  void _onMapReady() {
+    _mapReady = true;
+    final LatLng? pending = _pendingMove;
+    if (pending == null) return;
+    _pendingMove = null;
+    _mapController.move(pending, _pendingZoom);
+  }
+
+  /// Moves the map to [point], remembering the target while the map is still
+  /// rendering so a lookup that finishes first is applied the moment the map
+  /// is ready — otherwise the move was dropped and the map kept showing the
+  /// placeholder city.
+  void _moveMap(LatLng point, double zoom) {
+    if (_mapReady) {
+      _mapController.move(point, zoom);
+    } else {
+      _pendingMove = point;
+      _pendingZoom = zoom;
+    }
   }
 
   Future<void> _geocodeTypedAddress() async {
@@ -180,7 +222,15 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       }
       final LatLng point = LatLng(hit.$1, hit.$2);
       _placePin(point);
-      _mapController.move(point, 14);
+      _moveMap(point, 14);
+      // Keep the shared profile in lock-step with what the map shows, so
+      // every other screen (Home, Profile, Address & Location) reads the
+      // same place the map is pointing at (BUG_SELLER_023).
+      SellerProfileStore.instance.setPickedLocation(
+        label: query,
+        latitude: point.latitude,
+        longitude: point.longitude,
+      );
     } catch (_) {
       // Geocoding is best-effort; ignore network/parse failures.
     }
@@ -289,6 +339,12 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       address: display,
     );
     _syncingFromMap = false;
+    // The pin is the seller's actual spot: remember where it sits so the map
+    // reopens there (the text is published when the seller saves).
+    SellerProfileStore.instance.setPickedLocation(
+      latitude: point.latitude,
+      longitude: point.longitude,
+    );
     _refresh();
   }
 
@@ -300,18 +356,30 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   /// tap Save again.
   Future<void> _saveChanges() async {
     final profile = SellerProfileStore.instance;
+    final String location = _locationController.text.trim();
 
     profile.saveBusinessDetails(
       name: profile.name,
       business: _businessNameController.text.trim(),
       phone: profile.mobile,
-      location: _locationController.text.trim(),
+      location: location,
       address: profile.businessAddress.isNotEmpty
           ? profile.businessAddress
-          : _locationController.text.trim(),
+          : location,
 
       // Save farm size in acres
       farmSize: _farmSizeController.text.trim(),
+    );
+
+    // This card is also the app's source of truth for the seller's place, so
+    // the saved text (and the pin it was geocoded to, when there is one) is
+    // published there too — otherwise Home and Profile would keep showing
+    // whatever was picked earlier (BUG_SELLER_023).
+    profile.setPickedLocation(
+      label: location,
+      latitude: _markers.isNotEmpty ? _center.latitude : profile.pickedLatitude,
+      longitude:
+          _markers.isNotEmpty ? _center.longitude : profile.pickedLongitude,
     );
 
     final messenger = ScaffoldMessenger.of(context);
@@ -786,6 +854,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                 options: MapOptions(
                   initialCenter: _center,
                   initialZoom: 12,
+                  onMapReady: _onMapReady,
                   onTap: (tapPosition, point) {
                     _placePin(point);
                     _reverseGeocodePin(point);

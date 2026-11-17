@@ -15,7 +15,7 @@ void main() {
       theme: ThemeData(fontFamily: 'Inter'),
       home: const Row(
         children: [
-          SizedBox(width: 412, child: OrderDetailsScreen()),
+          SizedBox(width: 412, child: OrderDetailsScreen(order: OrderDetail.sample)),
           SizedBox(width: 412, child: OrderPickupCodeScreen()),
         ],
       ),

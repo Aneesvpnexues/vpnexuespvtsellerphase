@@ -127,6 +127,43 @@ class SellerProfileStore extends ChangeNotifier {
   /// Label picked on the location-confirm map (e.g. "Salem, Tamil Nadu").
   String get pickedLocation => _pickedLocation;
 
+  /// Placeholder the Zeplin screens use while the seller has not picked a
+  /// place yet, so unsaved setups still render like the design.
+  static const String defaultLocation = 'Salem, Tamil Nadu';
+
+  /// The seller's own location: whatever was picked on the login location
+  /// map, else whatever was saved in Business & Farm, else empty when the
+  /// seller has never chosen one.
+  String get savedLocation =>
+      _pickedLocation.isNotEmpty ? _pickedLocation : _businessLocation;
+
+  /// What every screen that shows the seller's place displays —
+  /// [savedLocation] with [defaultLocation] only as a last resort. Home,
+  /// Profile and Address & Location all read this one value, so they can
+  /// never disagree about where the seller is (BUG_SELLER_023).
+  String get displayLocation =>
+      savedLocation.isNotEmpty ? savedLocation : defaultLocation;
+
+  /// Compact badge form of [displayLocation] for tight chips, e.g.
+  /// "Coimbatore, TN" — the city plus the state's initials.
+  String get shortLocation {
+    final List<String> parts =
+        displayLocation
+            .split(',')
+            .map((String part) => part.trim())
+            .where((String part) => part.isNotEmpty)
+            .toList();
+    if (parts.length < 2) return displayLocation;
+    final String state = parts[1];
+    final List<String> words =
+        state.split(RegExp(r'\s+')).where((String word) => word.isNotEmpty).toList();
+    final String code =
+        words.length > 1
+            ? words.map((String word) => word[0].toUpperCase()).join()
+            : (state.length > 2 ? state.substring(0, 2) : state).toUpperCase();
+    return '${parts.first}, $code';
+  }
+
   /// Second address line picked on the map (e.g. "Fairlands, Salem · 636016").
   String get pickedAddress => _pickedAddress;
 
@@ -231,13 +268,12 @@ class SellerProfileStore extends ChangeNotifier {
   String get initials => initialsForName(_name);
 
   /// Address shown wherever a seller's place appears (home header, product
-  /// cards, order screens). Falls back to the old placeholder until the
-  /// seller confirms a location on the map page.
-  String get locationDisplay =>
-      _businessLocation.isNotEmpty ? _businessLocation : 'Salem, Tamil Nadu';
+  /// cards, order screens). Kept as an alias of [displayLocation] so both
+  /// names resolve to the same seller-chosen place.
+  String get locationDisplay => displayLocation;
 
   /// Line under the profile name: seller type + confirmed location.
-  String get sellerSummary => '${_sellerType.label}, $locationDisplay';
+  String get sellerSummary => '${_sellerType.label}, $displayLocation';
 
   /// Attaches persistent [storage] and reloads the saved onboarding flags
   /// (app relaunch). Called once at boot from `main()`.

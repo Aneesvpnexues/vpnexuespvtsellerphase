@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/order_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -68,11 +69,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  void _openOrder() {
+  /// Opens the tapped order's own details: the selected row's
+  /// [OrderDetail] travels with the route, so every order shows its own
+  /// id, buyer, products, totals and status (SELLER-020).
+  void _openOrder(_Order order) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         settings: const RouteSettings(name: AppRoutes.orderDetails),
-        builder: (_) => const OrderDetailsScreen(),
+        builder: (_) => OrderDetailsScreen(order: order.detail),
       ),
     );
   }
@@ -131,7 +135,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           extra: orders[i].extra,
                           price: orders[i].price,
                           status: orders[i].status,
-                          onTap: _openOrder,
+                          onTap: () => _openOrder(orders[i]),
                         ),
                       ),
                   ],
@@ -158,123 +162,238 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 }
 
-/// One order in the list. [recency] is the order number used by the
-/// newest/oldest sorting and [amount] is the numeric total for price sorting.
+/// One order in the list: the Zeplin chrome (tile colour) plus the full
+/// [OrderDetail] that both this row and the Order Details screen render.
+/// Every displayed value is derived from that single [detail], so the list
+/// and the opened summary can never disagree (SELLER-020).
 class _Order {
   const _Order({
-    required this.store,
-    required this.orderId,
-    required this.date,
-    required this.recency,
+    required this.detail,
     required this.iconBg,
     this.iconColor = const Color(0xFF5A4A1A),
-    required this.items,
-    required this.thumbImages,
-    required this.extra,
-    required this.price,
-    required this.amount,
-    required this.status,
   });
 
-  final String store;
-  final String orderId;
-  final String date;
-  final int recency;
+  final OrderDetail detail;
   final Color iconBg;
   final Color iconColor;
-  final String items;
-  final List<String> thumbImages;
-  final String extra;
-  final String price;
-  final int amount;
-  final String status;
+
+  String get store => detail.buyerName;
+  String get orderId => detail.orderId;
+  String get date => detail.date;
+  String get items => '${detail.items.length} items';
+  String get price => detail.totalAmountLabel;
+  int get amount => detail.totalAmount;
+  String get status => detail.status.label;
+
+  /// Order number used by the newest/oldest sorting, read from the id
+  /// (#NX4582 -> 4582), so ids always order the way they read.
+  int get recency => int.tryParse(orderId.replaceAll(RegExp(r'\D'), '')) ?? 0;
+
+  /// First three product thumbnails, like the design tile.
+  List<String> get thumbImages => <String>[
+    for (final OrderDetailItem item in detail.items.take(3)) item.image,
+  ];
+
+  /// Overflow chip shown when the order has more than three products.
+  String get extra =>
+      detail.items.length > 3 ? '+${detail.items.length - 3}' : '';
 }
 
 const _orders = <_Order>[
   _Order(
-    store: 'Akash Stores',
-    orderId: '#NX4582',
-    date: '12 Mar 2024, 10:30 AM',
-    recency: 4582,
     iconBg: AppColors.orderYellowBg,
-    items: '4 items',
-    thumbImages: [
-      'assets/order/tomatoes.png',
-      'assets/order/chillies.png',
-      'assets/order/chillies2.png',
-    ],
-    extra: '+1',
-    price: '\u20B92,400',
-    amount: 2400,
-    status: 'Accepted',
+    detail: OrderDetail(
+      orderId: '#NX4582',
+      date: '12 Mar 2024, 10:30 AM',
+      status: OrderStatus.accepted,
+      pickupType: PickupType.buyerPickup,
+      buyerName: 'Akash Stores',
+      buyerLocation: 'Salem, Tamil Nadu',
+      buyerPhone: '+91 98765 43210',
+      buyerType: 'Retailer',
+      items: <OrderDetailItem>[
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 20,
+          rate: 30,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 15,
+          rate: 40,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies2.png',
+          name: 'Green Chillies',
+          quantity: 25,
+          rate: 24,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 30,
+          rate: 20,
+        ),
+      ],
+      expectedPickupDate: '25 Mar 2024',
+      buyerNote:
+          'Please ensure fresh quality and proper\npacking. Call me before ready for pickup.',
+    ),
   ),
   _Order(
-    store: 'Hotel Green Leaf',
-    orderId: '#NX4581',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4581,
     iconBg: AppColors.orderBlueBg,
-    items: '2 items',
-    thumbImages: [
-      'assets/order/tomatoes.png',
-      'assets/order/chillies.png',
-    ],
-    extra: '',
-    price: '\u20B91,400',
-    amount: 1400,
-    status: 'Accepted',
+    detail: OrderDetail(
+      orderId: '#NX4581',
+      date: '12 Mar 2024, 4:20 AM',
+      status: OrderStatus.accepted,
+      pickupType: PickupType.buyerPickup,
+      buyerName: 'Hotel Green Leaf',
+      buyerLocation: 'Erode, Tamil Nadu',
+      buyerPhone: '+91 98450 12345',
+      buyerType: 'Hotel',
+      items: <OrderDetailItem>[
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 40,
+          rate: 25,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 10,
+          rate: 40,
+        ),
+      ],
+      expectedPickupDate: '14 Mar 2024',
+      buyerNote: 'Please pack the leaves separately.\nReach before 11 AM.',
+    ),
   ),
   _Order(
-    store: 'Annapoorna Mess',
-    orderId: '#NX4580',
-    date: '9 Mar 2024, 1:20 PM',
-    recency: 4580,
     iconBg: AppColors.darkCard,
     iconColor: Colors.white,
-    items: '5 items',
-    thumbImages: [
-      'assets/order/tomatoes.png',
-      'assets/order/chillies.png',
-      'assets/order/chillies2.png',
-    ],
-    extra: '+2',
-    price: '\u20B93,400',
-    amount: 3400,
-    status: 'Pending',
+    detail: OrderDetail(
+      orderId: '#NX4580',
+      date: '9 Mar 2024, 1:20 PM',
+      status: OrderStatus.pending,
+      pickupType: PickupType.delivery,
+      buyerName: 'Annapoorna Mess',
+      buyerLocation: 'Trichy, Tamil Nadu',
+      buyerPhone: '+91 90031 22448',
+      buyerType: 'Mess',
+      items: <OrderDetailItem>[
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 25,
+          rate: 24,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 20,
+          rate: 40,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies2.png',
+          name: 'Green Chillies',
+          quantity: 30,
+          rate: 22,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 30,
+          rate: 30,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 11,
+          rate: 40,
+        ),
+      ],
+      expectedPickupDate: '13 Mar 2024',
+      buyerNote: 'Deliver to the mess kitchen gate.\nCall on arrival.',
+    ),
   ),
   _Order(
-    store: 'Daily Needs',
-    orderId: '#NX4579',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4579,
     iconBg: AppColors.attentionRedBg,
-    items: '4 items',
-    thumbImages: [
-      'assets/order/tomatoes.png',
-      'assets/order/chillies.png',
-      'assets/order/chillies2.png',
-    ],
-    extra: '+1',
-    price: '\u20B93,000',
-    amount: 3000,
-    status: 'Confirmed',
+    detail: OrderDetail(
+      orderId: '#NX4579',
+      date: '12 Mar 2024, 4:20 AM',
+      status: OrderStatus.confirmed,
+      pickupType: PickupType.buyerPickup,
+      buyerName: 'Daily Needs',
+      buyerLocation: 'Pollachi, Tamil Nadu',
+      buyerPhone: '+91 90255 66778',
+      buyerType: 'Shop',
+      items: <OrderDetailItem>[
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 30,
+          rate: 30,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 20,
+          rate: 40,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies2.png',
+          name: 'Green Chillies',
+          quantity: 50,
+          rate: 22,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 10,
+          rate: 20,
+        ),
+      ],
+      expectedPickupDate: '15 Mar 2024',
+      buyerNote: 'Need clean retail packaging.\nNo plastic covers please.',
+    ),
   ),
   _Order(
-    store: 'Daily Needs',
-    orderId: '#NX4579',
-    date: '12 Mar 2024, 4:20 AM',
-    recency: 4579,
     iconBg: AppColors.orderPurpleBg,
-    items: '3 items',
-    thumbImages: [
-      'assets/order/tomatoes.png',
-      'assets/order/chillies.png',
-      'assets/order/chillies2.png',
-    ],
-    extra: '',
-    price: '\u20B93,500',
-    amount: 3500,
-    status: 'Delivered',
+    detail: OrderDetail(
+      orderId: '#NX4578',
+      date: '12 Mar 2024, 4:20 AM',
+      status: OrderStatus.delivered,
+      pickupType: PickupType.buyerPickup,
+      buyerName: 'Daily Needs',
+      buyerLocation: 'Karur, Tamil Nadu',
+      buyerPhone: '+91 93456 88990',
+      buyerType: 'Trader',
+      items: <OrderDetailItem>[
+        OrderDetailItem(
+          image: 'assets/order/tomatoes.png',
+          name: 'Fresh Tomatoes',
+          quantity: 50,
+          rate: 30,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies.png',
+          name: 'Green Chillies',
+          quantity: 40,
+          rate: 40,
+        ),
+        OrderDetailItem(
+          image: 'assets/order/chillies2.png',
+          name: 'Green Chillies',
+          quantity: 20,
+          rate: 20,
+        ),
+      ],
+      expectedPickupDate: '12 Mar 2024',
+      buyerNote: 'Same quality expected for next week\'s order.',
+    ),
   ),
 ];
 
