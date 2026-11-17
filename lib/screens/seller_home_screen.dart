@@ -29,145 +29,173 @@ class SellerHomeScreen extends StatelessWidget {
   static const double designHeight = 885;
   static const double trimTop = 44;
 
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ProductStore.instance,
-      builder: (context, _) {
-        final products = ProductStore.instance.products;
-        return Scaffold(
-          backgroundColor: AppColors.homeBg,
-          body: SafeArea(
-            bottom: false,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DesignCanvas(
-                    designWidth: designWidth,
-                    designHeight: designHeight,
-                    trimTop: trimTop,
-                    child: Stack(
-                      children: [
-                        const Positioned(left: 22, top: 74, child: _Greeting()),
-                        Positioned(
-                          left: 327.5,
-                          top: 73.5,
-                          child: _HeaderButton(
-                            key: const Key('home-notifications'),
-                            icon: Icons.notifications,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const NotificationsScreen(),
-                              ),
-                            ),
+  
+@override
+Widget build(BuildContext context) {
+  return AnimatedBuilder(
+    animation: ProductStore.instance,
+    builder: (context, _) {
+      final products = ProductStore.instance.products;
+
+      return Scaffold(
+        backgroundColor: AppColors.homeBg,
+        body: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: SizedBox(
+                    height: designHeight + -10,
+                    child: DesignCanvas(
+                      designWidth: designWidth,
+                      designHeight: designHeight + -10,
+                      trimTop: trimTop,
+                      child: Stack(
+                        children: [
+                          // Header greeting
+const Positioned(
+  left: 22,
+  top: 58,
+  child: _Greeting(),
+),
+
+// Notification button
+Positioned(
+  right: 75,
+  top: 70,
+  child: _HeaderButton(
+    key: const Key('home-notifications'),
+    icon: Icons.notifications,
+    onTap: () => Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    ),
+    badgeCount: 2, // Replace with actual unread count
+  ),
+),
+
+// Settings button
+Positioned(
+  right: 25,
+  top: 70,
+  child: _HeaderButton(
+    key: const Key('home-settings'),
+    icon: Icons.settings_outlined,
+    onTap: () => goToSettings(context),
+  ),
+),
+
+                          const Positioned(
+                            left: 25,
+                            top: 143,
+                            child: _ActiveOrdersCard(),
                           ),
-                        ),
-                        Positioned(
-                          left: 358.5,
-                          top: 73.5,
-                          child: _HeaderButton(
-                            key: const Key('home-settings'),
-                            icon: Icons.settings_outlined,
-                            onTap: () => goToSettings(context),
+
+                          const Positioned(
+                            left: 25,
+                            top: 361,
+                            child: _SectionTitle('My Products'),
                           ),
-                        ),
-                        const Positioned(
-                          left: 25,
-                          top: 143,
-                          child: _ActiveOrdersCard(),
-                        ),
-                        const Positioned(
-                          left: 25,
-                          top: 361,
-                          child: _SectionTitle('My Products'),
-                        ),
-                        Positioned(
-                          left: 25,
-                          top: 355,
-                          width: 130,
-                          height: 30,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                settings: const RouteSettings(
-                                  name: AppRoutes.products,
-                                ),
-                                builder: (_) => const MyProductsScreen(),
-                              ),
-                            ),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                        Positioned(
-                          left: 25,
-                          right: 0,
-                          top: 389,
-                          height: 204,
-                          child: _HomeProducts(products: products),
-                        ),
-                        const Positioned(
-                          left: 25,
-                          top: 613,
-                          child: _SectionTitle('Sales Overview'),
-                        ),
-                        const Positioned(
-                          left: 25,
-                          top: 644,
-                          child: _SalesCard(),
-                        ),
-                        Positioned(
-                          left: 330,
-                          top: 358,
-                          width: 60,
-                          height: 28,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                settings: const RouteSettings(
-                                  name: AppRoutes.products,
-                                ),
-                                builder: (_) => const MyProductsScreen(),
-                              ),
-                            ),
-                            child: HoverPress.chip(
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    left: 19,
-                                    top: 7,
-                                    child: _ViewAll(),
+
+                          Positioned(
+                            left: 25,
+                            top: 355,
+                            width: 130,
+                            height: 30,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  settings: const RouteSettings(
+                                    name: AppRoutes.products,
                                   ),
-                                ],
+                                  builder: (_) => const MyProductsScreen(),
+                                ),
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+
+                          Positioned(
+                            left: 25,
+                            right: 0,
+                            top: 389,
+                            height: 204,
+                            child: _HomeProducts(products: products),
+                          ),
+
+                          const Positioned(
+                            left: 25,
+                            top: 613,
+                            child: _SectionTitle('Sales Overview'),
+                          ),
+
+                          const Positioned(
+                            left: 25,
+                            top: 644,
+                            child: _SalesCard(),
+                          ),
+
+                          Positioned(
+                            left: 330,
+                            top: 358,
+                            width: 60,
+                            height: 28,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  settings: const RouteSettings(
+                                    name: AppRoutes.products,
+                                  ),
+                                  builder: (_) => const MyProductsScreen(),
+                                ),
+                              ),
+                              child: HoverPress.chip(
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 19,
+                                      top: 7,
+                                      child: _ViewAll(),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: PinnedBottomNav(
-                    selectedIndex: 0,
-                    onHomeTap: () => goToHome(context),
-                    onProductsTap: () => goToProducts(context),
-                    onAddTap: () => goToAddProduct(context),
-                    onOrdersTap: () => goToOrders(context),
-                    onProfileTap: () => goToProfile(context),
-                  ),
+              ),
+
+              // Fixed bottom navigation
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: PinnedBottomNav(
+                  selectedIndex: 0,
+                  onHomeTap: () => goToHome(context),
+                  onProductsTap: () => goToProducts(context),
+                  onAddTap: () => goToAddProduct(context),
+                  onOrdersTap: () => goToOrders(context),
+                  onProfileTap: () => goToProfile(context),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
 }
 
 class _Greeting extends StatelessWidget {
@@ -176,12 +204,17 @@ class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 280,
+      width: 260,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Hello,', style: AppTextStyles.homeHello),
+          Text(
+  'Hello,',
+  style: AppTextStyles.homeHello.copyWith(
+    fontSize: 14,
+  ),
+),
           const SizedBox(height: 2),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -193,7 +226,9 @@ class _Greeting extends StatelessWidget {
                     SellerProfileStore.instance.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.homeName,
+                    style: AppTextStyles.homeName.copyWith(
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
@@ -205,7 +240,11 @@ class _Greeting extends StatelessWidget {
                   color: Color(0xFF2E8B4B),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, size: 10, color: Colors.white),
+                child: const Icon(
+                  Icons.check,
+                  size: 10,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -214,7 +253,9 @@ class _Greeting extends StatelessWidget {
             animation: SellerProfileStore.instance,
             builder: (context, _) => Text(
               SellerProfileStore.instance.locationDisplay,
-              style: AppTextStyles.homeLocation,
+              style: AppTextStyles.homeLocation.copyWith(
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -224,10 +265,16 @@ class _Greeting extends StatelessWidget {
 }
 
 class _HeaderButton extends StatelessWidget {
-  const _HeaderButton({super.key, required this.icon, this.onTap});
+  const _HeaderButton({
+    super.key,
+    required this.icon,
+    this.onTap,
+    this.badgeCount = 0,
+  });
 
   final IconData icon;
   final VoidCallback? onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -235,13 +282,52 @@ class _HeaderButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 40,
+        height: 40,
         decoration: const BoxDecoration(
           color: AppColors.iconCircle,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 17, color: AppColors.iconDark),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 21,
+              color: AppColors.iconDark,
+            ),
+
+            if (badgeCount > 0)
+              Positioned(
+                right: 2,
+                top: 1,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    badgeCount > 99 ? '99+' : '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
