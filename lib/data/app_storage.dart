@@ -34,6 +34,11 @@ abstract final class StorageKeys {
   /// page whose Supabase write failed (offline). Splash retries it on the
   /// next login and clears it once the write succeeds.
   static const String pendingLocationKey = 'pending_location';
+
+  /// Locally saved seller avatar. While the remote (Cloudinary + Supabase)
+  /// upload is temporarily disabled the picked photo is encoded as a base64
+  /// data URI and kept here so it survives app restarts.
+  static const String avatarKey = 'seller_avatar';
 }
 
 /// Minimal synchronous-read / async-write key-value surface the stores

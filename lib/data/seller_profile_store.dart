@@ -250,6 +250,7 @@ class SellerProfileStore extends ChangeNotifier {
     _bankComplete = saved['bank'] == true;
     _verificationComplete = saved['verification'] == true;
     _personalComplete = saved['personal'] == true;
+    _avatarUrl = storage.readString(StorageKeys.avatarKey);
     notifyListeners();
   }
 
@@ -328,13 +329,27 @@ class SellerProfileStore extends ChangeNotifier {
     _name = name.trim();
     _mobile = mobile.trim();
     _email = email.trim();
-    _avatarUrl = avatarUrl;
+    // An avatar is only replaced when one is explicitly saved; callers that
+    // refresh name/phone without touching the picture keep the current avatar.
+    if (avatarUrl != null) _avatarUrl = avatarUrl.trim();
     _sellerType = sellerType;
     _personalComplete = name.trim().isNotEmpty && mobile.trim().isNotEmpty;
     notifyListeners();
     // Personal Details is an onboarding section like any other: record it so
     // the seller is not sent through it again after a relaunch.
     _persistOnboarding();
+    _persistAvatar();
+  }
+
+  /// Persists the locally saved avatar (base64 data URI) so the picture the
+  /// seller picked survives an app relaunch while the remote upload is
+  /// temporarily disabled.
+  void _persistAvatar() {
+    final KeyValueStore? storage = _storage;
+    if (storage == null) return;
+    storage
+        .writeString(StorageKeys.avatarKey, _avatarUrl ?? '')
+        .ignore();
   }
 
   /// Saves Business & Farm details entered on the Business & Farm screen.
@@ -394,6 +409,7 @@ class SellerProfileStore extends ChangeNotifier {
     // to sign up on this device starts at STEP 01 instead of inheriting the
     // sections the previous one finished.
     _persistOnboarding();
+    _persistAvatar();
   }
 
   static Map<String, Object?> _decodeFlags(String? raw) {

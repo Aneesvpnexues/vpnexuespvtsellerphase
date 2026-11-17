@@ -1,10 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/api_error.dart';
-import '../data/cloudinary_upload_api.dart';
-import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
@@ -14,10 +14,11 @@ import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
-import 'bank_detaile.dart';
-import 'business_details_screen.dart';
-import 'seller_home_screen.dart';
-import 'verify_detaile.dart';
+import '../widgets/seller_avatar.dart';
+// import 'bank_detaile.dart';
+// import 'business_details_screen.dart';
+// import 'seller_home_screen.dart';
+// import 'verify_detaile.dart';
 
 /// Personal Details - editable replica of Zeplin "Android Compact - 159"
 /// (project 6a8d49709e27bd8b35213d35,
@@ -51,15 +52,21 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   String? _avatarUrl;
   bool _isUploading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    final SellerProfileStore store = SellerProfileStore.instance;
-    _name = TextEditingController(text: store.name);
-    _mobile = TextEditingController(text: store.mobile);
-    _email = TextEditingController(text: store.email);
-    _sellerType = store.sellerType;
-  }
+ @override
+void initState() {
+  super.initState();
+
+  final SellerProfileStore store = SellerProfileStore.instance;
+
+  _name = TextEditingController(text: store.name);
+  _mobile = TextEditingController(text: store.mobile);
+  _email = TextEditingController(text: store.email);
+
+  _sellerType = store.sellerType;
+
+  // Load previously saved image
+  _avatarUrl = store.avatarUrl;
+}
 
   @override
   void dispose() {
@@ -75,6 +82,10 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// TEMPORARILY local-only avatar save: the Cloudinary + Supabase upload
+  /// pipeline is being reworked, so the picked image is encoded straight into
+  /// a local `data:` URI and persisted through the seller profile store
+  /// instead of being pushed to the remote storage.
   Future<void> _pickAndUploadAvatar() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
@@ -89,40 +100,31 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
 
     try {
       final bytes = await picked.readAsBytes();
-      final uploader = CloudinaryUploadApi(folder: 'seller_avatars');
-      final url = await uploader.upload(
-        ProductPhoto(
-          bytes: Uint8List.fromList(bytes),
-          mimeType: 'image/jpeg',
-          filename: picked.name,
-        ),
-      );
-
-      setState(() => _avatarUrl = url);
-
-      // Save avatar URL to Supabase
-      await SupabaseProductApi().saveSellerProfile(
-        name: _name.text.trim(),
-        mobile: _mobile.text.trim(),
-        sellerType: _sellerType.dbValue,
-        businessName: _name.text.trim(),
-        businessLocation: '',
-        businessAddress: '',
-        avatarUrl: url,
-      );
+      final avatarUrl = _localAvatarDataUri(bytes, picked.name);
+      setState(() => _avatarUrl = avatarUrl);
 
       SellerProfileStore.instance.save(
         name: _name.text.trim(),
         mobile: _mobile.text.trim(),
         email: _email.text.trim(),
         sellerType: _sellerType,
-        avatarUrl: url,
+        avatarUrl: avatarUrl,
       );
     } catch (e) {
-      if (mounted) _showMessage(AppStrings.trOf(context, 'Failed to upload avatar. Please try again.'));
+      if (mounted) _showMessage(AppStrings.trOf(context, 'Failed to save avatar. Please try again.'));
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  /// Encodes the picked avatar bytes as a local `data:<mime>;base64` URI so
+  /// the photo is saved on-device and renders everywhere the avatar shows up
+  /// (Personal Details, Profile) while the remote upload is disabled.
+  String _localAvatarDataUri(List<int> bytes, String filename) {
+    final String mimeType = filename.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : 'image/jpeg';
+    return 'data:$mimeType;base64,${base64Encode(bytes)}';
   }
 
   Future<void> _save() async {
@@ -158,18 +160,9 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
         businessLocation: '',
         businessAddress: '',
       );
-      // Save avatar URL separately if available
-      if (_avatarUrl != null && _avatarUrl!.trim().isNotEmpty) {
-        await SupabaseProductApi().saveSellerProfile(
-          name: name,
-          mobile: mobile,
-          sellerType: _sellerType.dbValue,
-          businessName: name,
-          businessLocation: '',
-          businessAddress: '',
-          avatarUrl: _avatarUrl,
-        );
-      }
+      // TEMPORARILY the avatar is saved locally only (see
+      // [_pickAndUploadAvatar]) — the Supabase avatar write is disabled while
+      // the remote upload pipeline is being reworked.
     } on ApiException catch (error) {
       if (!mounted) return;
       // TEMPORARY (offline onboarding): while Supabase is not configured,
@@ -190,30 +183,13 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       mobile: mobile,
       email: email,
       sellerType: _sellerType,
+      avatarUrl: _avatarUrl,
     );
     if (!mounted) return;
     _showMessage(AppStrings.trOf(context, 'Personal details saved'));
 
-    // Navigate forward based on completion status — skip already-completed
-    // pages so a returning seller never re-enters them.
-    final profile = SellerProfileStore.instance;
-    if (!profile.verificationComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const VerifyDetaileScreen()),
-      );
-    } else if (!profile.profileComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const Step03BusinessDetailsScreen()),
-      );
-    } else if (!profile.bankComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const BankDetaileScreen()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      );
-    }
+    // Return to Profile page after saving.
+Navigator.of(context).pop();
   }
 
   static Future<String> _saveToSupabase({
@@ -282,7 +258,11 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                       setState(() => _sellerType = type),
                 ),
               ),
-              Positioned(left: 25, top: 850, child: _SaveBar(onTap: _save)),
+              Positioned(
+  left: 25,
+  top: 287 + 22 + 25 + 1 + 41 + 9 + 25 + 1 + 41 + 9 + 25 + 1 + 41 + 9 + 25 + 1 + 31 + 22 + 22,
+  child: _SaveBar(onTap: _save),
+),
             ],
           ),
         ),
@@ -311,79 +291,50 @@ class _Avatar extends StatelessWidget {
       height: 105,
       child: Stack(
         children: [
-          Container(
-            width: 105,
-            height: 105,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.personalAvatarStart,
-                  AppColors.personalAvatarEnd,
+          SellerAvatar(
+            initials: initials,
+            avatarUrl: avatarUrl,
+            size: 105,
+          ),
+        Positioned(
+          left: 71,
+          top: 70,
+          child: GestureDetector(
+            onTap: isUploading ? null : onCameraTap,
+            child: Container(
+              width: 33,
+              height: 33,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.personalCameraBorder),
+              ),
+              child: Stack(
+                children: [
+                  const Image(
+                    image: AssetImage('assets/personal/ic_camera.png'),
+                    width: 17,
+                    height: 17,
+                  ),
+                  if (isUploading)
+                    Container(
+                      width: 33,
+                      height: 33,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(
+                          AppColors.personalAvatarEnd,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            child: avatarUrl != null
-                ? ClipOval(
-                    child: Image.network(
-                      avatarUrl!,
-                      width: 105,
-                      height: 105,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          Text(initials, style: AppTextStyles.personalInitials),
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        );
-                      },
-                    ),
-                  )
-                : Text(initials, style: AppTextStyles.personalInitials),
           ),
-          Positioned(
-            left: 71,
-            top: 70,
-            child: GestureDetector(
-              onTap: isUploading ? null : onCameraTap,
-              child: Container(
-                width: 33,
-                height: 33,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.personalCameraBorder),
-                ),
-                child: Stack(
-                  children: [
-                    const Image(
-                      image: AssetImage('assets/personal/ic_camera.png'),
-                      width: 17,
-                      height: 17,
-                    ),
-                    if (isUploading)
-                      Container(
-                        width: 33,
-                        height: 33,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(
-                            AppColors.personalAvatarEnd,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
+      ],
       ),
     );
   }

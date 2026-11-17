@@ -8,6 +8,7 @@ import '../l10n/app_strings.dart';
 import '../services/geo_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/seller_avatar.dart';
 import 'app_navigation.dart';
 import 'artboard.dart';
 import 'bottom_nav_bar.dart';
@@ -116,9 +117,11 @@ class _ProfileShellState extends State<ProfileShell> {
               Positioned(left: 17, top: 560, child: widget.listCard),
               Positioned(
                 left: 0,
+                right: 0,
                 bottom: 0,
-                child: BottomNavBar(
+                child: PinnedBottomNav(
                   selectedIndex: 3,
+                  barHeight: 96,
                   onHomeTap: () => goToHome(context),
                   onProductsTap: () => goToProducts(context),
                   onAddTap: () => goToAddProduct(context),
@@ -456,21 +459,15 @@ class _SellerCard extends StatelessWidget {
                 Positioned(
                   left: 22,
                   top: 15,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.avatarGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      store.initials,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.surface,
-                      ),
+                  child: SellerAvatar(
+                    initials: store.initials,
+                    avatarUrl: store.avatarUrl,
+                    size: 48,
+                    backgroundColor: AppColors.avatarGreen,
+                    initialsStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.surface,
                     ),
                   ),
                 ),
