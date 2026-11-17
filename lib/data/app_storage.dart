@@ -21,6 +21,10 @@ abstract final class StorageKeys {
   /// the same answer back from Supabase.
   static const String onboardingKey = 'onboarding_progress';
 
+  /// Selected UI language code (en, ta, hi, ...). Not session data, so it
+  /// survives logout and splash re-display.
+  static const String languageKey = 'language';
+
   /// Set once the one-time splash screen has been dismissed. Uninstalling
   /// the app clears the preferences, so a fresh install shows the splash
   /// exactly once again.

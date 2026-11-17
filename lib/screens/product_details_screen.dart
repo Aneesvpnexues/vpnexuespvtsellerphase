@@ -10,6 +10,7 @@ import '../theme/app_colors.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
+import 'edit_product_screen.dart';
 
 typedef ProductShare = Future<void> Function(Product product);
 typedef ProductUpdater = Future<Product> Function(Product product);
@@ -801,6 +802,62 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 top: 73,
                 child: PageHeader(title: AppStrings.trOf(context, 'Product Details')),
               ),
+              if (product != null)
+                Positioned(
+                  right: 22,
+                  top: 73,
+                  child: Semantics(
+                    button: true,
+                    label: 'Edit product',
+                    child: GestureDetector(
+                      key: const ValueKey('product-details-edit'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () async {
+                        final Product? saved = await Navigator.of(context)
+                            .push<Product>(
+                          MaterialPageRoute<Product>(
+                            builder: (_) => EditProductScreen(product: product),
+                          ),
+                        );
+                        if (!mounted || saved == null) return;
+                        setState(() {
+                          _loadProduct(saved);
+                        });
+                      },
+                      child: HoverPress.icon(
+                        child: Container(
+                          width: 76,
+                          height: 26,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          decoration: const BoxDecoration(
+                            color: AppColors.limeLight,
+                            borderRadius: BorderRadius.all(Radius.circular(13)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 13,
+                                color: AppColors.darkGreenInk,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.darkGreenInk,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
