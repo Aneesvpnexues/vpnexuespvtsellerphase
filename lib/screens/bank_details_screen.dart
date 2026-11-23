@@ -610,7 +610,7 @@ class _UpiCard extends StatelessWidget {
               left: 66,
               top: 53,
               child: LabelText(
-                'ramesh@upi',
+                'anjith@upi',
                 AppTextStyles.profileMenuTitle,
                 width: 75,
               ),

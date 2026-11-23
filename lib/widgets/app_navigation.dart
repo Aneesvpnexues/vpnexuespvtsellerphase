@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/order_store.dart';
 import '../data/product_store.dart';
 import '../data/sales_store.dart';
 import '../screens/add_products_screen.dart';
@@ -104,7 +105,14 @@ void goToOrders(BuildContext context) {
 
 /// Returns to the My Orders tab after the order flow finishes, dropping the
 /// completed detail/pickup/confirmation states from the stack.
-void goToOrdersRoot(BuildContext context) {
+///
+/// Pass [completedOrderId] to move that order to delivered — the
+/// confirmation screen is the "order completed / collected" state.
+void goToOrdersRoot(BuildContext context, {String? completedOrderId}) {
+  // TEMPORARY: local status move until the database write exists.
+  if (completedOrderId != null) {
+    OrderStore.instance.markOrder(completedOrderId, OrderStatus.delivered);
+  }
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orders),
@@ -139,6 +147,20 @@ void goToAddProduct(BuildContext context) {
   );
 }
 
+/// Opens the Add Products flow in edit mode for an existing [product].
+///
+/// The form opens prefilled and saving updates that same listing. The
+/// returned future completes when the edit screen is closed, so callers can
+/// refresh from the store afterwards.
+Future<void> goToEditProduct(BuildContext context, Product product) async {
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: AppRoutes.addProduct),
+      builder: (_) => AddProductsScreen(product: product),
+    ),
+  );
+}
+
 /// Opens the product-live preview (Zeplin 172).
 void goToOrderPrivew(BuildContext context) {
   Navigator.of(context).push(
@@ -159,12 +181,12 @@ void goToProductDetails(BuildContext context, {Product? product}) {
   );
 }
 
-/// Opens the pickup code entry state (Zeplin 154).
-void goToOrderPickupCode(BuildContext context) {
+/// Opens the pickup code entry state (Zeplin 154) for [orderId].
+void goToOrderPickupCode(BuildContext context, {String orderId = '#NX4582'}) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderPickupCode),
-      builder: (_) => const OrderPickupCodeScreen(),
+      builder: (_) => OrderPickupCodeScreen(orderId: orderId),
     ),
   );
 }
@@ -188,7 +210,7 @@ void goToOrderConfirmation(
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: AppRoutes.orderConfirmation),
-      builder: (_) => const OrderConfirmationScreen(),
+      builder: (_) => OrderConfirmationScreen(orderId: orderId),
     ),
   );
 }

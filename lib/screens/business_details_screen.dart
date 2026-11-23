@@ -118,10 +118,13 @@ class _Step03BusinessDetailsScreenState
     super.dispose();
   }
 
+  bool _saving = false;
+
   Future<void> _openVerifyDetails() async {
-    if (!_allFilled) return;
+    if (!_allFilled || _saving) return;
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    setState(() => _saving = true);
 
     final SellerProfileSaver save = widget.profileSaver ??
         Step03BusinessDetailsScreen.debugProfileSaver ??
@@ -136,24 +139,24 @@ class _Step03BusinessDetailsScreenState
         businessAddress: _address.text.trim(),
       );
     } on ApiException catch (error) {
+      // The save did not happen: stay on this step and show the server's
+      // real message. Nothing is marked complete and no success is faked.
       if (!mounted) return;
-      // TEMPORARY (offline onboarding): while Supabase is not configured,
-      // skip the remote save and keep walking the steps instead of
-      // blocking — see ApiException.isMissingConfiguration.
-      if (!error.isMissingConfiguration) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
-        return;
-      }
-      debugPrint('Step 03: skipping remote save (${error.message})');
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      return;
     } catch (_) {
       if (!mounted) return;
+      setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.trOf(context, 'Could not save business profile. Please try again.'))),
       );
       return;
     }
+    if (!mounted) return;
+    setState(() => _saving = false);
 
     final SellerProfileStore profile = SellerProfileStore.instance;
     profile.saveBusinessDetails(
@@ -334,6 +337,7 @@ class _Step03BusinessDetailsScreenState
           ContinueButton(
             buttonKey: const Key('business-continue'),
             enabled: _allFilled,
+            loading: _saving,
             onTap: _openVerifyDetails,
           ),
         ],

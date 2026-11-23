@@ -85,6 +85,10 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
   /// every revisit of this page.
   String? _existingRowId;
 
+  /// True while the bank row is being written, so a double tap can never
+  /// submit the same details twice.
+  bool _saving = false;
+
   @override
   void initState() {
     super.initState();
@@ -208,6 +212,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
   }
 
   Future<void> _continue() async {
+    if (_saving) return;
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
@@ -241,6 +246,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       return;
     }
 
+    setState(() => _saving = true);
     try {
       final Map<String, dynamic>? saved =
           await SupabaseProductApi().saveBankDetails(
@@ -253,25 +259,25 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
       if (!mounted) return;
       if (saved != null) _mergeSavedRow(saved);
     } on ApiException catch (error) {
-      // TEMPORARY (offline onboarding): while Supabase is not configured,
-      // the last step continues as if the save succeeded instead of
-      // blocking — see ApiException.isMissingConfiguration.
-      if (!error.isMissingConfiguration) {
-        if (mounted) _showMessage(error.message);
-        return;
-      }
-      debugPrint('Bank: skipping remote save (${error.message})');
+      // The save did not happen: stay on this step and show the server's
+      // real message. Bank is only marked complete below, after a confirmed
+      // write — never before.
+      if (mounted) setState(() => _saving = false);
+      if (mounted) _showMessage(error.message);
+      return;
     } catch (_) {
+      if (mounted) setState(() => _saving = false);
       if (mounted) _showMessage(AppStrings.trOf(context, 'Could not save bank details. Please try again.'));
       return;
     }
-
     if (!mounted) return;
+    setState(() => _saving = false);
 
-    // Bank Details is the last onboarding section, so record it the way the
-    // business and KYC screens do: a relaunch then resumes on Home instead
-    // of asking for the account all over again. Saving locally counts as
-    // done — the same rule the offline onboarding path uses everywhere else.
+    // Bank Details is the last onboarding section, so record it only now,
+    // after the server confirmed the write: a relaunch then resumes on Home
+    // instead of asking for the account all over again. Nothing is marked
+    // complete before that confirmation — the seller would otherwise be
+    // sent straight back here by the restore.
     final SellerProfileStore store = SellerProfileStore.instance;
     store.setCompletion(
       profileComplete: store.profileComplete,
@@ -511,6 +517,7 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
           ),
           ContinueButton(
             buttonKey: const Key('bank-continue'),
+            loading: _saving,
             onTap: _continue,
           ),
         ],

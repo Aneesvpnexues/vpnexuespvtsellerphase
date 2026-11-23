@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 
+import '../data/order_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -10,13 +12,6 @@ import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import 'order_details_screen.dart';
 
-/// My Orders list — replica of Zeplin
-/// "Android Compact - 132" (project 6a8d49709e27bd8b35213d35,
-/// screen 6ad1ae17402fbd4010868423).
-///
-/// Built against a 412x1154 artboard. Same zoom-scroll pattern as 117/123:
-/// fit width, scroll vertically. The status tabs filter the order list and
-/// the Sort by control opens an ordering sheet.
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
 
@@ -32,26 +27,126 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   _OrderFilter _filter = _OrderFilter.all;
   _OrderSort _sort = _OrderSort.newest;
 
+  final TextEditingController _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
+  @override
+void initState() {
+  super.initState();
+  OrderStore.instance.addListener(_onOrdersChanged);
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {
+      _syncDemoOrdersToStore();
+    }
+  });
+}
+
+  @override
+  void dispose() {
+    OrderStore.instance.removeListener(_onOrdersChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onOrdersChanged() {
+  if (mounted) {
+    setState(() {});
+    _syncDemoOrdersToStore();
+  }
+}
+
+  /// Updates search results immediately while typing.
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value.trim().toLowerCase();
+    });
+  }
+
+  /// Clears the current search.
+  void _clearSearch() {
+    _searchController.clear();
+
+    setState(() {
+      _searchQuery = '';
+    });
+  }
+
+  String _statusOf(_Order order) =>
+      OrderStore.instance.statusFor(order.orderId)?.label ??
+      order.status;
+void _syncDemoOrdersToStore() {
+  final activeCount = _orders.where(
+    (order) => _statusOf(order) == 'Accepted',
+  ).length;
+
+  OrderStore.instance.setDemoActiveOrdersCount(activeCount);
+}
+  /// Checks whether an order matches the search query.
+  ///
+  /// Searches across:
+  /// - Store name
+  /// - Order ID
+  /// - Order number without #
+  /// - Date
+  /// - Number of items
+  /// - Order status
+  /// - Price
+  bool _matchesSearch(_Order order) {
+    if (_searchQuery.isEmpty) return true;
+
+    final searchableText = [
+      order.store,
+      order.orderId,
+      order.orderId.replaceAll('#', ''),
+      order.date,
+      order.items,
+      order.price,
+      order.amount.toString(),
+      _statusOf(order),
+      order.recency.toString(),
+    ].join(' ').toLowerCase();
+
+    return searchableText.contains(_searchQuery);
+  }
+
+  /// Returns orders matching both the selected tab and search query.
   List<_Order> get _visibleOrders {
     final indexed = <(int, _Order)>[
       for (final (index, order) in _orders.indexed)
-        if (_filter.matches(order)) (index, order),
+        if (_filter.matches(_statusOf(order)) &&
+            _matchesSearch(order))
+          (index, order),
     ];
+
     indexed.sort((a, b) {
       final comparison = switch (_sort) {
-        _OrderSort.newest => b.$2.recency.compareTo(a.$2.recency),
-        _OrderSort.oldest => a.$2.recency.compareTo(b.$2.recency),
-        _OrderSort.priceHigh => b.$2.amount.compareTo(a.$2.amount),
-        _OrderSort.priceLow => a.$2.amount.compareTo(b.$2.amount),
+        _OrderSort.newest =>
+          b.$2.recency.compareTo(a.$2.recency),
+        _OrderSort.oldest =>
+          a.$2.recency.compareTo(b.$2.recency),
+        _OrderSort.priceHigh =>
+          b.$2.amount.compareTo(a.$2.amount),
+        _OrderSort.priceLow =>
+          a.$2.amount.compareTo(b.$2.amount),
       };
-      return comparison == 0 ? a.$1.compareTo(b.$1) : comparison;
+
+      return comparison == 0
+          ? a.$1.compareTo(b.$1)
+          : comparison;
     });
+
     return [for (final (_, order) in indexed) order];
   }
 
   void _selectFilter(_OrderFilter filter) {
     if (_filter == filter) return;
-    setState(() => _filter = filter);
+
+    setState(() {
+      _filter = filter;
+    });
   }
 
   Future<void> _showSortOptions() async {
@@ -59,20 +154,32 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
       builder: (_) => _SortSheet(selected: _sort),
     );
+
     if (selected != null && mounted) {
-      setState(() => _sort = selected);
+      setState(() {
+        _sort = selected;
+      });
     }
   }
 
-  void _openOrder() {
+  void _openOrder(_Order order) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        settings: const RouteSettings(name: AppRoutes.orderDetails),
-        builder: (_) => const OrderDetailsScreen(),
+        settings: const RouteSettings(
+          name: AppRoutes.orderDetails,
+        ),
+        builder: (_) => OrderDetailsScreen(
+          orderId: order.orderId,
+          initialStatus: OrderStatus.parseLabel(
+            _statusOf(order),
+          ),
+        ),
       ),
     );
   }
@@ -80,6 +187,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final orders = _visibleOrders;
+
     return Scaffold(
       backgroundColor: AppColors.homeBg,
       body: SafeArea(
@@ -97,17 +205,34 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       left: 0,
                       top: 73,
                       child: PageHeader(
-                        title: AppStrings.trOf(context, 'My Orders'),
-                        backButtonKey: const ValueKey<String>('my-orders-back'),
-                        titleKey: const ValueKey<String>('my-orders-title'),
+                        title: AppStrings.trOf(
+                          context,
+                          'My Orders',
+                        ),
+                        backButtonKey:
+                            const ValueKey<String>(
+                          'my-orders-back',
+                        ),
+                        titleKey: const ValueKey<String>(
+                          'my-orders-title',
+                        ),
                         onBack: () => goToHome(context),
                       ),
                     ),
+
+                    // Search and sort controls.
                     Positioned(
                       left: 22,
                       top: 122,
-                      child: _SearchSort(onSortTap: _showSortOptions),
+                      child: _SearchSort(
+                        controller: _searchController,
+                        onSearchChanged: _onSearchChanged,
+                        onClearSearch: _clearSearch,
+                        onSortTap: _showSortOptions,
+                      ),
                     ),
+
+                    // Order status tabs.
                     Positioned(
                       left: 22,
                       top: 181,
@@ -116,6 +241,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         onSelected: _selectFilter,
                       ),
                     ),
+
+                    // Order cards.
                     for (var i = 0; i < orders.length; i++)
                       Positioned(
                         left: 22,
@@ -130,14 +257,64 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           thumbImages: orders[i].thumbImages,
                           extra: orders[i].extra,
                           price: orders[i].price,
-                          status: orders[i].status,
-                          onTap: _openOrder,
+                          status: _statusOf(orders[i]),
+                          onTap: () => _openOrder(orders[i]),
+                        ),
+                      ),
+
+                    // Empty search/filter result.
+                    if (orders.isEmpty)
+                      Positioned(
+                        left: 22,
+                        top: 275,
+                        width: 368,
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                size: 42,
+                                color: AppColors.tabGray,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'No orders found'
+                                    : 'No orders available',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'Try another order name or number.'
+                                    : 'There are no orders in this category.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.tabGray,
+                                ),
+                              ),
+                              if (_searchQuery.isNotEmpty)
+                                TextButton(
+                                  onPressed: _clearSearch,
+                                  child: const Text(
+                                    'Clear search',
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
             ),
+
+            // Bottom navigation.
             Positioned(
               left: 0,
               right: 0,
@@ -158,8 +335,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 }
 
-/// One order in the list. [recency] is the order number used by the
-/// newest/oldest sorting and [amount] is the numeric total for price sorting.
+/// One order in the list.
 class _Order {
   const _Order({
     required this.store,
@@ -288,11 +464,11 @@ enum _OrderFilter {
 
   final String label;
 
-  bool matches(_Order order) => switch (this) {
+  bool matches(String status) => switch (this) {
     _OrderFilter.all => true,
-    _OrderFilter.active => order.status == 'Accepted',
-    _OrderFilter.pending => order.status == 'Pending',
-    _OrderFilter.confirmed => order.status == 'Confirmed',
+    _OrderFilter.active => status == 'Accepted',
+    _OrderFilter.pending => status == 'Pending',
+    _OrderFilter.confirmed => status == 'Confirmed',
   };
 }
 
@@ -308,9 +484,18 @@ enum _OrderSort {
   final IconData icon;
 }
 
+/// Search and sorting controls.
 class _SearchSort extends StatelessWidget {
-  const _SearchSort({required this.onSortTap});
+  const _SearchSort({
+    required this.controller,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.onSortTap,
+  });
 
+  final TextEditingController controller;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
   final VoidCallback onSortTap;
 
   @override
@@ -320,6 +505,7 @@ class _SearchSort extends StatelessWidget {
       height: 45,
       child: Stack(
         children: [
+          // Working search field.
           Positioned(
             left: 0,
             top: 0,
@@ -328,38 +514,76 @@ class _SearchSort extends StatelessWidget {
               height: 45,
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(14)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(14),
+                ),
               ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: 19,
-                    top: 0,
-                    bottom: 0,
-                    child: Icon(
-                      Icons.search,
-                      size: 14,
-                      color: Color(0x8A000000),
-                    ),
+              child: TextField(
+                key: const ValueKey('order-search-field'),
+                controller: controller,
+                onChanged: onSearchChanged,
+                textInputAction: TextInputAction.search,
+                keyboardType: TextInputType.text,
+                autocorrect: false,
+                enableSuggestions: false,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+                cursorColor: AppColors.primary,
+                decoration: InputDecoration(
+                  hintText: AppStrings.trOf(
+                    context,
+                    'Search orders...',
                   ),
-                  Positioned(
-                    left: 42,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: Text(
-                        AppStrings.trOf(context, 'Search vegetables...'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0x8A000000),
-                        ),
-                      ),
-                    ),
+                  hintStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0x8A000000),
+                    fontWeight: FontWeight.w400,
                   ),
-                ],
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 17,
+                    color: Color(0x8A000000),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 42,
+                    minHeight: 45,
+                  ),
+                  suffixIcon: controller.text.isNotEmpty
+                      ? IconButton(
+                          key: const ValueKey(
+                            'order-search-clear',
+                          ),
+                          onPressed: onClearSearch,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 35,
+                            minHeight: 40,
+                          ),
+                          icon: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Color(0x8A000000),
+                          ),
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 0,
+                  ),
+                  isDense: true,
+                ),
               ),
             ),
           ),
+
+          // Sort button.
           Positioned(
             left: 260,
             top: 0,
@@ -373,17 +597,23 @@ class _SearchSort extends StatelessWidget {
                   height: 45,
                   decoration: const BoxDecoration(
                     color: AppColors.darkCard,
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(14),
+                    ),
                   ),
-                  child: FittedBox(
+                  child: const FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.filter_list, size: 14, color: Colors.white),
+                        Icon(
+                          Icons.filter_list,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                         SizedBox(width: 6),
                         Text(
-                          AppStrings.trOf(context, 'Sort by'),
+                          'Sort by',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -409,8 +639,12 @@ class _SearchSort extends StatelessWidget {
   }
 }
 
+/// Order status tabs.
 class _OrderTabs extends StatelessWidget {
-  const _OrderTabs({required this.selected, required this.onSelected});
+  const _OrderTabs({
+    required this.selected,
+    required this.onSelected,
+  });
 
   final _OrderFilter selected;
   final ValueChanged<_OrderFilter> onSelected;
@@ -423,16 +657,20 @@ class _OrderTabs extends StatelessWidget {
       _OrderFilter.pending => 184,
       _OrderFilter.confirmed => 264,
     };
+
     final double pillWidth = switch (selected) {
       _OrderFilter.all => 99,
       _OrderFilter.active => 60,
       _OrderFilter.pending => 81,
       _OrderFilter.confirmed => 100,
     };
+
     TextStyle styleFor(_OrderFilter filter) => TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w600,
-      color: selected == filter ? AppColors.textPrimary : AppColors.tabGray,
+      color: selected == filter
+          ? AppColors.textPrimary
+          : AppColors.tabGray,
     );
 
     return Container(
@@ -440,7 +678,9 @@ class _OrderTabs extends StatelessWidget {
       height: 45,
       decoration: const BoxDecoration(
         color: Color(0xB8E3F1CC),
-        borderRadius: BorderRadius.all(Radius.circular(28)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(28),
+        ),
       ),
       child: Stack(
         children: [
@@ -454,10 +694,13 @@ class _OrderTabs extends StatelessWidget {
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(23)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(23),
+                ),
               ),
             ),
           ),
+
           Positioned(
             left: 4,
             top: 0,
@@ -470,13 +713,17 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    AppStrings.trOf(context, _OrderFilter.all.label),
+                    AppStrings.trOf(
+                      context,
+                      _OrderFilter.all.label,
+                    ),
                     style: styleFor(_OrderFilter.all),
                   ),
                 ),
               ),
             ),
           ),
+
           Positioned(
             left: 103,
             top: 0,
@@ -489,13 +736,17 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    AppStrings.trOf(context, _OrderFilter.active.label),
+                    AppStrings.trOf(
+                      context,
+                      _OrderFilter.active.label,
+                    ),
                     style: styleFor(_OrderFilter.active),
                   ),
                 ),
               ),
             ),
           ),
+
           Positioned(
             left: 188,
             top: 0,
@@ -508,13 +759,17 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    AppStrings.trOf(context, _OrderFilter.pending.label),
+                    AppStrings.trOf(
+                      context,
+                      _OrderFilter.pending.label,
+                    ),
                     style: styleFor(_OrderFilter.pending),
                   ),
                 ),
               ),
             ),
           ),
+
           Positioned(
             left: 276,
             top: 0,
@@ -527,7 +782,10 @@ class _OrderTabs extends StatelessWidget {
               child: HoverPress.chip(
                 child: Center(
                   child: Text(
-                    AppStrings.trOf(context, _OrderFilter.confirmed.label),
+                    AppStrings.trOf(
+                      context,
+                      _OrderFilter.confirmed.label,
+                    ),
                     style: styleFor(_OrderFilter.confirmed),
                   ),
                 ),
@@ -540,6 +798,7 @@ class _OrderTabs extends StatelessWidget {
   }
 }
 
+/// Sort options bottom sheet.
 class _SortSheet extends StatelessWidget {
   const _SortSheet({required this.selected});
 
@@ -559,15 +818,21 @@ class _SortSheet extends StatelessWidget {
               height: 4,
               decoration: const BoxDecoration(
                 color: AppColors.fieldBorder,
-                borderRadius: BorderRadius.all(Radius.circular(2)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 12),
+
             Row(
               children: [
                 Text(
                   AppStrings.trOf(context, 'Sort by'),
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -579,11 +844,17 @@ class _SortSheet extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 4),
+
             for (final option in _OrderSort.values)
               InkWell(
-                key: ValueKey('order-sort-${option.name}'),
-                borderRadius: const BorderRadius.all(Radius.circular(14)),
+                key: ValueKey(
+                  'order-sort-${option.name}',
+                ),
+                borderRadius: const BorderRadius.all(
+                  Radius.circular(14),
+                ),
                 onTap: () => Navigator.of(context).pop(option),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -600,9 +871,13 @@ class _SortSheet extends StatelessWidget {
                             : AppColors.tabGray,
                       ),
                       const SizedBox(width: 12),
+
                       Expanded(
                         child: Text(
-                          AppStrings.trOf(context, option.label),
+                          AppStrings.trOf(
+                            context,
+                            option.label,
+                          ),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: option == selected
@@ -614,6 +889,7 @@ class _SortSheet extends StatelessWidget {
                           ),
                         ),
                       ),
+
                       if (option == selected)
                         const Icon(
                           Icons.check_circle,
@@ -631,6 +907,7 @@ class _SortSheet extends StatelessWidget {
   }
 }
 
+/// Individual order card.
 class _OrderBlock extends StatelessWidget {
   const _OrderBlock({
     required this.store,
@@ -668,6 +945,7 @@ class _OrderBlock extends StatelessWidget {
         height: 154,
         child: Stack(
           children: [
+            // Top card background.
             Positioned(
               left: 0,
               top: 0,
@@ -676,11 +954,17 @@ class _OrderBlock extends StatelessWidget {
                 height: 69,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  border: Border.all(color: const Color(0x12000000)),
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(24),
+                  ),
+                  border: Border.all(
+                    color: const Color(0x12000000),
+                  ),
                 ),
               ),
             ),
+
+            // Bottom card background.
             Positioned(
               left: 0,
               top: 69,
@@ -689,11 +973,17 @@ class _OrderBlock extends StatelessWidget {
                 height: 85,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  border: Border.all(color: const Color(0x12000000)),
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(24),
+                  ),
+                  border: Border.all(
+                    color: const Color(0x12000000),
+                  ),
                 ),
               ),
             ),
+
+            // Left accent.
             Positioned(
               left: 1,
               top: 19,
@@ -702,10 +992,14 @@ class _OrderBlock extends StatelessWidget {
                 height: 31,
                 decoration: const BoxDecoration(
                   color: AppColors.limeCard,
-                  borderRadius: BorderRadius.all(Radius.circular(2)),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(2),
+                  ),
                 ),
               ),
             ),
+
+            // Store icon.
             Positioned(
               left: 20,
               top: 16,
@@ -714,7 +1008,9 @@ class _OrderBlock extends StatelessWidget {
                 height: 35,
                 decoration: BoxDecoration(
                   color: iconBg,
-                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(10),
+                  ),
                 ),
                 child: Icon(
                   Icons.storefront_outlined,
@@ -723,11 +1019,18 @@ class _OrderBlock extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Store name.
             Positioned(
               left: 65,
               top: 13,
-              child: Text(store, style: AppTextStyles.orderStore),
+              child: Text(
+                store,
+                style: AppTextStyles.orderStore,
+              ),
             ),
+
+            // Order ID and date.
             Positioned(
               left: 65,
               top: 31,
@@ -745,6 +1048,7 @@ class _OrderBlock extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
+
                     Container(
                       width: 3,
                       height: 3,
@@ -753,7 +1057,9 @@ class _OrderBlock extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                     ),
+
                     const SizedBox(width: 6),
+
                     Text(
                       date,
                       style: const TextStyle(
@@ -766,11 +1072,17 @@ class _OrderBlock extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Order status.
             Positioned(
               right: 11,
               top: 9,
-              child: _OrderStatusPill(status: status),
+              child: _OrderStatusPill(
+                status: status,
+              ),
             ),
+
+            // Divider.
             Positioned(
               left: 20,
               top: 68,
@@ -780,6 +1092,8 @@ class _OrderBlock extends StatelessWidget {
                 color: const Color(0x1A000000),
               ),
             ),
+
+            // Item count.
             Positioned(
               left: 20,
               top: 75,
@@ -792,6 +1106,8 @@ class _OrderBlock extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Product thumbnails.
             for (int i = 0; i < thumbImages.length; i++)
               Positioned(
                 left: 20.0 + i * 52.0,
@@ -802,26 +1118,41 @@ class _OrderBlock extends StatelessWidget {
                   clipBehavior: Clip.antiAlias,
                   decoration: const BoxDecoration(
                     color: Color(0xFF7BAE5A),
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(10),
+                    ),
                   ),
                   foregroundDecoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    border: Border.all(color: const Color(0x12000000)),
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(10),
+                    ),
+                    border: Border.all(
+                      color: const Color(0x12000000),
+                    ),
                   ),
                   child: Image.asset(
                     thumbImages[i],
-                    key: ValueKey<String>('order-thumb-$i'),
+                    key: ValueKey<String>(
+                      'order-thumb-$i',
+                    ),
                     width: 46,
                     height: 46,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.eco_outlined,
-                      size: 20,
-                      color: Colors.white,
-                    ),
+                    errorBuilder: (
+                      context,
+                      error,
+                      stackTrace,
+                    ) =>
+                        const Icon(
+                          Icons.eco_outlined,
+                          size: 20,
+                          color: Colors.white,
+                        ),
                   ),
                 ),
               ),
+
+            // Additional products count.
             if (extra.isNotEmpty)
               Positioned(
                 left: 20.0 + thumbImages.length * 52.0,
@@ -832,7 +1163,9 @@ class _OrderBlock extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: AppColors.filterBg,
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(10),
+                    ),
                   ),
                   child: Text(
                     extra,
@@ -844,6 +1177,8 @@ class _OrderBlock extends StatelessWidget {
                   ),
                 ),
               ),
+
+            // Total price.
             Positioned(
               right: 12,
               top: 105,
@@ -861,8 +1196,11 @@ class _OrderBlock extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    AppStrings.trOf(context, 'Total Order'),
-                    style: TextStyle(
+                    AppStrings.trOf(
+                      context,
+                      'Total Order',
+                    ),
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Color(0x59000000),
                       height: 1.0,
@@ -878,8 +1216,11 @@ class _OrderBlock extends StatelessWidget {
   }
 }
 
+/// Order status pill.
 class _OrderStatusPill extends StatelessWidget {
-  const _OrderStatusPill({required this.status});
+  const _OrderStatusPill({
+    required this.status,
+  });
 
   final String status;
 
@@ -887,28 +1228,43 @@ class _OrderStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color bg;
     final Color dot;
+
     switch (status) {
       case 'Accepted':
         bg = AppColors.filterBg;
         dot = AppColors.primary;
+
       case 'Pending':
         bg = AppColors.outOfStockBg;
         dot = AppColors.attentionRed;
+
       case 'Confirmed':
-        bg = Color(0xFFE1EFFA);
-        dot = Color(0xFF1A73E8);
+        bg = const Color(0xFFE1EFFA);
+        dot = const Color(0xFF1A73E8);
+
+      case 'Rejected':
+        bg = AppColors.attentionRedBg;
+        dot = AppColors.attentionRed;
+
       default:
         bg = Colors.white;
         dot = AppColors.tabGray;
     }
+
     return Container(
       width: 73,
       height: 22,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 6,
+      ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        border: Border.all(color: const Color(0x12000000)),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(10),
+        ),
+        border: Border.all(
+          color: const Color(0x12000000),
+        ),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -918,12 +1274,18 @@ class _OrderStatusPill extends StatelessWidget {
             Container(
               width: 5,
               height: 5,
-              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: dot,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 4),
             Text(
               AppStrings.trOf(context, status),
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

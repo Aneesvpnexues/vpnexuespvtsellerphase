@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
+import 'app_storage.dart';
 
 enum ProductStatus { active, outOfStock, draft }
 
@@ -132,6 +136,49 @@ class Product {
     );
   }
 
+  /// Prefix of the ids handed to products that are saved on the device
+  /// while database writes are temporarily disabled (see
+  /// `SellerProductRepository.saveProductsLocally`).
+  static const String localIdPrefix = 'local_';
+
+  /// Whether this product exists only on this device.
+  bool get isLocal => isLocalId(id);
+
+  /// Whether [id] belongs to a product saved only on this device.
+  static bool isLocalId(String id) => id.startsWith(localIdPrefix);
+
+  /// Serializes the product for the on-device record
+  /// (`StorageKeys.productsKey`).
+  ///
+  /// [includePhotos] is false when the record is already close to the size
+  /// limit [ProductStore] allows in SharedPreferences: the listing itself
+  /// is always kept, only its photo bytes are dropped.
+  Map<String, dynamic> toJson({bool includePhotos = true}) {
+    return <String, dynamic>{
+      'id': id,
+      'user_id': userId,
+      'name': name,
+      'category': category,
+      'price': price,
+      'unit': unit,
+      'quantity': quantity,
+      'description': description,
+      'status': status.apiValue,
+      'buyer_pickup_enabled': buyerPickupEnabled,
+      'delivery_enabled': deliveryEnabled,
+      'imageUrls': imageUrls,
+      if (includePhotos)
+        'photos': <Map<String, dynamic>>[
+          for (final ProductPhoto photo in photos)
+            <String, dynamic>{
+              'bytes': base64Encode(photo.bytes),
+              'mime': photo.mimeType,
+              if (photo.filename != null) 'filename': photo.filename,
+            },
+        ],
+    };
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final Object? rawUrls = json['imageUrls'];
     final Object? legacyCover = json['imageUrl'];
@@ -155,9 +202,34 @@ class Product {
       quantity: _int(json['quantity']),
       description: (json['description'] ?? '').toString(),
       status: productStatusFromApi(json['status']?.toString()),
-      photos: const <ProductPhoto>[],
+      photos: _photosFromJson(json['photos']),
       imageUrls: List<String>.unmodifiable(urls),
+      buyerPickupEnabled: json['buyer_pickup_enabled'] != false,
+      deliveryEnabled: json['delivery_enabled'] != false,
     );
+  }
+
+  /// Photo bytes of an on-device record (base64), or none for a record
+  /// saved without photos. A corrupt entry is skipped instead of thrown so
+  /// one bad photo never hides the rest of the saved list.
+  static List<ProductPhoto> _photosFromJson(Object? raw) {
+    if (raw is! List) return const <ProductPhoto>[];
+    final List<ProductPhoto> photos = <ProductPhoto>[];
+    for (final Object? item in raw) {
+      if (item is! Map) continue;
+      final String bytes = (item['bytes'] ?? '').toString();
+      if (bytes.isEmpty) continue;
+      try {
+        photos.add(ProductPhoto(
+          bytes: base64Decode(bytes),
+          mimeType: (item['mime'] ?? 'image/jpeg').toString(),
+          filename: item['filename'] as String?,
+        ));
+      } catch (_) {
+        // Skip just this photo; the rest of the product still restores.
+      }
+    }
+    return photos;
   }
 
   static double _double(Object? value) {
@@ -245,6 +317,7 @@ class ProductStore extends ChangeNotifier {
   final List<Product> _products = <Product>[];
   int _nextId = 1;
   String _userId = '';
+  KeyValueStore? _storage;
 
   List<Product> get products => List<Product>.unmodifiable(_products);
 
@@ -254,6 +327,53 @@ class ProductStore extends ChangeNotifier {
 
   set userId(String value) {
     _userId = value.trim();
+    notifyListeners();
+  }
+
+  /// Attaches persistent [storage] and restores the products already saved
+  /// on this device (app relaunch). Called once at boot from `main()`.
+  ///
+  /// While database writes are disabled (see
+  /// `SellerProductRepository.saveProductsLocally`) this record is the only
+  /// place new products are stored.
+  void attachStorage(KeyValueStore storage) {
+    _storage = storage;
+    hydrateFromStorage();
+  }
+
+  /// Merges the products persisted under [StorageKeys.productsKey] into the
+  /// in-memory list, skipping ids that are already loaded.
+  ///
+  /// Called at boot and again by every repository refresh: the splash and
+  /// OTP flows clear the store right before re-fetching, and products saved
+  /// on this device must come back even when the backend is unreachable.
+  void hydrateFromStorage() {
+    final KeyValueStore? storage = _storage;
+    if (storage == null) return;
+    final List<Product> restored = <Product>[];
+    try {
+      final String? raw = storage.readString(StorageKeys.productsKey);
+      if (raw == null || raw.isEmpty) return;
+      final Object? decoded = jsonDecode(raw);
+      if (decoded is! List) return;
+      for (final Object? row in decoded) {
+        if (row is! Map) continue;
+        final Product product =
+            Product.fromJson(Map<String, dynamic>.from(row));
+        if (product.id.isEmpty || product.name.isEmpty) continue;
+        if (_products.any((Product item) => item.id == product.id)) continue;
+        restored.add(product);
+      }
+    } catch (error) {
+      // A corrupt record must never stop the app from opening.
+      debugPrint('Could not restore locally saved products: $error');
+      return;
+    }
+    if (restored.isEmpty) return;
+    // The record is written in list order (newest first), so restoring at
+    // the front keeps that order.
+    _products.insertAll(0, restored);
+    if (_products.length + 1 > _nextId) _nextId = _products.length + 1;
     notifyListeners();
   }
 
@@ -284,6 +404,7 @@ class ProductStore extends ChangeNotifier {
     );
     _products.insert(0, product);
     notifyListeners();
+    _persist();
     return product;
   }
 
@@ -293,6 +414,7 @@ class ProductStore extends ChangeNotifier {
       ..addAll(products);
     _nextId = _products.length + 1;
     notifyListeners();
+    _persist();
   }
 
   void upsert(Product product) {
@@ -303,6 +425,7 @@ class ProductStore extends ChangeNotifier {
       _products[index] = product;
     }
     notifyListeners();
+    _persist();
   }
 
   void updateProduct(Product product) {
@@ -310,6 +433,7 @@ class ProductStore extends ChangeNotifier {
     if (index == -1) return;
     _products[index] = product;
     notifyListeners();
+    _persist();
   }
 
   bool removeProduct(String id) {
@@ -317,18 +441,62 @@ class ProductStore extends ChangeNotifier {
     if (index == -1) return false;
     _products.removeAt(index);
     notifyListeners();
+    _persist();
     return true;
   }
 
-  void clear() {
-    if (_products.isEmpty) {
-      _nextId = 1;
-      return;
-    }
+  /// Clears the in-memory list — used before a login re-fetches the
+  /// seller's data, and by the Settings logout.
+  ///
+  /// [persist] is false for that pre-refetch clear: products saved on this
+  /// device have to stay on disk so [hydrateFromStorage] can bring them
+  /// back afterwards. The logout keeps the default, so the device really
+  /// forgets the seller's local products.
+  void clear({bool persist = true}) {
+    final bool hadProducts = _products.isNotEmpty;
     _products.clear();
     _nextId = 1;
-    notifyListeners();
+    if (persist) _persist();
+    if (hadProducts) notifyListeners();
   }
+
+  /// Writes the current list to [StorageKeys.productsKey]. Fire-and-forget
+  /// like every other store write: a failed write must not block the UI,
+  /// and the next change simply retries.
+  void _persist() {
+    final KeyValueStore? storage = _storage;
+    if (storage == null) return;
+    final String payload = _encodeForStorage();
+    storage.writeString(StorageKeys.productsKey, payload).ignore();
+  }
+
+  /// JSON record of the list, newest product first.
+  ///
+  /// SharedPreferences keeps the whole record in memory on every launch, so
+  /// its size is capped at [_maxStoredChars]: a listing whose photos would
+  /// push the record past the cap is stored without its photo bytes (the
+  /// row itself always fits), and only when even that does not fit is the
+  /// listing left out. Newest photos are kept first because the list starts
+  /// with the most recently added product.
+  String _encodeForStorage() {
+    final List<Map<String, dynamic>> rows = <Map<String, dynamic>>[];
+    int size = 2; // the surrounding "[]"
+    for (final Product product in _products) {
+      Map<String, dynamic> row = product.toJson();
+      int rowSize = jsonEncode(row).length + 1;
+      if (size + rowSize > _maxStoredChars) {
+        row = product.toJson(includePhotos: false);
+        rowSize = jsonEncode(row).length + 1;
+        if (size + rowSize > _maxStoredChars) break;
+      }
+      rows.add(row);
+      size += rowSize;
+    }
+    return jsonEncode(rows);
+  }
+
+  /// Upper size (in JSON characters) of the on-device product record.
+  static const int _maxStoredChars = 800000;
 }
 
 /// Seeds the three demo products drawn in the Zeplin 117 home strip

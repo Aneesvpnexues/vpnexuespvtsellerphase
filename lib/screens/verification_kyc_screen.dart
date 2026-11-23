@@ -1,15 +1,10 @@
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-import '../data/cloudinary_upload_api.dart';
-import '../data/product_store.dart';
-import '../data/seller_profile_store.dart';
-import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
-import '../services/auth_flow.dart';
 import '../services/kyc_document_validator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -17,17 +12,14 @@ import '../widgets/design_canvas.dart';
 import '../widgets/page_header.dart';
 import '../widgets/label_text.dart';
 
-/// The three KYC documents shown on the verification screen.
-enum _KycDoc { aadhaar, pan, farm }
+/// Three KYC documents.
+enum _KycDoc {
+  aadhaar,
+  pan,
+  farm,
+}
 
-/// Verification (KYC) — Zeplin "Android Compact - 161"
-/// (project 6a8d49709e27bd8b35213d35, screen 6ad1af835d2f94b851860b63).
-///
-/// Built against a 412x917 artboard. Badges reflect whether a *validated*
-/// document URL exists in Supabase (`seller_verify_your_details`): blank or
-/// unreadable images are rejected on pick, on save and again on load
-/// (SELLER-017). Tapping a row opens a sheet to view / edit / save the
-/// document image.
+/// Verification KYC Screen.
 class VerificationKycScreen extends StatefulWidget {
   const VerificationKycScreen({super.key});
 
@@ -36,126 +28,51 @@ class VerificationKycScreen extends StatefulWidget {
   static const double trimTop = 49;
 
   @override
-  State<VerificationKycScreen> createState() => _VerificationKycScreenState();
+  State<VerificationKycScreen> createState() =>
+      _VerificationKycScreenState();
 }
 
-class _VerificationKycScreenState extends State<VerificationKycScreen> {
-  // No document reads as "Verified" until a stored, validated image exists —
-  // the screen must never claim verification it cannot back up (SELLER-017).
-  // The badges start at "Under review" and only flip once
-  // [KycDocumentValidator] has approved the image behind them.
-  bool _aadhaarVerified = false;
-  bool _panVerified = false;
-  bool _farmVerified = false;
+class _VerificationKycScreenState
+    extends State<VerificationKycScreen> {
 
-  String? _aadhaarUrl;
-  String? _panUrl;
-  String? _farmUrl;
+  // Frontend-only document storage.
+  XFile? _aadhaarFile;
+  XFile? _panFile;
+  XFile? _farmFile;
+
+  Uint8List? _aadhaarBytes;
+  Uint8List? _panBytes;
+  Uint8List? _farmBytes;
 
   @override
   void initState() {
     super.initState();
-    _loadKyc();
   }
 
-  Future<void> _loadKyc() async {
-    try {
-      final List<String> candidateIds = <String>{
-        AuthFlow.instance.firebaseUid ?? '',
-        SellerProfileStore.instance.userId,
-      }.where((String id) => id.trim().isNotEmpty).toList();
-      if (candidateIds.isEmpty) return;
-
-      final Map<String, dynamic>? row =
-          await SupabaseProductApi().getVerificationForUsers(candidateIds);
-      if (!mounted) return;
-
-      if (row == null) {
-        // No KYC row yet — nothing has been uploaded.
-        setState(() {
-          _aadhaarUrl = null;
-          _panUrl = null;
-          _farmUrl = null;
-          _aadhaarVerified = false;
-          _panVerified = false;
-          _farmVerified = false;
-        });
-        return;
-      }
-
-      final String aadhaar = _urlOf(row, 'aadhaar_card');
-      final String pan = _urlOf(row, 'pan_card');
-      final String farm = _urlOf(row, 'business_registration');
-
-      // A URL alone must not read as "Verified": every stored image is
-      // downloaded and run through the same blankness check used on upload,
-      // so a blank upload (including one made before this check existed)
-      // never shows a green badge (SELLER-017).
-      final List<bool> validated = await Future.wait<bool>(<Future<bool>>[
-        _isUsableDocument(aadhaar),
-        _isUsableDocument(pan),
-        _isUsableDocument(farm),
-      ]);
-      if (!mounted) return;
-
-      setState(() {
-        _aadhaarUrl = aadhaar.isEmpty ? null : aadhaar;
-        _panUrl = pan.isEmpty ? null : pan;
-        _farmUrl = farm.isEmpty ? null : farm;
-        _aadhaarVerified = validated[0];
-        _panVerified = validated[1];
-        _farmVerified = validated[2];
-      });
-    } catch (_) {
-      // Offline / not configured — every badge stays at "Under review":
-      // verification is never assumed without evidence (SELLER-017).
-    }
-  }
-
-  /// Downloads [url] and applies the same validation as the upload flow.
-  /// Anything empty, unreachable or blank counts as not verified.
-  Future<bool> _isUsableDocument(String url) async {
-    if (url.trim().isEmpty) return false;
-    try {
-      final http.Response response = await http
-          .get(Uri.parse(url.trim()))
-          .timeout(const Duration(seconds: 20));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return false;
-      }
-      final KycDocumentIssue? issue = await KycDocumentValidator.check(
-        response.bodyBytes,
-        mimeType: response.headers['content-type'],
-        filename: Uri.tryParse(url.trim())?.path ?? '',
-      );
-      return issue == null;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static String _urlOf(Map<String, dynamic> row, String key) =>
-      (row[key] ?? '').toString().trim();
-
+  /// Open selected document.
   void _openDoc(_KycDoc doc) {
     final String title;
     final String message;
-    final String? url;
+    final Uint8List? currentBytes;
+
     switch (doc) {
       case _KycDoc.aadhaar:
         title = 'Aadhaar Card';
-        message = 'Your Aadhaar image is shown below. Tap Edit to update it.';
-        url = _aadhaarUrl;
+        message =
+            'Your Aadhaar image is shown below. Tap Edit to update it.';
+        currentBytes = _aadhaarBytes;
+
       case _KycDoc.pan:
         title = 'Pan Card';
-        message = 'Your PAN image is shown below. Tap Edit to update it.';
-        url = _panUrl;
+        message =
+            'Your PAN image is shown below. Tap Edit to update it.';
+        currentBytes = _panBytes;
+
       case _KycDoc.farm:
         title = 'Farm Ownership Certificate';
         message =
-            'Your Farm Ownership Certificate image is shown below. '
-            'Tap Edit to update it.';
-        url = _farmUrl;
+            'Your Farm Ownership Certificate image is shown below. Tap Edit to update it.';
+        currentBytes = _farmBytes;
     }
 
     showModalBottomSheet<void>(
@@ -163,30 +80,46 @@ class _VerificationKycScreenState extends State<VerificationKycScreen> {
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
-      builder: (BuildContext ctx) => _DocSheet(
-        doc: doc,
-        title: title,
-        message: message,
-        currentUrl: url,
-        onSaved: (String newUrl) => _applySaved(doc, newUrl),
-      ),
+      builder: (BuildContext ctx) {
+        return _DocSheet(
+          doc: doc,
+          title: title,
+          message: message,
+          currentBytes: currentBytes,
+          onSaved: (
+            XFile file,
+            Uint8List bytes,
+          ) {
+            _applySaved(doc, file, bytes);
+          },
+        );
+      },
     );
   }
 
-  void _applySaved(_KycDoc doc, String url) {
+  /// Save selected document in frontend memory.
+  void _applySaved(
+    _KycDoc doc,
+    XFile file,
+    Uint8List bytes,
+  ) {
     setState(() {
       switch (doc) {
         case _KycDoc.aadhaar:
-          _aadhaarUrl = url;
-          _aadhaarVerified = true;
+          _aadhaarFile = file;
+          _aadhaarBytes = bytes;
+
         case _KycDoc.pan:
-          _panUrl = url;
-          _panVerified = true;
+          _panFile = file;
+          _panBytes = bytes;
+
         case _KycDoc.farm:
-          _farmUrl = url;
-          _farmVerified = true;
+          _farmFile = file;
+          _farmBytes = bytes;
       }
     });
   }
@@ -203,29 +136,55 @@ class _VerificationKycScreenState extends State<VerificationKycScreen> {
           trimTop: VerificationKycScreen.trimTop,
           child: Stack(
             children: [
+
+              // Page heading.
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: AppStrings.trOf(context, 'Verification (KYC)')),
+                child: PageHeader(
+                  title: AppStrings.trOf(
+                    context,
+                    'Verification (KYC)',
+                  ),
+                ),
               ),
-              const Positioned(left: 22, top: 132, child: _KycBanner()),
+
+              // KYC banner.
+              const Positioned(
+                left: 22,
+                top: 132,
+                child: _KycBanner(),
+              ),
+
+              // Documents card.
               Positioned(
                 left: 22,
                 top: 235,
                 child: _DocumentsCard(
-                  aadhaarVerified: _aadhaarVerified,
-                  panVerified: _panVerified,
-                  farmVerified: _farmVerified,
+                  aadhaarUploaded:
+                      _aadhaarFile != null,
+
+                  panUploaded:
+                      _panFile != null,
+
+                  farmUploaded:
+                      _farmFile != null,
+
                   onDocTap: _openDoc,
                 ),
               ),
+
+              // Footer.
               Positioned(
                 left: 70,
                 top: 528,
                 width: 266,
                 height: 34,
                 child: Text(
-                  AppStrings.trOf(context, 'Your documents are encrypted and only used\nto verify your identity'),
+                  AppStrings.trOf(
+                    context,
+                    'Your documents are encrypted and only used\nto verify your identity',
+                  ),
                   style: AppTextStyles.kycFooter,
                   textAlign: TextAlign.center,
                 ),
@@ -238,6 +197,7 @@ class _VerificationKycScreenState extends State<VerificationKycScreen> {
   }
 }
 
+/// KYC banner.
 class _KycBanner extends StatelessWidget {
   const _KycBanner();
 
@@ -248,10 +208,13 @@ class _KycBanner extends StatelessWidget {
       height: 86,
       decoration: const BoxDecoration(
         color: AppColors.kycBanner,
-        borderRadius: BorderRadius.all(Radius.circular(22)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(22),
+        ),
       ),
       child: Stack(
         children: [
+
           Positioned(
             left: 211,
             top: 0,
@@ -264,6 +227,7 @@ class _KycBanner extends StatelessWidget {
               ),
             ),
           ),
+
           Positioned(
             left: 16,
             top: 16,
@@ -273,29 +237,41 @@ class _KycBanner extends StatelessWidget {
               alignment: Alignment.center,
               decoration: const BoxDecoration(
                 color: AppColors.orderDivider,
-                borderRadius: BorderRadius.all(Radius.circular(14)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(14),
+                ),
               ),
               child: const Image(
-                image: AssetImage('assets/kyc/ic_shield.png'),
+                image: AssetImage(
+                  'assets/kyc/ic_shield.png',
+                ),
                 width: 29,
                 height: 29,
               ),
             ),
           ),
+
           Positioned(
             left: 92,
             top: 22,
             child: LabelText(
-              AppStrings.trOf(context, 'Verified Seller'),
+              AppStrings.trOf(
+                context,
+                'Verified Seller',
+              ),
               AppTextStyles.kycBannerTitle,
               width: 150,
             ),
           ),
+
           Positioned(
             left: 92,
             top: 50,
             child: LabelText(
-              AppStrings.trOf(context, 'Buyer see a green tick on your profile'),
+              AppStrings.trOf(
+                context,
+                'Buyer see a green tick on your profile',
+              ),
               AppTextStyles.kycBannerSub,
               width: 190,
               height: 13,
@@ -307,17 +283,19 @@ class _KycBanner extends StatelessWidget {
   }
 }
 
+/// Documents card.
 class _DocumentsCard extends StatelessWidget {
   const _DocumentsCard({
-    required this.aadhaarVerified,
-    required this.panVerified,
-    required this.farmVerified,
+    required this.aadhaarUploaded,
+    required this.panUploaded,
+    required this.farmUploaded,
     required this.onDocTap,
   });
 
-  final bool aadhaarVerified;
-  final bool panVerified;
-  final bool farmVerified;
+  final bool aadhaarUploaded;
+  final bool panUploaded;
+  final bool farmUploaded;
+
   final ValueChanged<_KycDoc> onDocTap;
 
   @override
@@ -327,11 +305,17 @@ class _DocumentsCard extends StatelessWidget {
       height: 235,
       decoration: BoxDecoration(
         color: AppColors.profileCardBg,
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        border: Border.all(color: Color(0x14000000)),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(20),
+        ),
+        border: Border.all(
+          color: const Color(0x14000000),
+        ),
       ),
       child: Stack(
         children: [
+
+          // Documents heading.
           Positioned(
             left: 22,
             top: 13,
@@ -341,11 +325,17 @@ class _DocumentsCard extends StatelessWidget {
               width: 120,
             ),
           ),
+
+          // Aadhaar icon.
           const Positioned(
             left: 21,
             top: 56,
-            child: _DocTile(icon: 'assets/kyc/ic_credit_card.png'),
+            child: _DocTile(
+              icon: 'assets/kyc/ic_credit_card.png',
+            ),
           ),
+
+          // Aadhaar title.
           Positioned(
             left: 66,
             top: 53,
@@ -355,23 +345,50 @@ class _DocumentsCard extends StatelessWidget {
               width: 120,
             ),
           ),
-          const Positioned(left: 66, top: 79, child: _MaskDots(count: 8)),
+
+          // Aadhaar masked number.
+          const Positioned(
+            left: 66,
+            top: 79,
+            child: _MaskDots(count: 8),
+          ),
+
           const Positioned(
             left: 108,
             top: 68,
-            child: LabelText('4821', AppTextStyles.profileMenuSub, width: 40),
+            child: LabelText(
+              '4821',
+              AppTextStyles.profileMenuSub,
+              width: 40,
+            ),
           ),
+
+          // Aadhaar status.
           Positioned(
             right: 16,
             top: 63,
-            child: _StatusPill(amber: !aadhaarVerified),
+            child: _StatusPill(
+              uploaded: aadhaarUploaded,
+            ),
           ),
-          const Positioned(left: 22, top: 102, child: _Divider()),
+
+          // First divider.
+          const Positioned(
+            left: 22,
+            top: 102,
+            child: _Divider(),
+          ),
+
+          // PAN icon.
           const Positioned(
             left: 21,
             top: 114,
-            child: _DocTile(icon: 'assets/kyc/ic_sim_card.png'),
+            child: _DocTile(
+              icon: 'assets/kyc/ic_sim_card.png',
+            ),
           ),
+
+          // PAN title.
           Positioned(
             left: 66,
             top: 111,
@@ -381,23 +398,51 @@ class _DocumentsCard extends StatelessWidget {
               width: 100,
             ),
           ),
+
+          // PAN masked number.
           const Positioned(
             left: 66,
             top: 126,
-            child: LabelText('ABCDE', AppTextStyles.profileMenuSub, width: 40),
+            child: LabelText(
+              'Not Submitted',
+              AppTextStyles.profileMenuSub,
+              width: 40,
+            ),
           ),
-          const Positioned(left: 103, top: 137, child: _MaskDots(count: 4)),
-          const Positioned(
-            left: 123,
-            top: 126,
-            child: LabelText('f', AppTextStyles.profileMenuSub, width: 20),
-          ),
+
+          // const Positioned(
+          //   left: 103,
+          //   top: 137,
+          //   child: _MaskDots(count: 4),
+          // ),
+
+          // const Positioned(
+          //   left: 123,
+          //   top: 126,
+          //   child: LabelText(
+          //     'f',
+          //     AppTextStyles.profileMenuSub,
+          //     width: 20,
+          //   ),
+          // ),
+
+          // PAN status.
           Positioned(
             right: 16,
             top: 120,
-            child: _StatusPill(amber: !panVerified),
+            child: _StatusPill(
+              uploaded: panUploaded,
+            ),
           ),
-          const Positioned(left: 22, top: 160, child: _Divider()),
+
+          // Second divider.
+          const Positioned(
+            left: 22,
+            top: 160,
+            child: _Divider(),
+          ),
+
+          // Farm certificate icon.
           const Positioned(
             left: 21,
             top: 177,
@@ -406,31 +451,46 @@ class _DocumentsCard extends StatelessWidget {
               color: AppColors.kycAmberTile,
             ),
           ),
+
+          // Farm certificate title.
           Positioned(
             left: 66,
             top: 174,
             width: 120,
             height: 26,
             child: Text(
-              AppStrings.trOf(context, 'Farm Ownership\nCertificate'),
+              AppStrings.trOf(
+                context,
+                'Farm Ownership\nCertificate',
+              ),
               style: AppTextStyles.kycDocTitleTwoLines,
             ),
           ),
+
+          // Farm submission information.
           Positioned(
             left: 66,
             top: 195,
             child: LabelText(
-              AppStrings.trOf(context, 'Submitted 10 Mar 2024'),
+              AppStrings.trOf(
+                context,
+                'Not Submitted',
+              ),
               AppTextStyles.profileMenuSub,
               width: 140,
             ),
           ),
+
+          // Farm status.
           Positioned(
             right: 16,
             top: 186,
-            child: _StatusPill(amber: !farmVerified),
+            child: _StatusPill(
+              uploaded: farmUploaded,
+            ),
           ),
-          // Transparent tap targets over each document row.
+
+          // Aadhaar tap target.
           Positioned(
             left: 8,
             top: 46,
@@ -443,6 +503,8 @@ class _DocumentsCard extends StatelessWidget {
               child: const SizedBox.expand(),
             ),
           ),
+
+          // PAN tap target.
           Positioned(
             left: 8,
             top: 104,
@@ -455,6 +517,8 @@ class _DocumentsCard extends StatelessWidget {
               child: const SizedBox.expand(),
             ),
           ),
+
+          // Farm certificate tap target.
           Positioned(
             left: 8,
             top: 164,
@@ -473,8 +537,12 @@ class _DocumentsCard extends StatelessWidget {
   }
 }
 
+/// Document icon tile.
 class _DocTile extends StatelessWidget {
-  const _DocTile({required this.icon, this.color = AppColors.orderTile});
+  const _DocTile({
+    required this.icon,
+    this.color = AppColors.orderTile,
+  });
 
   final String icon;
   final Color color;
@@ -487,16 +555,24 @@ class _DocTile extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(10),
+        ),
       ),
-      child: Image(image: AssetImage(icon), width: 16, height: 16),
+      child: Image(
+        image: AssetImage(icon),
+        width: 16,
+        height: 16,
+      ),
     );
   }
 }
 
-/// Row of grey dots that mask the middle part of a document number.
+/// Masked document number dots.
 class _MaskDots extends StatelessWidget {
-  const _MaskDots({required this.count});
+  const _MaskDots({
+    required this.count,
+  });
 
   final int count;
 
@@ -512,7 +588,9 @@ class _MaskDots extends StatelessWidget {
             Container(
               width: 4,
               height: 4,
-              margin: EdgeInsets.only(right: i == count - 1 ? 0 : 1),
+              margin: EdgeInsets.only(
+                right: i == count - 1 ? 0 : 1,
+              ),
               decoration: const BoxDecoration(
                 color: AppColors.kycMaskDot,
                 shape: BoxShape.circle,
@@ -524,25 +602,38 @@ class _MaskDots extends StatelessWidget {
   }
 }
 
+/// Status pill:
+/// Not uploaded = Upload.
+/// Uploaded = Under review.
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({this.amber = false, String? label})
-    :         label = label ?? (amber ? 'Under review' : 'Verified');
+  const _StatusPill({
+    required this.uploaded,
+  });
 
-  final bool amber;
-  final String label;
+  final bool uploaded;
 
   @override
   Widget build(BuildContext context) {
+    final String label =
+        uploaded ? 'Under review' : 'Upload';
+
     return Container(
-      width: amber ? 94 : 67,
+      width: uploaded ? 94 : 65,
       height: 19,
       decoration: BoxDecoration(
-        color: amber ? AppColors.kycAmberTile : AppColors.orderTile,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        border: Border.all(color: const Color(0x12000000)),
+        color: uploaded
+            ? AppColors.kycAmberTile
+            : AppColors.orderTile,
+        borderRadius: const BorderRadius.all(
+          Radius.circular(10),
+        ),
+        border: Border.all(
+          color: const Color(0x12000000),
+        ),
       ),
       child: Stack(
         children: [
+
           Positioned(
             left: 10,
             top: 7,
@@ -550,19 +641,20 @@ class _StatusPill extends StatelessWidget {
               width: 4,
               height: 4,
               decoration: BoxDecoration(
-                color: amber
+                color: uploaded
                     ? AppColors.kycAmberText
-                    : AppColors.kycVerifiedText,
+                    : AppColors.darkGreen,
                 shape: BoxShape.circle,
               ),
             ),
           ),
+
           Positioned(
             left: 18,
             top: -3,
             child: LabelText(
               AppStrings.trOf(context, label),
-              amber
+              uploaded
                   ? AppTextStyles.kycPillTextAmber
                   : AppTextStyles.kycPillText,
               width: 80,
@@ -575,31 +667,39 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
+/// Divider between documents.
 class _Divider extends StatelessWidget {
   const _Divider();
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 324, height: 1, color: const Color(0x12000000));
+    return Container(
+      width: 324,
+      height: 1,
+      color: const Color(0x12000000),
+    );
   }
 }
 
-/// Bottom sheet shown when a document row is tapped: message + document
-/// image + [Edit] / [Save & Confirm] buttons.
+/// Document preview and upload bottom sheet.
 class _DocSheet extends StatefulWidget {
   const _DocSheet({
     required this.doc,
     required this.title,
     required this.message,
-    this.currentUrl,
+    this.currentBytes,
     required this.onSaved,
   });
 
   final _KycDoc doc;
   final String title;
   final String message;
-  final String? currentUrl;
-  final ValueChanged<String> onSaved;
+  final Uint8List? currentBytes;
+
+  final void Function(
+    XFile file,
+    Uint8List bytes,
+  ) onSaved;
 
   @override
   State<_DocSheet> createState() => _DocSheetState();
@@ -608,145 +708,170 @@ class _DocSheet extends StatefulWidget {
 class _DocSheetState extends State<_DocSheet> {
   XFile? _picked;
   Uint8List? _pickedBytes;
+
   bool _saving = false;
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
+  /// Select document image from gallery.
   Future<void> _edit() async {
-    final XFile? picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1600,
-      maxHeight: 1600,
-    );
-    if (picked == null || !mounted) return;
-    // Read the bytes right away so the preview works on every platform
-    // (web has no file paths for Image.file).
-    final Uint8List bytes = await picked.readAsBytes();
-    if (!mounted) return;
-
-    // Blank / unreadable photos are refused here, before they can be
-    // previewed, uploaded or flagged "Verified" (SELLER-017).
-    final KycDocumentIssue? issue = await KycDocumentValidator.check(
-      bytes,
-      mimeType: picked.mimeType,
-      filename: picked.name,
-    );
-    if (!mounted) return;
-    if (issue != null) {
-      _showMessage(
-        AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
-      );
-      return;
-    }
-
-    setState(() {
-      _picked = picked;
-      _pickedBytes = bytes;
-    });
-  }
-
-  Future<void> _saveAndConfirm() async {
-    if (_saving) return;
-    if (_picked == null) {
-      Navigator.pop(context);
-      return;
-    }
-
-    setState(() => _saving = true);
     try {
-      final Uint8List bytes = await _picked!.readAsBytes();
-
-      // Final gate before the upload: nothing invalid reaches Cloudinary or
-      // Supabase, so an unverifiable image can never flip the badge to
-      // "Verified" (SELLER-017).
-      final KycDocumentIssue? issue = await KycDocumentValidator.check(
-        bytes,
-        mimeType: _picked!.mimeType,
-        filename: _picked!.name,
+      final XFile? picked =
+          await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1600,
+        maxHeight: 1600,
       );
+
+      if (picked == null || !mounted) return;
+
+      final Uint8List bytes =
+          await picked.readAsBytes();
+
+      if (!mounted) return;
+
+      // Validate selected document.
+      final KycDocumentIssue? issue =
+          await KycDocumentValidator.check(
+        bytes,
+        mimeType: picked.mimeType,
+        filename: picked.name,
+      );
+
+      if (!mounted) return;
+
       if (issue != null) {
-        if (!mounted) return;
-        setState(() => _saving = false);
         _showMessage(
-          AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+          AppStrings.trOf(
+            context,
+            KycDocumentValidator.messageFor(issue),
+          ),
         );
         return;
       }
 
-      final String url = await CloudinaryUploadApi(folder: 'seller_kyc')
-          .upload(
-            ProductPhoto(
-              bytes: bytes,
-              mimeType: 'image/jpeg',
-              filename: _picked!.name,
-            ),
-          );
+      setState(() {
+        _picked = picked;
+        _pickedBytes = bytes;
+      });
 
-      final SupabaseProductApi api = SupabaseProductApi();
-      final String userId = SellerProfileStore.instance.userId;
-      if (userId.isNotEmpty) api.userId = userId;
-      await api.saveVerifyDetails(
-        aadhaarUrl: widget.doc == _KycDoc.aadhaar ? url : null,
-        panUrl: widget.doc == _KycDoc.pan ? url : null,
-        businessUrl: widget.doc == _KycDoc.farm ? url : null,
-      );
-
-      final SellerProfileStore store = SellerProfileStore.instance;
-      store.setCompletion(
-        profileComplete: store.profileComplete,
-        bankComplete: store.bankComplete,
-        verificationComplete: true,
-        personalComplete: store.personalComplete,
-      );
-
-      widget.onSaved(url);
-      if (!mounted) return;
-      _showMessage(AppStrings.trOf(context, 'Saved successfully.'));
-      Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _saving = false);
-      _showMessage(AppStrings.trOf(context, 'Failed to save. Please try again.'));
-    }
-  }
 
-  Widget _buildImage() {
-    if (_pickedBytes != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.memory(_pickedBytes!, fit: BoxFit.contain),
-      );
-    }
-    final String? url = widget.currentUrl;
-    if (url != null && url.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          url,
-          fit: BoxFit.contain,
-          width: double.infinity,
-          height: 220,
-          loadingBuilder: (BuildContext context, Widget child,
-                  ImageChunkEvent? progress) =>
-              progress == null
-                  ? child
-                  : const Center(child: CircularProgressIndicator()),
-          errorBuilder: (BuildContext context, Object error,
-                  StackTrace? stack) =>
-              Text(
-                AppStrings.trOf(context, 'Could not load image'),
-                style: AppTextStyles.profileMenuSub,
-              ),
+      _showMessage(
+        AppStrings.trOf(
+          context,
+          'Unable to select image. Please try again.',
         ),
       );
     }
+  }
+
+  /// Save document in frontend memory only.
+  Future<void> _saveAndConfirm() async {
+    if (_saving) return;
+
+    if (_picked == null || _pickedBytes == null) {
+      _showMessage(
+        AppStrings.trOf(
+          context,
+          'Please select a document first.',
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      // Final image validation.
+      final KycDocumentIssue? issue =
+          await KycDocumentValidator.check(
+        _pickedBytes!,
+        mimeType: _picked!.mimeType,
+        filename: _picked!.name,
+      );
+
+      if (!mounted) return;
+
+      if (issue != null) {
+        setState(() => _saving = false);
+
+        _showMessage(
+          AppStrings.trOf(
+            context,
+            KycDocumentValidator.messageFor(issue),
+          ),
+        );
+        return;
+      }
+
+      // Save locally in parent screen state.
+      widget.onSaved(
+        _picked!,
+        _pickedBytes!,
+      );
+
+      if (!mounted) return;
+
+      _showMessage(
+        AppStrings.trOf(
+          context,
+          'Saved successfully.',
+        ),
+      );
+
+      Navigator.pop(context);
+
+    } catch (_) {
+      if (!mounted) return;
+
+      _showMessage(
+        AppStrings.trOf(
+          context,
+          'Unable to save document. Please try again.',
+        ),
+      );
+
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  /// Display selected or previously saved frontend image.
+  Widget _buildImage() {
+    final Uint8List? imageBytes =
+        _pickedBytes ?? widget.currentBytes;
+
+    if (imageBytes != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.memory(
+          imageBytes,
+          fit: BoxFit.contain,
+          width: double.infinity,
+          height: 220,
+        ),
+      );
+    }
+
     return Text(
-      AppStrings.trOf(context, 'No image uploaded yet'),
+      AppStrings.trOf(
+        context,
+        'No image uploaded yet',
+      ),
       style: AppTextStyles.profileMenuSub,
     );
   }
@@ -758,12 +883,15 @@ class _DocSheetState extends State<_DocSheet> {
         left: 24,
         right: 24,
         top: 12,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
+          // Bottom sheet handle.
           Center(
             child: Container(
               width: 40,
@@ -774,16 +902,34 @@ class _DocSheetState extends State<_DocSheet> {
               ),
             ),
           ),
+
           const SizedBox(height: 16),
-          Text(AppStrings.trOf(context, widget.title), style: AppTextStyles.title),
-          const SizedBox(height: 8),
+
+          // Document title.
           Text(
-            AppStrings.trOf(context, widget.message),
+            AppStrings.trOf(
+              context,
+              widget.title,
+            ),
+            style: AppTextStyles.title,
+          ),
+
+          const SizedBox(height: 8),
+
+          // Document description.
+          Text(
+            AppStrings.trOf(
+              context,
+              widget.message,
+            ),
             style: AppTextStyles.body.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
+
           const SizedBox(height: 16),
+
+          // Image preview.
           Container(
             width: double.infinity,
             height: 220,
@@ -791,35 +937,55 @@ class _DocSheetState extends State<_DocSheet> {
             decoration: BoxDecoration(
               color: AppColors.fieldFill,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.fieldBorder),
+              border: Border.all(
+                color: AppColors.fieldBorder,
+              ),
             ),
             child: _buildImage(),
           ),
+
           const SizedBox(height: 20),
+
+          // Edit and Save buttons.
           Row(
             children: [
+
+              // Edit button.
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : _edit,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.darkGreen,
-                    side: const BorderSide(color: AppColors.darkGreen),
-                    minimumSize: const Size.fromHeight(48),
+                    side: const BorderSide(
+                      color: AppColors.darkGreen,
+                    ),
+                    minimumSize:
+                        const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(AppStrings.trOf(context, 'Edit')),
+                  child: Text(
+                    AppStrings.trOf(
+                      context,
+                      'Edit',
+                    ),
+                  ),
                 ),
               ),
+
               const SizedBox(width: 12),
+
+              // Save button.
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _saving ? null : _saveAndConfirm,
+                  onPressed:
+                      _saving ? null : _saveAndConfirm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.darkGreen,
                     foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize:
+                        const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -834,9 +1000,11 @@ class _DocSheetState extends State<_DocSheet> {
                           ),
                         )
                       : Text(
-                          AppStrings.trOf(context, 'Save'),
+                          AppStrings.trOf(
+                            context,
+                            'Save',
+                          ),
                           maxLines: 1,
-                          overflow: TextOverflow.visible,
                           textAlign: TextAlign.center,
                         ),
                 ),

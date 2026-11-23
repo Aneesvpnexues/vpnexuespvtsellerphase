@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:seller_app/screens/notifications_screen.dart';
 
 import '../data/product_store.dart';
+import '../data/order_store.dart';
 import '../data/seller_profile_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -338,176 +339,210 @@ class _ActiveOrdersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 362,
-      height: 205,
-      decoration: const BoxDecoration(
-        color: AppColors.limeCard,
-        borderRadius: BorderRadius.all(Radius.circular(22)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 190,
-            top: 0,
-            child: Container(
-              width: 172,
-              height: 156,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD4EE96),
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(22),
-                  bottomLeft: Radius.circular(80),
+    return AnimatedBuilder(
+      animation: OrderStore.instance,
+      builder: (context, _) {
+        final activeCount =
+            OrderStore.instance.activeOrdersCount;
+
+        return Container(
+          width: 362,
+          height: 205,
+          decoration: const BoxDecoration(
+            color: AppColors.limeCard,
+            borderRadius: BorderRadius.all(
+              Radius.circular(22),
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 190,
+                top: 0,
+                child: Container(
+                  width: 172,
+                  height: 156,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD4EE96),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(22),
+                      bottomLeft: Radius.circular(80),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const Positioned(
-            left: 20,
-            top: 18,
-            child: Text('ACTIVE ORDERS', style: AppTextStyles.homeCardLabel),
-          ),
-          const Positioned(
-            left: 20,
-            top: 42,
-            child: Text('You have', style: AppTextStyles.homeHeroSmall),
-          ),
-          Positioned(
-            left: 20,
-            top: 75,
-            child: Text(
-              '${ProductStore.instance.count} new orders',
-              style: AppTextStyles.homeHeroBig,
-            ),
-          ),
-          Positioned(
-            left: 23,
-            top: 113,
-            right: 23,
-            child: Text(
-              'Review and accept to keep\nyour business growing',
-              style: AppTextStyles.homeHeroDesc.copyWith(height: 1.25),
-            ),
-          ),
-          Positioned(
-            left: 20,
-            top: 162,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => goToOrders(context),
-              child: Container(
-                width: 102,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.all(Radius.circular(19)),
+              const Positioned(
+                left: 20,
+                top: 18,
+                child: Text(
+                  'ACTIVE ORDERS',
+                  style: AppTextStyles.homeCardLabel,
                 ),
-                child: Stack(
-                  children: [
-                    const Positioned(
-                      left: 9,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: Text(
-                          'View orders',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+              ),
+              const Positioned(
+                left: 20,
+                top: 42,
+                child: Text(
+                  'You have',
+                  style: AppTextStyles.homeHeroSmall,
+                ),
+              ),
+              Positioned(
+                left: 20,
+                top: 75,
+                child: Text(
+                  '$activeCount active orders',
+                  style: AppTextStyles.homeHeroBig,
+                ),
+              ),
+              Positioned(
+                left: 23,
+                top: 113,
+                right: 23,
+                child: Text(
+                  activeCount > 0
+                      ? 'Review and accept to keep\n'
+                          'your business growing'
+                      : 'No active orders right now',
+                  style: AppTextStyles.homeHeroDesc.copyWith(
+                    height: 1.25,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 20,
+                top: 162,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => goToOrders(context),
+                  child: Container(
+                    width: 102,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: AppColors.darkCard,
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(19),
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        const Positioned(
+                          left: 9,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: Text(
+                              'View orders',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: const BoxDecoration(
-                          color: AppColors.limeLight,
-                          shape: BoxShape.circle,
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: const BoxDecoration(
+                              color: AppColors.limeLight,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward,
+                              size: 12,
+                              color: AppColors.darkCard,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.arrow_forward,
-                          size: 12,
-                          color: AppColors.darkCard,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 10,
+                bottom: 17,
+                child: Container(
+                  width: 126,
+                  height: 21,
+                  padding: const EdgeInsets.only(
+                    left: 8,
+                    right: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xC2DAEFB8),
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(14),
+                    ),
+                    border: Border.all(
+                      color: const Color(0x63CDEB6B),
+                    ),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _WaitingDot(),
+                        SizedBox(width: 5),
+                        Text(
+                          'Waiting for your response',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF030302),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            right: 10,
-            bottom: 17,
-            child: Container(
-              width: 126,
-              height: 21,
-              padding: const EdgeInsets.only(left: 8, right: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xC2DAEFB8),
-                borderRadius: const BorderRadius.all(Radius.circular(14)),
-                border: Border.all(color: const Color(0x63CDEB6B)),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _WaitingDot(),
-                    SizedBox(width: 5),
-                    Text(
-                      'Waiting for your response',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF030302),
-                      ),
+              Positioned(
+                left: 281,
+                top: 30,
+                child: Transform.rotate(
+                  angle: 20 * math.pi / 180,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(10),
                     ),
-                  ],
+                    child: Image.asset(
+                      'assets/order/ic_hero_box_dark.png',
+                      key: const Key('home-hero-tile-dark'),
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            left: 281,
-            top: 30,
-            child: Transform.rotate(
-              angle: 20 * math.pi / 180,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                child: Image.asset(
-                  'assets/order/ic_hero_box_dark.png',
-                  key: const Key('home-hero-tile-dark'),
-                  width: 48,
-                  height: 48,
+              Positioned(
+                left: 261,
+                top: 52,
+                child: Transform.rotate(
+                  angle: -12 * math.pi / 180,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(10),
+                    ),
+                    child: Image.asset(
+                      'assets/order/ic_hero_box_white.png',
+                      key: const Key('home-hero-tile-white'),
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            left: 261,
-            top: 52,
-            child: Transform.rotate(
-              angle: -12 * math.pi / 180,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                child: Image.asset(
-                  'assets/order/ic_hero_box_white.png',
-                  key: const Key('home-hero-tile-white'),
-                  width: 48,
-                  height: 48,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

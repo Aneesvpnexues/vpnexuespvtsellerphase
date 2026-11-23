@@ -164,15 +164,11 @@ void initState() {
       // [_pickAndUploadAvatar]) — the Supabase avatar write is disabled while
       // the remote upload pipeline is being reworked.
     } on ApiException catch (error) {
+      // The save did not happen — keep the seller here with the real
+      // message instead of pretending it succeeded.
       if (!mounted) return;
-      // TEMPORARY (offline onboarding): while Supabase is not configured,
-      // save locally and keep walking the steps instead of blocking —
-      // see ApiException.isMissingConfiguration.
-      if (!error.isMissingConfiguration) {
-        _showMessage(error.message);
-        return;
-      }
-      debugPrint('Personal: skipping remote save (${error.message})');
+      _showMessage(error.message);
+      return;
     } catch (_) {
       if (!mounted) return;
       _showMessage(AppStrings.trOf(context, 'Could not save profile. Please try again.'));

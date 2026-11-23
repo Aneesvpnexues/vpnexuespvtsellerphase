@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../data/product_store.dart';
@@ -18,14 +19,10 @@ import 'about_vpnexues_screen.dart';
 import 'app_language_screen.dart';
 import 'welcome_seller_screen.dart';
 
-/// Settings — replica of Zeplin "Android Compact - 164"
-/// (project 6a8d49709e27bd8b35213d35, screen 6ad1af816876b4d201278981).
+/// Settings screen — Zeplin Android Compact - 164.
 ///
-/// Built against a 412x917 artboard. Every offset below is taken from the
-/// Zeplin latest-version layers, so on a matching viewport the layout renders
-/// 1:1; on other sizes it scales down uniformly instead of overflowing.
-/// Notification toggles are functional (tap to flip) and persist while the
-/// screen is mounted; no network.
+/// Design canvas: 412 x 917.
+/// Notification toggles are functional.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -45,34 +42,63 @@ class SettingsScreen extends StatelessWidget {
           trimTop: trimTop,
           child: Stack(
             children: [
-              Positioned(left: 25, top: 127, child: _PreferencesCard()),
-              Positioned(left: 25, top: 253, child: _NotificationsCard()),
-              Positioned(left: 25, top: 496, child: _SupportCard()),
-              Positioned(
-                left: 25,
-                top: 622,
-                child: _LogoutCard(
+              // Preferences
+Positioned(
+  left: 25,
+  top: 127,
+  child: _PreferencesCard(),
+),
+
+// Notifications
+Positioned(
+  left: 25,
+  top: 253,
+  child: _NotificationsCard(),
+),
+
+// App info (below Notifications)
+Positioned(
+  left: 25,
+  top: 446,
+  child: _SupportCard(),
+),
+
+// Logout
+Positioned(
+  left: 25,
+  top: 572,
+  child: _LogoutCard(
                   onTap: () async {
                     final navigator = Navigator.of(context);
+
                     ProductStore.instance.clear();
                     SellerProfileStore.instance.reset();
                     WalletStore.instance.reset();
-                    // Drop the local session too, so the next launch has no
-                    // login/sign-up method to resume and starts fresh.
+
                     SessionStore.instance.endSession();
+
                     await AuthFlow.instance.signOut();
+
                     navigator.pushReplacement(
                       MaterialPageRoute<void>(
-                        builder: (_) => const WelcomeSellerScreen(),
+                        builder: (_) =>
+                            const WelcomeSellerScreen(),
                       ),
                     );
                   },
                 ),
               ),
+
+              // Page header
               Positioned(
                 left: 0,
                 top: 73,
-                child: PageHeader(title: AppStrings.trOf(context, 'Settings')),
+                child: PageHeader(
+                  title: AppStrings.trOf(
+                    context,
+                    'Settings',
+                  ),
+                ),
               ),
             ],
           ),
@@ -86,10 +112,12 @@ class _PreferencesCard extends StatefulWidget {
   const _PreferencesCard();
 
   @override
-  State<_PreferencesCard> createState() => _PreferencesCardState();
+  State<_PreferencesCard> createState() =>
+      _PreferencesCardState();
 }
 
-class _PreferencesCardState extends State<_PreferencesCard> {
+class _PreferencesCardState
+    extends State<_PreferencesCard> {
   @override
   Widget build(BuildContext context) {
     return _Card(
@@ -104,115 +132,49 @@ class _PreferencesCardState extends State<_PreferencesCard> {
             width: 100,
           ),
         ),
+
         Positioned(
           left: 21,
           top: 53,
           child: GestureDetector(
             key: const Key('settings-language'),
             behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const AppLanguageScreen(),
-              ),
-            ),
-            // Rebuilds when a language is applied so the subtitle shows the
-            // native name of the active selection ('English' by default).
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const AppLanguageScreen(),
+                ),
+              );
+            },
             child: ValueListenableBuilder<Locale>(
-              valueListenable: LocaleService.instance.locale,
-              builder: (context, locale, _) => _MenuRow(
-                icon: 'assets/settings/ic_globe.png',
-                iconSize: 16,
-                title: AppStrings.trOf(context, 'Language'),
-                titleWidth: 59,
-                subtitle:
-                    AppLanguages.nativeNames[locale.languageCode] ??
-                    'English',
-                subtitleWidth: 35,
-                chevron: true,
-              ),
+              valueListenable:
+                  LocaleService.instance.locale,
+              builder: (context, locale, _) {
+                return _MenuRow(
+                  icon: 'assets/settings/ic_globe.png',
+                  iconSize: 16,
+                  title: AppStrings.trOf(
+                    context,
+                    'Language',
+                  ),
+                  titleWidth: 59,
+                  subtitle:
+                      AppLanguages.nativeNames[
+                          locale.languageCode] ??
+                      'English',
+                  subtitleWidth: 35,
+                  chevron: true,
+                );
+              },
             ),
           ),
         ),
-        Positioned(left: 21, top: 93, child: _Divider()),
-      ],
-    );
-  }
-}
 
-class _NotificationsCard extends StatefulWidget {
-  const _NotificationsCard();
-
-  @override
-  State<_NotificationsCard> createState() => _NotificationsCardState();
-}
-
-class _NotificationsCardState extends State<_NotificationsCard> {
-  final List<bool> _toggleStates = [true, false, false];
-
-  void _onToggleChanged(int index) {
-    setState(() => _toggleStates[index] = !_toggleStates[index]);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      height: 229,
-      children: [
-        Positioned(
-          left: 22,
-          top: 13,
-          child: LabelText(
-            AppStrings.trOf(context, 'Notifications'),
-            AppTextStyles.orderCardTitle,
-            width: 104,
-          ),
-        ),
         Positioned(
           left: 21,
-          top: 53,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_box.png',
-            iconSize: 20,
-            title: AppStrings.trOf(context, 'New orders'),
-            titleWidth: 68,
-            subtitle: AppStrings.trOf(
-              context,
-              'Alert me the moment an order arrives',
-            ),
-            subtitleWidth: 181,
-            toggle: _toggleStates[0],
-            onToggleChanged: () => _onToggleChanged(0),
-          ),
-        ),
-        Positioned(left: 21, top: 102, child: _Divider()),
-        Positioned(
-          left: 21,
-          top: 111,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_bell.png',
-            iconSize: 16,
-            title: AppStrings.trOf(context, 'Stock alerts'),
-            titleWidth: 71,
-            subtitle: AppStrings.trOf(context, 'When a product is running low'),
-            subtitleWidth: 146,
-            toggle: _toggleStates[1],
-            onToggleChanged: () => _onToggleChanged(1),
-          ),
-        ),
-        Positioned(left: 21, top: 160, child: _Divider()),
-        Positioned(
-          left: 19,
-          top: 169,
-          child: _MenuRow(
-            icon: 'assets/settings/ic_card.png',
-            iconSize: 16,
-            title: AppStrings.trOf(context, 'Stock alerts'),
-            titleWidth: 71,
-            subtitle: AppStrings.trOf(context, 'When a product is running low'),
-            subtitleWidth: 146,
-            toggle: _toggleStates[2],
-            onToggleChanged: () => _onToggleChanged(2),
-          ),
+          top: 93,
+          child: _Divider(),
         ),
       ],
     );
@@ -231,31 +193,135 @@ class _SupportCard extends StatelessWidget {
           left: 22,
           top: 13,
           child: LabelText(
-            AppStrings.trOf(context, 'Preferences'),
+            AppStrings.trOf(context, 'App info'),
             AppTextStyles.orderCardTitle,
             width: 100,
           ),
         ),
+
         Positioned(
           left: 21,
           top: 53,
           child: GestureDetector(
             key: const Key('settings-about'),
             behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const AboutVpnexuesScreen(),
-              ),
-            ),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const AboutVpnexuesScreen(),
+                ),
+              );
+            },
             child: _MenuRow(
               icon: 'assets/settings/ic_alert.png',
               iconSize: 16,
-              title: AppStrings.trOf(context, 'About VP NEXUES'),
+              title: AppStrings.trOf(
+                context,
+                'About VP NEXUES',
+              ),
               titleWidth: 108,
-              subtitle: AppStrings.trOf(context, 'version 1.0'),
+              subtitle: AppStrings.trOf(
+                context,
+                'version 1.0',
+              ),
               subtitleWidth: 52,
               chevron: true,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotificationsCard extends StatefulWidget {
+  const _NotificationsCard();
+
+  @override
+  State<_NotificationsCard> createState() =>
+      _NotificationsCardState();
+}
+
+class _NotificationsCardState
+    extends State<_NotificationsCard> {
+
+  // Two notification toggles.
+  final List<bool> _toggleStates = [true, false];
+
+  void _onToggleChanged(int index) {
+    setState(() {
+      _toggleStates[index] = !_toggleStates[index];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      height: 180,
+      children: [
+        Positioned(
+          left: 22,
+          top: 13,
+          child: LabelText(
+            AppStrings.trOf(context, 'Notifications'),
+            AppTextStyles.orderCardTitle,
+            width: 104,
+          ),
+        ),
+
+        // New orders
+        Positioned(
+          left: 21,
+          top: 53,
+          child: _MenuRow(
+            icon: 'assets/settings/ic_box.png',
+            iconSize: 20,
+            title: AppStrings.trOf(
+              context,
+              'New orders',
+            ),
+            titleWidth: 68,
+            subtitle: AppStrings.trOf(
+              context,
+              'Alert me the moment an order arrives',
+            ),
+            subtitleWidth: 181,
+            toggle: _toggleStates[0],
+            onToggleChanged: () {
+              _onToggleChanged(0);
+            },
+          ),
+        ),
+
+        // Divider
+        Positioned(
+          left: 21,
+          top: 102,
+          child: _Divider(),
+        ),
+
+        // Stock alerts
+        Positioned(
+          left: 21,
+          top: 111,
+          child: _MenuRow(
+            icon: 'assets/settings/ic_bell.png',
+            iconSize: 16,
+            title: AppStrings.trOf(
+              context,
+              'Stock alerts',
+            ),
+            titleWidth: 71,
+            subtitle: AppStrings.trOf(
+              context,
+              'When a product is running low',
+            ),
+            subtitleWidth: 146,
+            toggle: _toggleStates[1],
+            onToggleChanged: () {
+              _onToggleChanged(1);
+            },
           ),
         ),
       ],
@@ -293,11 +359,15 @@ class _LogoutCard extends StatelessWidget {
                       color: AppColors.outOfStockBg,
                     ),
                   ),
+
                   Positioned(
                     left: 45,
                     top: 4,
                     child: LabelText(
-                      AppStrings.trOf(context, 'Log out'),
+                      AppStrings.trOf(
+                        context,
+                        'Log out',
+                      ),
                       AppTextStyles.settingsLogout,
                       width: 45,
                     ),
@@ -313,7 +383,10 @@ class _LogoutCard extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.height, required this.children});
+  const _Card({
+    required this.height,
+    required this.children,
+  });
 
   final double height;
   final List<Widget> children;
@@ -326,7 +399,9 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.profileCardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x14000000)),
+        border: Border.all(
+          color: const Color(0x14000000),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1AB8B8B8),
@@ -350,7 +425,9 @@ class _Card extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(children: children),
+      child: Stack(
+        children: children,
+      ),
     );
   }
 }
@@ -370,12 +447,16 @@ class _MenuRow extends StatelessWidget {
 
   final String icon;
   final double iconSize;
+
   final String title;
   final double titleWidth;
+
   final String subtitle;
   final double subtitleWidth;
+
   final bool? toggle;
   final bool chevron;
+
   final VoidCallback? onToggleChanged;
 
   @override
@@ -385,6 +466,7 @@ class _MenuRow extends StatelessWidget {
       height: 40,
       child: Stack(
         children: [
+          // Icon tile
           Positioned(
             left: 0,
             top: 3,
@@ -394,6 +476,8 @@ class _MenuRow extends StatelessWidget {
               color: AppColors.orderTile,
             ),
           ),
+
+          // Title
           Positioned(
             left: 45,
             top: 0,
@@ -403,6 +487,8 @@ class _MenuRow extends StatelessWidget {
               width: titleWidth,
             ),
           ),
+
+          // Subtitle
           Positioned(
             left: 45,
             top: 15,
@@ -412,25 +498,35 @@ class _MenuRow extends StatelessWidget {
               width: subtitleWidth,
             ),
           ),
+
+          // Toggle
           if (toggle != null)
             Positioned(
               left: 283,
               top: 11,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => onToggleChanged?.call(),
+                onTap: () {
+                  onToggleChanged?.call();
+                },
                 child: HoverPress.control(
                   enabled: onToggleChanged != null,
-                  child: _Toggle(on: toggle!),
+                  child: _Toggle(
+                    on: toggle!,
+                  ),
                 ),
               ),
             ),
+
+          // Chevron
           if (chevron)
             const Positioned(
               left: 312,
               top: 11,
               child: Image(
-                image: AssetImage('assets/settings/ic_chevron.png'),
+                image: AssetImage(
+                  'assets/settings/ic_chevron.png',
+                ),
                 width: 18,
                 height: 18,
               ),
@@ -462,13 +558,19 @@ class _Tile extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Image(image: AssetImage(icon), width: iconSize, height: iconSize),
+      child: Image(
+        image: AssetImage(icon),
+        width: iconSize,
+        height: iconSize,
+      ),
     );
   }
 }
 
 class _Toggle extends StatelessWidget {
-  const _Toggle({required this.on});
+  const _Toggle({
+    required this.on,
+  });
 
   final bool on;
 
@@ -477,10 +579,16 @@ class _Toggle extends StatelessWidget {
     return Container(
       width: 40,
       height: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 2,
+      ),
+      alignment: on
+          ? Alignment.centerRight
+          : Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: on ? AppColors.businessToggle : AppColors.settingsToggleOff,
+        color: on
+            ? AppColors.businessToggle
+            : AppColors.settingsToggleOff,
         borderRadius: BorderRadius.circular(9),
       ),
       child: Container(
@@ -500,6 +608,10 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 324, height: 1, color: AppColors.cardBorder);
+    return Container(
+      width: 324,
+      height: 1,
+      color: AppColors.cardBorder,
+    );
   }
 }

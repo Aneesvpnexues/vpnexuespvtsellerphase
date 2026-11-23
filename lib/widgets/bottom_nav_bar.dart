@@ -20,10 +20,11 @@ class BottomNavBar extends StatelessWidget {
     this.onAddTap,
     this.onOrdersTap,
     this.onProfileTap,
+    this.barHeight = defaultBarHeight,
   });
 
   static const double designWidth = 412;
-  static const double barHeight = 88;
+  static const double defaultBarHeight = 88;
 
   final int? selectedIndex;
   final VoidCallback? onHomeTap;
@@ -31,6 +32,7 @@ class BottomNavBar extends StatelessWidget {
   final VoidCallback? onAddTap;
   final VoidCallback? onOrdersTap;
   final VoidCallback? onProfileTap;
+  final double barHeight;
 
   /// Design-measured tab centers (Zeplin 124): Home 52, Products 127,
   /// FAB 206, Orders 285, Profile 363. Tab boxes are 60 wide, so each is
@@ -172,6 +174,7 @@ class PinnedBottomNav extends StatelessWidget {
     this.onOrdersTap,
     this.onProfileTap,
     this.maxScale = 1.0,
+    this.barHeight = BottomNavBar.defaultBarHeight,
   });
 
   final int? selectedIndex;
@@ -181,6 +184,7 @@ class PinnedBottomNav extends StatelessWidget {
   final VoidCallback? onOrdersTap;
   final VoidCallback? onProfileTap;
   final double maxScale;
+  final double barHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -192,12 +196,12 @@ class PinnedBottomNav extends StatelessWidget {
         );
         return SizedBox(
           width: BottomNavBar.designWidth * scale,
-          height: BottomNavBar.barHeight * scale,
+          height: barHeight * scale,
           child: FittedBox(
             fit: BoxFit.fill,
             child: SizedBox(
               width: BottomNavBar.designWidth,
-              height: BottomNavBar.barHeight,
+              height: barHeight,
               child: BottomNavBar(
                 selectedIndex: selectedIndex,
                 onHomeTap: onHomeTap,
@@ -205,6 +209,7 @@ class PinnedBottomNav extends StatelessWidget {
                 onAddTap: onAddTap,
                 onOrdersTap: onOrdersTap,
                 onProfileTap: onProfileTap,
+                barHeight: barHeight,
               ),
             ),
           ),

@@ -82,10 +82,8 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     );
 
     _locationController = TextEditingController(
-      text: profile.businessLocation.isNotEmpty
-          ? profile.businessLocation
-          : 'Salem, Tamil Nadu',
-    );
+  text: profile.businessLocation.trim(),
+);
 
     _manualCropController = TextEditingController();
 
@@ -299,62 +297,75 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   /// shows an error snackbar instead of the success one — the seller can
   /// tap Save again.
   Future<void> _saveChanges() async {
-    final profile = SellerProfileStore.instance;
+  final profile = SellerProfileStore.instance;
 
-    profile.saveBusinessDetails(
-      name: profile.name,
-      business: _businessNameController.text.trim(),
-      phone: profile.mobile,
-      location: _locationController.text.trim(),
-      address: profile.businessAddress.isNotEmpty
-          ? profile.businessAddress
-          : _locationController.text.trim(),
+  final String location = _locationController.text.trim();
 
-      // Save farm size in acres
-      farmSize: _farmSizeController.text.trim(),
-    );
+  profile.saveBusinessDetails(
+    name: profile.name,
+    business: _businessNameController.text.trim(),
+    phone: profile.mobile,
+    location: location,
+    address: location,
+    farmSize: _farmSizeController.text.trim(),
+  );
 
-    final messenger = ScaffoldMessenger.of(context);
-    // Translate while this route's context is still valid — after the await
-    // the widget may already be disposed.
-    final String successMessage = AppStrings.trOf(
-      context,
-      'Business & Farm details saved successfully!',
-    );
-    final String errorMessage = AppStrings.trOf(
-      context,
-      'Could not save your details to the server. Check your connection and try again.',
-    );
-    try {
-      await SupabaseProductApi().saveSellerProfile(
-        name: profile.name,
-        mobile: profile.mobile,
-        sellerType: profile.sellerType.dbValue,
-        businessName: profile.businessName,
-        businessLocation: profile.businessLocation,
-        businessAddress: profile.businessAddress,
-        avatarUrl: profile.avatarUrl,
+  // Keep the shared profile store synchronized.
+  profile.setBusinessLocation(
+    location: location,
+    address: location,
+  );
+
+  if (!mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+
+  final String successMessage = AppStrings.trOf(
+    context,
+    'Business & Farm details saved successfully!',
+  );
+
+  final String errorMessage = AppStrings.trOf(
+    context,
+    'Could not save your details to the server. Check your connection and try again.',
+  );
+
+  try {
+    // await SupabaseProductApi().saveSellerProfile(
+    //   name: profile.name,
+    //   mobile: profile.mobile,
+    //   sellerType: profile.sellerType.dbValue,
+    //   businessName: profile.businessName,
+    //   businessLocation: profile.businessLocation,
+    //   businessAddress: profile.businessAddress,
+    //   avatarUrl: profile.avatarUrl,
+    // );
+
+    if (!mounted) return;
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(successMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(successMessage),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    } catch (error) {
-      debugPrint('[BusinessFarm] saveSellerProfile failed: $error');
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    }
+  } catch (error) {
+    debugPrint('[BusinessFarm] saveSellerProfile failed: $error');
+
+    if (!mounted) return;
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
+}
 
   Widget _safeAsset(
     String path, {
@@ -507,33 +518,34 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               ),
             ),
 
-            Positioned(
-              left: 22,
-              right: 12,
-              bottom: 9,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.businessPillBg,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: AppColors.businessPillBorder,
-                    ),
-                  ),
-                  child: Text(
-                    _locationController.text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.businessHeroPill,
-                  ),
-                ),
-              ),
-            ),
+if (_locationController.text.trim().isNotEmpty)
+  Positioned(
+    left: 22,
+    right: 12,
+    bottom: 9,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 3,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.businessPillBg,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: AppColors.businessPillBorder,
+          ),
+        ),
+        child: Text(
+          _locationController.text.trim(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.businessHeroPill,
+        ),
+      ),
+    ),
+  ),
           ],
         ),
       ),
@@ -770,7 +782,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           _buildInput(
             asset: 'assets/business/ic_location.png',
             controller: _locationController,
-            hint: AppStrings.trOf(context, 'Enter location (e.g. Kochi)'),
+            hint: AppStrings.trOf(context, 'Enter location (e.g. Chennai)'),
             onSubmitted: _geocodeTypedAddress,
           ),
 
@@ -784,13 +796,19 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               child: FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: _center,
-                  initialZoom: 12,
-                  onTap: (tapPosition, point) {
-                    _placePin(point);
-                    _reverseGeocodePin(point);
-                  },
-                ),
+  initialCenter: _center,
+  initialZoom: 12,
+
+  // Disable map rotation completely
+  interactionOptions: const InteractionOptions(
+    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+  ),
+
+  onTap: (tapPosition, point) {
+    _placePin(point);
+    _reverseGeocodePin(point);
+  },
+),
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -807,27 +825,31 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
-
-          Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 280),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _locationController.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+          if (_locationController.text.trim().isNotEmpty) ...[
+  const SizedBox(height: 8),
+  Center(
+    child: Container(
+      constraints: const BoxConstraints(maxWidth: 280),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        _locationController.text.trim(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  ),
+],
         ],
       ),
     );

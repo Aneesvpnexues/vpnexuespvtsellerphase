@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/order_store.dart';
 import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
@@ -17,12 +18,28 @@ import '../widgets/slide_drag_detector.dart';
 /// Built against a 412x1567 artboard: fit width, scroll vertically for the
 /// tall content. Slide-to-accept hands over to [OrderPickupCodeScreen];
 /// "Reject order" asks for confirmation and pops back to My Orders.
+///
+/// The page tracks [orderId] through the local status store: pending ->
+/// accepted on slide to accept, confirmed on the pickup OTP, delivered on
+/// the completed state. TEMPORARY: those moves are in memory only until the
+/// database is wired in.
 class OrderDetailsScreen extends StatelessWidget {
-  const OrderDetailsScreen({super.key});
+  const OrderDetailsScreen({
+    super.key,
+    this.orderId = '#NX4582',
+    this.initialStatus = OrderStatus.pending,
+  });
 
   static const double designWidth = 412;
   static const double designHeight = 1567;
   static const double trimTop = 49;
+
+  /// Order this page shows; also the key the local status store tracks.
+  final String orderId;
+
+  /// Status the order was opened with — the seeded status from My Orders —
+  /// used until the local status store moves it.
+  final OrderStatus initialStatus;
 
   Future<void> _confirmReject(BuildContext context) async {
     final bool? reject = await showDialog<bool>(
@@ -31,49 +48,112 @@ class OrderDetailsScreen extends StatelessWidget {
       builder: (BuildContext dialogContext) => const _RejectConfirmDialog(),
     );
     if (reject == true && context.mounted) {
+      // TEMPORARY: local status only — swap for the backend write later.
+      OrderStore.instance.markOrder(orderId, OrderStatus.rejected);
       Navigator.of(context).pop();
     }
   }
 
+  /// Bottom slide action for the order's current status.
+  ///
+  /// pending  -> marks accepted and opens the pickup code (OTP) screen
+  /// accepted -> opens the pickup code screen, the OTP there confirms it
+  /// confirmed -> marks delivered and opens the completed state
+  void _onSlide(BuildContext context, OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        OrderStore.instance.markOrder(orderId, OrderStatus.accepted);
+        goToOrderPickupCode(context, orderId: orderId);
+      case OrderStatus.accepted:
+        goToOrderPickupCode(context, orderId: orderId);
+      case OrderStatus.confirmed:
+        OrderStore.instance.markOrder(orderId, OrderStatus.delivered);
+        goToOrderConfirmation(
+          context,
+          orderId: orderId,
+          dateTime: DateTime.now(),
+        );
+      case OrderStatus.delivered:
+      case OrderStatus.rejected:
+        break;
+    }
+  }
+
+  /// Slide label for [status]; null hides the bar because the order is
+  /// already finished (delivered or rejected).
+  static String? _slideLabelFor(OrderStatus status) => switch (status) {
+    OrderStatus.pending => 'Slide to accept order',
+    OrderStatus.accepted => 'Slide to confirm pickup',
+    OrderStatus.confirmed => 'Slide to complete order',
+    OrderStatus.delivered || OrderStatus.rejected => null,
+  };
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.homeBg,
-      body: SafeArea(
-        bottom: false,
-        child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight,
-          trimTop: trimTop,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 73,
-                child: PageHeader(
-                  title: AppStrings.trOf(context, 'Order Details'),
-                ),
+    // TEMPORARY: rebuild straight from the local status store so the page
+    // (hero, progress strip, actions) reflects the move immediately.
+    return AnimatedBuilder(
+      animation: OrderStore.instance,
+      builder: (BuildContext context, _) {
+        final OrderStatus status = OrderStore.instance.statusOf(
+          orderId,
+          fallback: initialStatus,
+        );
+        final String? slideLabel = _slideLabelFor(status);
+        final bool canReject =
+            status == OrderStatus.pending || status == OrderStatus.accepted;
+        return Scaffold(
+          backgroundColor: AppColors.homeBg,
+          body: SafeArea(
+            bottom: false,
+            child: DesignCanvas(
+              designWidth: designWidth,
+              designHeight: designHeight,
+              trimTop: trimTop,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 73,
+                    child: PageHeader(
+                      title: AppStrings.trOf(context, 'Order Details'),
+                    ),
+                  ),
+                  Positioned(left: 22, top: 117, child: const _SegmentTabs()),
+                  Positioned(
+                    left: 25,
+                    top: 172,
+                    child: _OrderHero(orderId: orderId, status: status),
+                  ),
+                  Positioned(left: 22, top: 394, child: const _BuyerCard()),
+                  Positioned(left: 22, top: 588, child: const _ItemsCard()),
+                  Positioned(left: 22, top: 862, child: const _SummaryCard()),
+                  Positioned(left: 22, top: 1082, child: const _DeliveryCard()),
+                  if (canReject)
+                    Positioned(
+                      left: 21,
+                      top: 1424,
+                      width: 364,
+                      height: 48,
+                      child: _RejectButton(
+                        onTap: () => _confirmReject(context),
+                      ),
+                    ),
+                  if (slideLabel != null)
+                    Positioned(
+                      left: 21,
+                      top: 1494,
+                      child: _SlideAccept(
+                        label: slideLabel,
+                        onAccept: () => _onSlide(context, status),
+                      ),
+                    ),
+                ],
               ),
-              Positioned(left: 22, top: 117, child: const _SegmentTabs()),
-              Positioned(left: 25, top: 172, child: const _OrderHero()),
-              Positioned(left: 22, top: 394, child: const _BuyerCard()),
-              Positioned(left: 22, top: 588, child: const _ItemsCard()),
-              Positioned(left: 22, top: 862, child: const _SummaryCard()),
-              Positioned(left: 22, top: 1082, child: const _DeliveryCard()),
-              Positioned(
-                left: 21,
-                top: 1424,
-                width: 364,
-                height: 48,
-                child: _RejectButton(
-                  onTap: () => _confirmReject(context),
-                ),
-              ),
-              Positioned(left: 21, top: 1494, child: const _SlideAccept()),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -323,8 +403,47 @@ class _SegmentTabs extends StatelessWidget {
   }
 }
 
+/// Hero copy per order status. TEMPORARY: in-memory only until the order
+/// data comes from the database.
+String _heroTitle(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'New Order',
+  OrderStatus.accepted => 'Accepted',
+  OrderStatus.confirmed => 'Confirmed',
+  OrderStatus.delivered => 'Completed',
+  OrderStatus.rejected => 'Rejected',
+};
+
+String _heroCaption(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'Waiting for your response',
+  OrderStatus.accepted => 'Waiting for the buyer to arrive',
+  OrderStatus.confirmed => 'Pickup code verified with the buyer',
+  OrderStatus.delivered => 'Order completed and collected',
+  OrderStatus.rejected => 'You declined this order',
+};
+
+String _statusPillLabel(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'Active',
+  OrderStatus.accepted => 'Accepted',
+  OrderStatus.confirmed => 'Confirmed',
+  OrderStatus.delivered => 'Completed',
+  OrderStatus.rejected => 'Rejected',
+};
+
+/// Progress strip step that is highlighted for [status]: 0 Active while the
+/// order waits, 1 Pickup once it is confirmed, 2 Completed when delivered.
+/// -1 highlights nothing (rejected).
+int _activeStepIndex(OrderStatus status) => switch (status) {
+  OrderStatus.pending || OrderStatus.accepted => 0,
+  OrderStatus.confirmed => 1,
+  OrderStatus.delivered => 2,
+  OrderStatus.rejected => -1,
+};
+
 class _OrderHero extends StatelessWidget {
-  const _OrderHero();
+  const _OrderHero({required this.orderId, required this.status});
+
+  final String orderId;
+  final OrderStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -390,7 +509,7 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 12,
             child: _Label(
-              AppStrings.trOf(context, 'ORDER #NX4582'),
+              AppStrings.trOf(context, 'ORDER $orderId'),
               AppTextStyles.orderId,
               width: 107,
               height: 15,
@@ -400,9 +519,9 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 32,
             child: _Label(
-              AppStrings.trOf(context, 'New Order'),
+              AppStrings.trOf(context, _heroTitle(status)),
               AppTextStyles.orderHeroTitle,
-              width: 149,
+              width: 200,
               height: 34,
             ),
           ),
@@ -410,9 +529,9 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 67,
             child: _Label(
-              AppStrings.trOf(context, 'Waiting for your response'),
+              AppStrings.trOf(context, _heroCaption(status)),
               AppTextStyles.orderHeroCaption,
-              width: 126,
+              width: 240,
               height: 13,
             ),
           ),
@@ -427,37 +546,52 @@ class _OrderHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 284,
+            right: 17,
             top: 15,
-            child: Container(
-              width: 61,
-              height: 19,
-              decoration: const BoxDecoration(
-                color: AppColors.orderDark,
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 294,
-            top: 22,
-            child: _Dot(size: 5, color: AppColors.orderDivider),
+            child: _StatusPill(label: _statusPillLabel(status)),
           ),
           Positioned(
-            left: 301.5,
-            top: 15,
-            child: _Label(
-              AppStrings.trOf(context, 'Active'),
-              AppTextStyles.orderPillLabel.copyWith(
-                color: AppColors.orderDivider,
-              ),
-              width: 34,
-              height: 20,
-            ),
+            left: 17,
+            top: 118,
+            child: _ProgressStrip(activeIndex: _activeStepIndex(status)),
           ),
-          const Positioned(left: 17, top: 118, child: _ProgressStrip()),
         ],
         ),
+      ),
+    );
+  }
+}
+
+/// Dark status chip in the hero card: dot + label, sized to its text so the
+/// longer labels (Accepted, Confirmed) still fit inside the card.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 19,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: const BoxDecoration(
+        color: AppColors.orderDark,
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _Dot(size: 5, color: AppColors.orderDivider),
+          const SizedBox(width: 4),
+          Text(
+            AppStrings.trOf(context, label),
+            maxLines: 1,
+            softWrap: false,
+            style: AppTextStyles.orderPillLabel.copyWith(
+              color: AppColors.orderDivider,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -480,12 +614,16 @@ class _Dot extends StatelessWidget {
 }
 
 class _ProgressStrip extends StatelessWidget {
-  const _ProgressStrip();
+  const _ProgressStrip({this.activeIndex = 0});
+
+  /// Index of the highlighted step (0 Active, 1 Pickup, 2 Completed);
+  /// -1 leaves every step idle, which is how a rejected order reads.
+  final int activeIndex;
 
   static const List<_Step> steps = [
-    _Step('Active', _StepIcon.bolt, true, 38),
-    _Step('Pickup', _StepIcon.download, false, 146),
-    _Step('Completed', _StepIcon.flag, false, 256),
+    _Step('Active', _StepIcon.bolt, 38),
+    _Step('Pickup', _StepIcon.download, 146),
+    _Step('Completed', _StepIcon.flag, 256),
   ];
 
   static const List<double> centers = [56, 164, 274];
@@ -510,7 +648,7 @@ class _ProgressStrip extends StatelessWidget {
             Positioned(
               left: steps[i].left,
               top: 16,
-              child: _StepCircle(step: steps[i]),
+              child: _StepCircle(step: steps[i], active: i == activeIndex),
             ),
           for (int i = 0; i < steps.length; i++)
             Positioned(
@@ -527,7 +665,7 @@ class _ProgressStrip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: steps[i].active
+                    color: i == activeIndex
                         ? AppColors.orderDark
                         : const Color(0x8C0D3B20),
                   ),
@@ -543,18 +681,18 @@ class _ProgressStrip extends StatelessWidget {
 enum _StepIcon { bolt, download, flag }
 
 class _Step {
-  const _Step(this.label, this.icon, this.active, this.left);
+  const _Step(this.label, this.icon, this.left);
 
   final String label;
   final _StepIcon icon;
-  final bool active;
   final double left;
 }
 
 class _StepCircle extends StatelessWidget {
-  const _StepCircle({required this.step});
+  const _StepCircle({required this.step, required this.active});
 
   final _Step step;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -583,10 +721,10 @@ class _StepCircle extends StatelessWidget {
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: step.active ? AppColors.orderDark : Colors.white,
+        color: active ? AppColors.orderDark : Colors.white,
         shape: BoxShape.circle,
         border: Border.all(
-          color: step.active
+          color: active
               ? const Color(0xFFE1F8A4)
               : const Color(0xFFE9E9E9),
           width: 2,
@@ -1411,7 +1549,13 @@ class _DeliveryCard extends StatelessWidget {
 }
 
 class _SlideAccept extends StatefulWidget {
-  const _SlideAccept();
+  const _SlideAccept({required this.label, required this.onAccept});
+
+  /// Status-dependent slide label, e.g. "Slide to accept order".
+  final String label;
+
+  /// Runs the status transition for the current order status.
+  final VoidCallback onAccept;
 
   @override
   State<_SlideAccept> createState() => _SlideAcceptState();
@@ -1457,7 +1601,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
       setState(() => _knobX = _end);
-      goToOrderPickupCode(context);
+      widget.onAccept();
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -1468,7 +1612,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   Widget build(BuildContext context) {
     return HoverPress.slide(
       child: SlideDragDetector(
-        onTap: () => goToOrderPickupCode(context),
+        onTap: widget.onAccept,
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
@@ -1522,9 +1666,9 @@ class _SlideAcceptState extends State<_SlideAccept>
                 left: 112,
                 top: 15,
                 child: _Label(
-                  AppStrings.trOf(context, 'Slide to accept order'),
+                  AppStrings.trOf(context, widget.label),
                   AppTextStyles.orderSlideLabel,
-                  width: 180,
+                  width: 220,
                 ),
               ),
             ],

@@ -26,8 +26,11 @@ import 'seller_type_screen.dart';
 /// card is editable and both directions stay in sync through Nominatim
 /// geocoding. "Confirm location" persists the pick to [SellerProfileStore]
 /// (shared with Business Details), writes it to Supabase
-/// (`seller_profiles.location` / `business_address`) with a pending-retry
-/// marker when offline, and calls the backend before STEP 02.
+/// (`seller_profiles.location` / `business_address` plus the pin
+/// coordinates) with a pending-retry marker left behind when the write
+/// fails, and opens STEP 02 only after the server confirmed it — a failed
+/// save keeps the seller here with the real error instead of a fake
+/// success.
 ///
 /// Built against a 412x917 artboard, so every offset below is taken straight
 /// from the design PNG.
@@ -39,12 +42,12 @@ class LocationConfirmScreen extends StatefulWidget {
 
   /// Retries a location write that failed while offline.
   ///
-  /// The State's `_persistLocation` stores a `{label, address}` marker BEFORE
-  /// attempting the write and clears it only on success, so a seller who
-  /// confirmed their address with no connectivity keeps it for the next
-  /// login. Called from Splash (Firebase session resume) and the OTP login
-  /// (logout -> login again, where Splash does not re-run). Failure leaves
-  /// the marker in place for the next attempt.
+  /// The State's `_persistLocation` stores a `{label, address, latitude,
+  /// longitude}` marker BEFORE attempting the write and clears it only on
+  /// success, so a seller who confirmed their address with no connectivity
+  /// keeps it for the next login. Called from Splash (Firebase session
+  /// resume) and the OTP login (logout -> login again, where Splash does not
+  /// re-run). Failure leaves the marker in place for the next attempt.
   static void retryPendingLocation({required String uid, String? phone}) {
     final AppStorage? storage = AppStorage.current;
     final String raw =
@@ -59,6 +62,8 @@ class LocationConfirmScreen extends StatefulWidget {
         }
         final String label = (decoded['label'] ?? '').toString().trim();
         final String address = (decoded['address'] ?? '').toString().trim();
+        final double? latitude = _doubleOrNull(decoded['latitude']);
+        final double? longitude = _doubleOrNull(decoded['longitude']);
         if (label.isEmpty && address.isEmpty) {
           await storage?.remove(StorageKeys.pendingLocationKey);
           return;
@@ -69,6 +74,8 @@ class LocationConfirmScreen extends StatefulWidget {
             .saveLocationDetails(
               label: label,
               address: address,
+              latitude: latitude,
+              longitude: longitude,
               phone: (phone ?? '').trim().isNotEmpty
                   ? phone!.trim()
                   : AuthFlow.instance.currentUserPhone,
@@ -86,6 +93,13 @@ class LocationConfirmScreen extends StatefulWidget {
         debugPrint('[LocationConfirm] pending location retry failed: $error');
       }
     }());
+  }
+
+  /// Marker values are written by this app only, but a hand-edited or
+  /// truncated marker must never crash the retry.
+  static double? _doubleOrNull(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse((value ?? '').toString().trim());
   }
 
   @override
@@ -336,10 +350,34 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
   // Confirm
   // ---------------------------------------------------------------------------
 
-  void _confirm() {
+  /// True while STEP 01 is being written to Supabase: the confirm button
+  /// turns into a spinner and ignores taps, so a double tap cannot submit
+  /// the step twice.
+  bool _saving = false;
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  /// Saves the confirmed pick and only then opens STEP 02: nothing
+  /// navigates forward before the server acknowledged the write, so a step
+  /// is never marked done on an unconfirmed save and no success is faked.
+  Future<void> _confirm() async {
+    if (_saving) return;
     final SellerProfileStore store = SellerProfileStore.instance;
     final String label = _labelController.text.trim();
     final String address = _addressController.text.trim();
+    if (label.isEmpty && address.isEmpty) {
+      _showMessage('Move the pin or enter an address to continue.');
+      return;
+    }
     store.setPickedLocation(
       label: label,
       address: address,
@@ -348,75 +386,94 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     );
     // Every location display (home, profile, orders, Business & Farm)
     // reads businessLocation/businessAddress — mirror the pick so all of
-    // them switch to it right away.
+    // them switch to it right away (this is the local half of the save).
     store.setBusinessLocation(location: label, address: address);
-    // STEP 01 is done the moment the pick is confirmed — record it so a
-    // relaunch mid-onboarding resumes on the next unfinished page, not here.
-    store.setLocationComplete(true);
+
+    FocusScope.of(context).unfocus();
+    setState(() => _saving = true);
+
+    // Best-effort `PUT /onboarding/location` for the legacy backend: it must
+    // never gate navigation, so it runs alongside the Supabase write.
     unawaited(_saveLocation());
 
-    // Supabase is the source the app reads back on every login. Capture the
-    // messenger and the translated warning while this route's context is
-    // still valid, then let onboarding continue either way (retry-on-login
-    // covers an offline failure).
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    unawaited(
-      _persistLocation(
-        label: label,
-        address: address,
-        phone: store.mobile,
-        messenger: messenger,
-        warning:
-            'Could not save your location to the server. It will retry at next login.',
-      ),
+    final bool saved = await _persistLocation(
+      label: label,
+      address: address,
+      phone: store.mobile,
+      latitude: _center.latitude,
+      longitude: _center.longitude,
     );
+    if (!mounted) return;
+    setState(() => _saving = false);
 
+    if (!saved) {
+      // Real error surfaced; the pending marker written above stays in
+      // place for the retry on the next login. The seller remains on
+      // STEP 01 — nothing was marked complete without a confirmed write.
+      _showMessage(
+        'Could not save your location to the server. '
+        'Check your connection and try again.',
+      );
+      return;
+    }
+
+    // STEP 01 is done the moment the pick is confirmed AND saved — record
+    // it so a relaunch mid-onboarding resumes on the next unfinished page.
+    store.setLocationComplete(true);
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
   }
 
   /// Writes the confirmed address to `seller_profiles.location` /
-  /// `business_address`.
+  /// `business_address` (with the map coordinates) and returns whether the
+  /// server accepted it.
   ///
   /// A pending marker is stored BEFORE the attempt and cleared only on
   /// success, so a failed write is retried on the next login instead of
-  /// being lost. On failure [warning] is shown on [messenger] (captured
-  /// before navigating away) and onboarding continues anyway.
-  static Future<void> _persistLocation({
+  /// being lost. The caller decides what a `false` means for navigation —
+  /// here it always means "stay on this step".
+  static Future<bool> _persistLocation({
     required String label,
     required String address,
     required String phone,
-    required ScaffoldMessengerState messenger,
-    required String warning,
+    double? latitude,
+    double? longitude,
   }) async {
     final AppStorage? storage = AppStorage.current;
     const String key = StorageKeys.pendingLocationKey;
     try {
       await storage?.writeString(
         key,
-        jsonEncode(<String, String>{'label': label, 'address': address}),
+        jsonEncode(<String, Object?>{
+          'label': label,
+          'address': address,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        }),
       );
     } catch (_) {
       // Marker is best-effort; the direct attempt below still runs.
     }
     try {
       await SupabaseProductApi()
-          .saveLocationDetails(label: label, address: address, phone: phone)
+          .saveLocationDetails(
+            label: label,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            phone: phone,
+          )
           .timeout(const Duration(seconds: 15));
       try {
         await storage?.remove(key);
       } catch (_) {}
+      debugPrint('[LocationConfirm] location saved');
+      return true;
     } catch (error) {
       debugPrint('[LocationConfirm] saveLocationDetails failed: $error');
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(warning),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      return false;
     }
   }
 
@@ -487,7 +544,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
             Positioned(
               left: 24,
               top: 731,
-              child: _ConfirmButton(onConfirm: _confirm),
+              child: _ConfirmButton(onConfirm: _confirm, saving: _saving),
             ),
           ],
         ),
@@ -861,16 +918,21 @@ class _LocationCard extends StatelessWidget {
 }
 
 class _ConfirmButton extends StatelessWidget {
-  const _ConfirmButton({required this.onConfirm});
+  const _ConfirmButton({required this.onConfirm, this.saving = false});
 
   final VoidCallback onConfirm;
+
+  /// True while STEP 01 is being written: the label swaps for a spinner and
+  /// taps are ignored, so the step can never be submitted twice.
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onConfirm,
+      onTap: saving ? null : onConfirm,
       child: HoverPress.button(
+        enabled: !saving,
         child: Container(
           key: const Key('confirmLocationButton'),
           width: 364,
@@ -887,16 +949,25 @@ class _ConfirmButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Text(
-            'Confirm location',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              height: 1,
-              letterSpacing: 0.2,
-              color: AppColors.surface,
-            ),
-          ),
+          child: saving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.surface,
+                  ),
+                )
+              : const Text(
+                  'Confirm location',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                    letterSpacing: 0.2,
+                    color: AppColors.surface,
+                  ),
+                ),
         ),
       ),
     );

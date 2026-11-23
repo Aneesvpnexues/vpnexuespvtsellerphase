@@ -239,7 +239,15 @@ class AuthFlow {
             'Firebase Console > Authentication > Sign-in method.';
       case 'missing-phone-number':
         return 'No phone number provided. Enter a mobile number and retry.';
+      case 'internal-error':
+      case '17020':
+      case '39':
+        return 'App verification failed (Error code: 39). Check SHA-1/SHA-256 fingerprints in Firebase Console and enable Play Integrity API.';
       default:
+        final msg = error.message ?? '';
+        if (msg.contains('39') || msg.toLowerCase().contains('internal error')) {
+          return 'App verification failed (Error code: 39). Check SHA-1/SHA-256 fingerprints in Firebase Console and enable Play Integrity API.';
+        }
         return error.message ?? 'Verification failed. Try again.';
     }
   }

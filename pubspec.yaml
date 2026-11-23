@@ -51,6 +51,13 @@ dependencies:
   # Persistent local storage: seller profile, products, registered sign-up
   # accounts and the active session all survive app restarts through this.
   shared_preferences: ^2.3.0
+  # Secure storage for the authentication session (phone, Firebase uid,
+  # session method). Kept apart from shared_preferences above: that store
+  # holds non-sensitive business data, while the session record is the
+  # credential that decides whether the app opens on Home or on Welcome, so
+  # it lives in the platform keystore (Windows DPAPI, Android Keystore,
+  # iOS Keychain) instead of a plain preferences XML.
+  flutter_secure_storage: ^11.2.0
   connectivity_plus: ^7.3.2
   geolocator: ^13.0.0
   flutter_map: ^6.2.1

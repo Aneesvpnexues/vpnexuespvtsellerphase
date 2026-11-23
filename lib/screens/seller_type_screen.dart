@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
+import '../data/seller_profile_store.dart';
+import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -30,7 +33,100 @@ class Step02SellerTypeScreen extends StatefulWidget {
 class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
   int? _selectedIndex;
 
-  void _select(int index) => setState(() => _selectedIndex = index);
+  /// True while STEP 02 is being written to Supabase; Continue turns into a
+  /// spinner and ignores taps until the save resolves.
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Revisiting this step (back navigation) shows the saved answer instead
+    // of an empty form, so a finished choice is never asked for again.
+    final SellerProfileStore store = SellerProfileStore.instance;
+    if (store.sellerTypeComplete) {
+      switch (store.sellerType) {
+        case SellerType.farmer:
+          _selectedIndex = 0;
+        case SellerType.trader:
+          _selectedIndex = 1;
+        case SellerType.fpo:
+          _selectedIndex = 4;
+      }
+    }
+  }
+
+  void _select(int index) {
+    if (_saving) return;
+    setState(() => _selectedIndex = index);
+  }
+
+  /// The seller type each pill stands for (the app's model only distinguishes
+  /// farmer / trader / fpo, so the five pills map onto those three).
+  static SellerType _typeFor(int index) {
+    switch (index) {
+      case 0:
+        return SellerType.farmer; // Farmer
+      case 4:
+        return SellerType.fpo; // Business seller
+      default:
+        return SellerType.trader; // Shop owner, restaurant supplier, wholesaler
+    }
+  }
+
+  /// Saves STEP 02 and only then moves on: nothing navigates forward before
+  /// the server confirmed the write, and a failure leaves the seller here
+  /// with the real error message.
+  Future<void> _continue() async {
+    if (_saving) return;
+    final int? index = _selectedIndex;
+    if (index == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.trOf(context, 'Choose the option that best describes you.'),
+            ),
+          ),
+        );
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _saving = true);
+
+    final SellerType type = _typeFor(index);
+    try {
+      await SupabaseProductApi().saveSellerType(type.dbValue);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.trOf(context, 'Could not save your seller type. Please try again.'),
+            ),
+          ),
+        );
+      return;
+    }
+    if (!mounted) return;
+
+    final SellerProfileStore store = SellerProfileStore.instance;
+    store.setSellerType(type);
+    store.setSellerTypeComplete(true);
+    setState(() => _saving = false);
+
+    goToBusinessDetails(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +205,8 @@ class _Step02SellerTypeScreenState extends State<Step02SellerTypeScreen> {
           ),
           ContinueButton(
             buttonKey: const Key('seller-type-continue'),
-            onTap: () {
-              FocusScope.of(context).unfocus();
-              goToBusinessDetails(context);
-            },
+            loading: _saving,
+            onTap: _continue,
           ),
         ],
       ),

@@ -27,6 +27,24 @@ enum OrderStatus {
         return OrderStatus.pending;
     }
   }
+
+  /// Parses the display label the demo order list uses ('Pending',
+  /// 'Accepted', 'Confirmed', 'Delivered', 'Rejected').
+  static OrderStatus parseLabel(String? label) {
+    switch (label) {
+      case 'Accepted':
+        return OrderStatus.accepted;
+      case 'Confirmed':
+        return OrderStatus.confirmed;
+      case 'Delivered':
+        return OrderStatus.delivered;
+      case 'Rejected':
+        return OrderStatus.rejected;
+      case 'Pending':
+      default:
+        return OrderStatus.pending;
+    }
+  }
 }
 
 enum PickupType {
@@ -223,6 +241,19 @@ class Order {
 }
 
 class OrderStore extends ChangeNotifier {
+  int _demoActiveOrdersCount = 0;
+  int get activeOrdersCount {
+  return _orders.where((order) {
+    return (_localStatus[order.orderId] ?? order.status) ==
+        OrderStatus.accepted;
+  }).length + _demoActiveOrdersCount;
+}
+void setDemoActiveOrdersCount(int count) {
+  if (_demoActiveOrdersCount == count) return;
+
+  _demoActiveOrdersCount = count;
+  notifyListeners();
+}
   OrderStore._();
 
   static final OrderStore instance = OrderStore._();
@@ -230,9 +261,40 @@ class OrderStore extends ChangeNotifier {
   List<Order> _orders = <Order>[];
   bool _isLoading = false;
 
+  /// TEMPORARY local status overlay keyed by order id.
+  ///
+  /// This build has no backend yet: the demo orders live in the UI, so the
+  /// pending -> accepted -> confirmed -> delivered moves are recorded here
+  /// and read back by My Orders and Order Details. Replace [markOrder] with
+  /// the database write when the API is wired in.
+  final Map<String, OrderStatus> _localStatus = <String, OrderStatus>{};
+
   List<Order> get orders => List.unmodifiable(_orders);
+  /// Number of orders currently accepted.
+
 
   bool get isLoading => _isLoading;
+
+  /// The status [orderId] was moved to in this session, or null while it
+  /// still carries the status it was created with.
+  OrderStatus? statusFor(String orderId) => _localStatus[orderId];
+
+  /// Status of [orderId] when it has no local move yet.
+  OrderStatus statusOf(String orderId, {OrderStatus fallback = OrderStatus.pending}) =>
+      _localStatus[orderId] ?? fallback;
+
+  /// Moves [orderId] to [status] locally and notifies the listeners.
+  void markOrder(String orderId, OrderStatus status) {
+    if (orderId.isEmpty || _localStatus[orderId] == status) return;
+    _localStatus[orderId] = status;
+    final int index = _orders.indexWhere((Order order) => order.orderId == orderId);
+    if (index != -1) {
+      final List<Order> updated = List<Order>.of(_orders);
+      updated[index] = updated[index].copyWith(status: status);
+      _orders = List<Order>.unmodifiable(updated);
+    }
+    notifyListeners();
+  }
 
   void setOrders(List<Order> orders) {
     _orders = List<Order>.unmodifiable(orders);
@@ -245,7 +307,9 @@ class OrderStore extends ChangeNotifier {
   }
 
   void clear() {
+    _demoActiveOrdersCount = 0;
     _orders = <Order>[];
+    _localStatus.clear();
     notifyListeners();
   }
 
