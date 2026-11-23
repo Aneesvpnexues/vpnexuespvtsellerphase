@@ -111,7 +111,7 @@ class SellerApp extends StatelessWidget {
           navigatorKey: rootNavigatorKey,
           scaffoldMessengerKey: NetworkService.instance.messengerKey,
           theme: ThemeData(fontFamily: 'Inter'),
-          home: const SellerHomeScreen(),
+          home: const SplashScreen(),
         );
       },
     );
