@@ -487,6 +487,51 @@ class _ProductRow extends StatelessWidget {
 
   final Product product;
 
+  /// Quick actions for the listing. Tapping the row opens the details page,
+  /// so the ⋮ button is what offers Edit — kept as a bottom sheet so more
+  /// actions can be added later without changing the row layout.
+  void _showRowMenu(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cardWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(product.name, style: AppTextStyles.sectionHeader),
+              const SizedBox(height: 4),
+              Text(
+                product.quantityLabel,
+                style: const TextStyle(fontSize: 12, color: Color(0x7A000000)),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                key: const ValueKey('my-product-edit'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.edit_outlined,
+                  size: 20,
+                  color: AppColors.darkGreenInk,
+                ),
+                title: const Text('Edit product'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  goToEditProduct(context, product);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool showPublish = product.status == ProductStatus.draft;
@@ -526,7 +571,16 @@ class _ProductRow extends StatelessWidget {
               ),
             ),
             Positioned(left: 7, top: 7, child: _ProductImage(product: product)),
-            const Positioned(left: 82, top: 13, child: _DotsIcon()),
+            Positioned(
+              left: 82,
+              top: 13,
+              child: GestureDetector(
+                key: ValueKey('my-product-menu-${product.id}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _showRowMenu(context),
+                child: HoverPress.icon(child: const _DotsIcon()),
+              ),
+            ),
             Positioned(
               left: 122,
               top: 6,

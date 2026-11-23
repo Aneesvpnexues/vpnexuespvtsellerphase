@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../data/seller_profile_store.dart';
-import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -35,18 +34,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
   final MapController _mapController = MapController();
   List<Marker> _markers = [];
-
-  /// Where the map opens. Starts on the placeholder city only until the
-  /// seller's own coordinates are seeded in [initState] (BUG_SELLER_023).
   LatLng _center = const LatLng(12.9716, 77.5946);
-
-  /// True once the map can be moved. A geocode that finishes before the map
-  /// finishes rendering is queued in [_pendingMove] and applied on ready,
-  /// instead of being dropped (which left the map on another city).
-  bool _mapReady = false;
-  LatLng? _pendingMove;
-  double _pendingZoom = 14;
-
   Timer? _geocodeDebounce;
   bool _syncingFromMap = false;
   int _geocodeSeq = 0;
@@ -65,11 +53,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     'Potatoes',
   ];
 
-  final List<String> _selectedCrops = [
-    'Tomatoes',
-    'Spinach',
-    'Carrots',
-  ];
+  /// "What you grow" selection: restored from [SellerProfileStore.crops] in
+  /// [initState] and committed back to the store on every change.
+  final List<String> _selectedCrops = <String>[];
 
   @override
   void initState() {
@@ -92,12 +78,16 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           : '5',
     );
 
-    // Address & Location opens on the place the seller already chose — the
-    // login location pick first, then a previously saved address — never on
-    // a hardcoded city (BUG_SELLER_023).
-    _locationController = TextEditingController(text: profile.displayLocation);
+    _locationController = TextEditingController(
+  text: profile.businessLocation.trim(),
+);
 
     _manualCropController = TextEditingController();
+
+    // Restore the saved crop selection. Profiles saved before the field
+    // existed carry the store's starter crops; an explicitly saved empty
+    // selection stays empty.
+    _selectedCrops.addAll(_canonicalCrops(profile.crops));
 
     // Initialize delivery toggles from the shared store.
     _buyerPickup = profile.buyerPickup;
@@ -107,15 +97,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     _locationController.addListener(_refresh);
     _locationController.addListener(_onLocationEdited);
 
-    // Place a pin at the saved address on first build. Saved coordinates are
-    // used straight away so the map cannot open on some other city; without
-    // them the address text is geocoded instead.
-    if (profile.pickedLatitude != null && profile.pickedLongitude != null) {
-      _setPin(LatLng(profile.pickedLatitude!, profile.pickedLongitude!));
-    } else {
-      _geocodeDebounce =
-          Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
-    }
+    // Place a pin at the saved address on first build.
+    _geocodeDebounce =
+        Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
   }
 
   void _refresh() {
@@ -161,41 +145,15 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 
 
   void _placePin(LatLng point) {
-    _setPin(point);
-    setState(() {});
-  }
-
-  /// Records the pin without triggering a rebuild — used from [initState],
-  /// where the first build is still on its way.
-  void _setPin(LatLng point) {
-    _center = point;
-    _markers = [
-      Marker(
-        point: point,
-        child: const Icon(Icons.location_on, size: 36, color: Colors.red),
-      ),
-    ];
-  }
-
-  void _onMapReady() {
-    _mapReady = true;
-    final LatLng? pending = _pendingMove;
-    if (pending == null) return;
-    _pendingMove = null;
-    _mapController.move(pending, _pendingZoom);
-  }
-
-  /// Moves the map to [point], remembering the target while the map is still
-  /// rendering so a lookup that finishes first is applied the moment the map
-  /// is ready — otherwise the move was dropped and the map kept showing the
-  /// placeholder city.
-  void _moveMap(LatLng point, double zoom) {
-    if (_mapReady) {
-      _mapController.move(point, zoom);
-    } else {
-      _pendingMove = point;
-      _pendingZoom = zoom;
-    }
+    setState(() {
+      _center = point;
+      _markers = [
+        Marker(
+          point: point,
+          child: const Icon(Icons.location_on, size: 36, color: Colors.red),
+        ),
+      ];
+    });
   }
 
   Future<void> _geocodeTypedAddress() async {
@@ -222,15 +180,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       }
       final LatLng point = LatLng(hit.$1, hit.$2);
       _placePin(point);
-      _moveMap(point, 14);
-      // Keep the shared profile in lock-step with what the map shows, so
-      // every other screen (Home, Profile, Address & Location) reads the
-      // same place the map is pointing at (BUG_SELLER_023).
-      SellerProfileStore.instance.setPickedLocation(
-        label: query,
-        latitude: point.latitude,
-        longitude: point.longitude,
-      );
+      _mapController.move(point, 14);
     } catch (_) {
       // Geocoding is best-effort; ignore network/parse failures.
     }
@@ -339,13 +289,96 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       address: display,
     );
     _syncingFromMap = false;
-    // The pin is the seller's actual spot: remember where it sits so the map
-    // reopens there (the text is published when the seller saves).
-    SellerProfileStore.instance.setPickedLocation(
-      latitude: point.latitude,
-      longitude: point.longitude,
-    );
     _refresh();
+  }
+
+  // ---------------------------------------------------------------------------
+  // CROP SELECTION ("What you grow")
+  // ---------------------------------------------------------------------------
+
+  /// Maps a saved selection onto the [_allCrops] spellings where they match
+  /// case-insensitively and drops duplicates, so a manually added "onions"
+  /// can never render as a second chip next to "Onions".
+  List<String> _canonicalCrops(Iterable<String> saved) {
+    final List<String> canonical = <String>[];
+    final Set<String> seen = <String>{};
+    for (final String crop in saved) {
+      final String trimmed = crop.trim();
+      if (trimmed.isEmpty) continue;
+      final String key = trimmed.toLowerCase();
+      if (!seen.add(key)) continue;
+      canonical.add(
+        _allCrops.firstWhere(
+          (String option) => option.toLowerCase() == key,
+          orElse: () => trimmed,
+        ),
+      );
+    }
+    return canonical;
+  }
+
+  /// Whether [crop] is part of the current selection (case-insensitively).
+  bool _isSelected(String crop) => _selectedCrops.any(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+
+  /// Selects or deselects [crop] and commits the new selection straight
+  /// away — the same persist-on-change pattern the rest of the profile
+  /// store uses, so navigating away without pressing Done cannot lose it.
+  void _toggleCrop(String crop) {
+    setState(() {
+      final int index = _selectedCrops.indexWhere(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+      if (index == -1) {
+        _selectedCrops.add(crop);
+      } else {
+        _selectedCrops.removeAt(index);
+      }
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// Removes [crop] through the chip's delete icon in edit mode.
+  void _removeCrop(String crop) {
+    setState(() {
+      _selectedCrops.removeWhere(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// Adds a manually typed crop, ignoring blanks and duplicates.
+  void _addCrop(String value) {
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty || _isSelected(trimmed)) return;
+    setState(() {
+      _selectedCrops.add(trimmed);
+      _manualCropController.clear();
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// "Edit Crops" enters edit mode; "Done" commits the edited selection
+  /// first and only then leaves it, so the button can no longer change just
+  /// the flag and drop the seller's crops.
+  void _onCropsEditTapped() {
+    if (_isEditingCrops) {
+      SellerProfileStore.instance
+          .setSelectedCrops(_selectedCrops, forcePersist: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(AppStrings.trOf(context, 'Crop selection saved.')),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
+    }
+    setState(() => _isEditingCrops = !_isEditingCrops);
   }
 
   // SAVE BUSINESS AND FARM DETAILS
@@ -355,74 +388,88 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   /// shows an error snackbar instead of the success one — the seller can
   /// tap Save again.
   Future<void> _saveChanges() async {
-    final profile = SellerProfileStore.instance;
-    final String location = _locationController.text.trim();
+  final profile = SellerProfileStore.instance;
 
+  final String location = _locationController.text.trim();
+
+  if (!mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+
+  final String successMessage = AppStrings.trOf(
+    context,
+    'Business & Farm details saved successfully!',
+  );
+
+  final String errorMessage = AppStrings.trOf(
+    context,
+    'Could not save your details to the server. Check your connection and try again.',
+  );
+
+  // The success message may only follow a save that actually ran: every
+  // field — including the crop selection — is written to the local profile
+  // store inside this try block, and any failure surfaces the error message
+  // instead of a false confirmation.
+  //
+  // Crops stay device-local in this phase: `seller_profiles` has no crop
+  // column (no migration exists that adds one), so syncing them to Supabase
+  // needs a schema change first. The Supabase profile save below is kept
+  // for that later phase — it needs an authenticated Supabase session
+  // (the API's own `_ensureSignedIn()`), which this screen does not
+  // guarantee yet, and the `supabase_product_api.dart` import has to come
+  // back with it.
+  try {
     profile.saveBusinessDetails(
       name: profile.name,
       business: _businessNameController.text.trim(),
       phone: profile.mobile,
       location: location,
-      address: profile.businessAddress.isNotEmpty
-          ? profile.businessAddress
-          : location,
-
-      // Save farm size in acres
+      address: location,
       farmSize: _farmSizeController.text.trim(),
+      crops: _selectedCrops,
     );
 
-    // This card is also the app's source of truth for the seller's place, so
-    // the saved text (and the pin it was geocoded to, when there is one) is
-    // published there too — otherwise Home and Profile would keep showing
-    // whatever was picked earlier (BUG_SELLER_023).
-    profile.setPickedLocation(
-      label: location,
-      latitude: _markers.isNotEmpty ? _center.latitude : profile.pickedLatitude,
-      longitude:
-          _markers.isNotEmpty ? _center.longitude : profile.pickedLongitude,
+    // Keep the shared profile store synchronized.
+    profile.setBusinessLocation(
+      location: location,
+      address: location,
     );
+    // await SupabaseProductApi().saveSellerProfile(
+    //   name: profile.name,
+    //   mobile: profile.mobile,
+    //   sellerType: profile.sellerType.dbValue,
+    //   businessName: profile.businessName,
+    //   businessLocation: profile.businessLocation,
+    //   businessAddress: profile.businessAddress,
+    //   avatarUrl: profile.avatarUrl,
+    // );
+  } catch (error) {
+    debugPrint('[BusinessFarm] saveBusinessDetails failed: $error');
 
-    final messenger = ScaffoldMessenger.of(context);
-    // Translate while this route's context is still valid — after the await
-    // the widget may already be disposed.
-    final String successMessage = AppStrings.trOf(
-      context,
-      'Business & Farm details saved successfully!',
-    );
-    final String errorMessage = AppStrings.trOf(
-      context,
-      'Could not save your details to the server. Check your connection and try again.',
-    );
-    try {
-      await SupabaseProductApi().saveSellerProfile(
-        name: profile.name,
-        mobile: profile.mobile,
-        sellerType: profile.sellerType.dbValue,
-        businessName: profile.businessName,
-        businessLocation: profile.businessLocation,
-        businessAddress: profile.businessAddress,
-        avatarUrl: profile.avatarUrl,
+    if (!mounted) return;
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(successMessage),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    } catch (error) {
-      debugPrint('[BusinessFarm] saveSellerProfile failed: $error');
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    }
+    return;
   }
+
+  if (!mounted) return;
+
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(successMessage),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
 
   Widget _safeAsset(
     String path, {
@@ -575,33 +622,34 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               ),
             ),
 
-            Positioned(
-              left: 22,
-              right: 12,
-              bottom: 9,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.businessPillBg,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: AppColors.businessPillBorder,
-                    ),
-                  ),
-                  child: Text(
-                    _locationController.text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.businessHeroPill,
-                  ),
-                ),
-              ),
-            ),
+if (_locationController.text.trim().isNotEmpty)
+  Positioned(
+    left: 22,
+    right: 12,
+    bottom: 9,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 3,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.businessPillBg,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: AppColors.businessPillBorder,
+          ),
+        ),
+        child: Text(
+          _locationController.text.trim(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.businessHeroPill,
+        ),
+      ),
+    ),
+  ),
           ],
         ),
       ),
@@ -660,11 +708,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               ),
 
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isEditingCrops = !_isEditingCrops;
-                  });
-                },
+                onTap: _onCropsEditTapped,
                 child: Text(
                   _isEditingCrops
                       ? AppStrings.trOf(context, 'Done')
@@ -692,30 +736,31 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                 .toSet()
                 .toList()
                 .map((crop) {
-              final isSelected = _selectedCrops.contains(crop);
-              return Chip(
-                label: Text(AppStrings.trOf(context, crop)),
-                backgroundColor:
-                    isSelected ? AppColors.orderDark : Colors.white,
-                labelStyle: isSelected
-                    ? AppTextStyles.businessChipActive
-                    : AppTextStyles.businessChipIdle,
+              final isSelected = _isSelected(crop);
+              return GestureDetector(
+                key: ValueKey('crop-chip-$crop'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _toggleCrop(crop),
+                child: Chip(
+                  label: Text(AppStrings.trOf(context, crop)),
+                  backgroundColor:
+                      isSelected ? AppColors.orderDark : Colors.white,
+                  labelStyle: isSelected
+                      ? AppTextStyles.businessChipActive
+                      : AppTextStyles.businessChipIdle,
 
-                deleteIcon: _isEditingCrops && isSelected
-                    ? const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: Colors.white,
-                      )
-                    : null,
+                  deleteIcon: _isEditingCrops && isSelected
+                      ? const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : null,
 
-                onDeleted: _isEditingCrops && isSelected
-                    ? () {
-                        setState(() {
-                          _selectedCrops.remove(crop);
-                        });
-                      }
-                    : null,
+                  onDeleted: _isEditingCrops && isSelected
+                      ? () => _removeCrop(crop)
+                      : null,
+                ),
               );
             }).toList(),
           ),
@@ -757,6 +802,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                       ),
                     ),
                     child: TextField(
+                      key: const Key('manual-crop-field'),
                       controller: _manualCropController,
                       style: AppTextStyles.personalValue,
                       decoration: InputDecoration(
@@ -775,22 +821,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
                 const SizedBox(width: 8),
 
                 GestureDetector(
-                  onTap: () {
-                    final text =
-                        _manualCropController.text.trim();
-
-                    if (text.isNotEmpty &&
-                        !_selectedCrops.any(
-                          (crop) =>
-                              crop.toLowerCase() ==
-                              text.toLowerCase(),
-                        )) {
-                      setState(() {
-                        _selectedCrops.add(text);
-                        _manualCropController.clear();
-                      });
-                    }
-                  },
+                  onTap: () => _addCrop(_manualCropController.text),
                   child: Container(
                     height: 41,
                     padding: const EdgeInsets.symmetric(
@@ -838,7 +869,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           _buildInput(
             asset: 'assets/business/ic_location.png',
             controller: _locationController,
-            hint: AppStrings.trOf(context, 'Enter location (e.g. Kochi)'),
+            hint: AppStrings.trOf(context, 'Enter location (e.g. Chennai)'),
             onSubmitted: _geocodeTypedAddress,
           ),
 
@@ -852,14 +883,19 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
               child: FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: _center,
-                  initialZoom: 12,
-                  onMapReady: _onMapReady,
-                  onTap: (tapPosition, point) {
-                    _placePin(point);
-                    _reverseGeocodePin(point);
-                  },
-                ),
+  initialCenter: _center,
+  initialZoom: 12,
+
+  // Disable map rotation completely
+  interactionOptions: const InteractionOptions(
+    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+  ),
+
+  onTap: (tapPosition, point) {
+    _placePin(point);
+    _reverseGeocodePin(point);
+  },
+),
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -876,27 +912,31 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
-
-          Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 280),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _locationController.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+          if (_locationController.text.trim().isNotEmpty) ...[
+  const SizedBox(height: 8),
+  Center(
+    child: Container(
+      constraints: const BoxConstraints(maxWidth: 280),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        _locationController.text.trim(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  ),
+],
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:seller_app/data/seller_profile_store.dart';
 import 'package:seller_app/data/session_store.dart';
 import 'package:seller_app/screens/business_details_screen.dart';
 import 'package:seller_app/screens/seller_home_screen.dart';
+import 'package:seller_app/screens/seller_type_screen.dart';
 import 'package:seller_app/screens/splash_screen.dart';
 import 'package:seller_app/screens/welcome_seller_screen.dart';
 import 'package:seller_app/services/auth_flow.dart';
@@ -104,8 +105,30 @@ void main() {
       userName: 'Meena',
       method: SessionStore.signupMethod,
     );
-    // STEP 01 (location) is done; Business Details is not.
+    // STEP 01 (location) is done; STEP 02 (seller type) is not — the walk
+    // continues there, not on STEP 03 and never on the Welcome screen.
     SellerProfileStore.instance.setLocationComplete(true);
+
+    await pumpSplash(tester);
+
+    expect(find.byType(Step02SellerTypeScreen), findsOneWidget);
+    expect(find.byType(Step03BusinessDetailsScreen), findsNothing);
+    expect(find.byType(WelcomeSellerScreen), findsNothing);
+  });
+
+  testWidgets(
+      'a sign-up that finished STEP 01 and STEP 02 resumes on Business '
+      'Details', (WidgetTester tester) async {
+    resetState();
+    await bootStorage(splashSeen: true);
+    SessionStore.instance.startSession(
+      phone: '',
+      userName: 'Meena',
+      method: SessionStore.signupMethod,
+    );
+    SellerProfileStore.instance
+      ..setLocationComplete(true)
+      ..setSellerTypeComplete(true);
 
     await pumpSplash(tester);
 

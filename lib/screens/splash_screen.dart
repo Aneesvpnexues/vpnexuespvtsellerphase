@@ -10,12 +10,10 @@ import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
+import '../services/onboarding_flow.dart';
 import '../theme/app_colors.dart';
-import '../screens/bank_detaile.dart';
-import '../screens/business_details_screen.dart';
 import '../screens/location_confirm_screen.dart';
 import '../screens/seller_home_screen.dart';
-import '../screens/verify_detaile.dart';
 import '../screens/welcome_seller_screen.dart';
 
 /// First screen shown when the app opens — static replica of Zeplin
@@ -201,14 +199,30 @@ class _SplashScreenState extends State<SplashScreen> {
     bool verificationComplete = store.verificationComplete;
     bool personalComplete = store.personalComplete;
 
-    // Clear any stale data from a previous login session.
+    // Whether this launch managed to read anything back from Supabase. A
+    // login session that could not be restored at all keeps its old
+    // behaviour (continue on Home) instead of being dropped into onboarding
+    // with every flag empty.
+    bool foundAnyRow = false;
+
+    // Clear any stale data from a previous login session. Products saved
+    // on this device stay on disk (persist: false) so the refresh below
+    // can restore them.
     store.resetCompletionFlags();
-    ProductStore.instance.clear();
+    ProductStore.instance.clear(persist: false);
+    // Bring the products saved on this device straight back: a session
+    // without a Firebase UID never reaches the refresh below, and its Home
+    // must still show the listings. (The refresh hydrates again and skips
+    // ids that are already loaded.)
+    ProductStore.instance.hydrateFromStorage();
     WalletStore.instance.reset();
 
-    // Set the user_id for product queries and all user-scoped lookups.
+    // Set the user_id for product queries and all user-scoped lookups. A
+    // sign-up session has no Firebase UID yet — keeping the pending
+    // registration id recorded at sign-up (instead of wiping it to "")
+    // is what lets every pre-OTP write stay keyed to the same seller.
     ProductStore.instance.userId = uid;
-    store.userId = uid;
+    if (uid.isNotEmpty) store.userId = uid;
 
     if (uid.isNotEmpty) {
       // Retry a location write that failed while offline (marker left by
@@ -275,9 +289,10 @@ class _SplashScreenState extends State<SplashScreen> {
             }
           }
 
-          final bool foundAnyRow = profile != null ||
+          final bool rowsFound = profile != null ||
               bankDetails != null ||
               verificationDetails != null;
+          if (rowsFound) foundAnyRow = true;
 
           if (foundAnyRow && mounted) {
             if (profile != null) {
@@ -318,22 +333,31 @@ class _SplashScreenState extends State<SplashScreen> {
       personalComplete: personalComplete,
     );
     store.setLocationComplete(locationComplete);
+    // STEP 02 (seller type) has no Supabase column of its own, but it can
+    // only have been passed once STEP 03 business details exist — so a
+    // restored profile marks it answered too.
+    store.setSellerTypeComplete(store.sellerTypeComplete || profileComplete);
 
-    // A login session continues straight on Home (the OTP flow sends the
-    // seller to the same place); a sign-up session — and a record saved by
-    // an older build, which stored no method — still walks the onboarding
-    // steps so no pending page is skipped in favour of Home.
-    if (session.method == SessionStore.loginMethod) {
+    // Both session kinds resume through the same order: STEP 01 Location ->
+    // STEP 02 Seller Type -> STEP 03 Business Details -> STEP 04 Verify ->
+    // STEP 05 Bank Details -> Home, so a pending page is never skipped in
+    // favour of Home and a finished one is never asked for again.
+    //
+    // A **login** session whose rows could not be read at all (offline cold
+    // start, or an account created before Supabase existed) keeps its
+    // original behaviour and opens Home, instead of being dropped into
+    // onboarding with every flag empty.
+    final bool restoredAnything = foundAnyRow ||
+        locationComplete ||
+        profileComplete ||
+        bankComplete ||
+        verificationComplete ||
+        store.sellerTypeComplete;
+    if (session.method == SessionStore.loginMethod && !restoredAnything) {
       _openHome();
-    } else {
-      _navigateBasedOnCompletion(
-        profileComplete: profileComplete,
-        bankComplete: bankComplete,
-        verificationComplete: verificationComplete,
-        personalComplete: personalComplete,
-        locationComplete: locationComplete,
-      );
+      return;
     }
+    OnboardingFlow.resume(context, clearStack: false, store: store);
   }
 
   /// Returns the Firebase user for this device, or null.
@@ -407,68 +431,19 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   /// Determines whether verification/KYC is complete based on at least one
-  /// document URL being present.
+  /// document URL **or** file name being present (the metadata-only path
+  /// writes file names when nothing is uploaded to Cloudinary yet).
   bool _isVerificationComplete(Map<String, dynamic> verification) {
     final fields = <String>[
       verification['aadhaar_card'] ?? '',
       verification['pan_card'] ?? '',
       verification['business_registration'] ?? '',
+      verification['aadhaar_file_name'] ?? '',
+      verification['pan_file_name'] ?? '',
+      verification['business_file_name'] ?? '',
     ];
     return fields.any(
       (value) => value.toString().trim().isNotEmpty,
-    );
-  }
-
-  /// Navigates to the first incomplete onboarding step:
-  /// [Location Confirm] -> [Seller Type / Business Details] -> [Verify (KYC)] -> [Bank Details] -> Home
-  void _navigateBasedOnCompletion({
-    required bool profileComplete,
-    required bool bankComplete,
-    required bool verificationComplete,
-    required bool personalComplete,
-    bool locationComplete = true,
-  }) {
-    if (!mounted) return;
-
-    if (!locationComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const LocationConfirmScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!profileComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step03BusinessDetailsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!verificationComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const VerifyDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!bankComplete) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    // All sections complete — go straight to Home.
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
     );
   }
 
@@ -486,31 +461,35 @@ class _SplashScreenState extends State<SplashScreen> {
     final String business =
         (profile['business_name'] ?? '').toString().trim();
     final String sellerTypeStr =
-        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
-    SellerType sellerType;
-    switch (sellerTypeStr) {
-      case 'trader':
-        sellerType = SellerType.trader;
-      case 'fpo':
-        sellerType = SellerType.fpo;
-      default:
-        sellerType = SellerType.farmer;
-    }
+        (profile['seller_type'] ?? '').toString().trim().toLowerCase();
     // Set location even when no name exists yet so the address shows up
     // regardless of how far onboarding has progressed.
     SellerProfileStore.instance.setBusinessLocation(
       location: location,
       address: address,
     );
+    // A seller type stored on the row means STEP 02 was answered — restore
+    // it so Profile / Personal Details show the saved choice instead of the
+    // default. An empty (legacy) value leaves whatever this device knows.
+    if (sellerTypeStr.isNotEmpty) {
+      switch (sellerTypeStr) {
+        case 'trader':
+          SellerProfileStore.instance.setSellerType(SellerType.trader);
+        case 'fpo':
+          SellerProfileStore.instance.setSellerType(SellerType.fpo);
+        case 'farmer':
+          SellerProfileStore.instance.setSellerType(SellerType.farmer);
+      }
+    }
     if (name.isNotEmpty) {
-    SellerProfileStore.instance.saveBusinessDetails(
-      name: name,
-      business: business.isNotEmpty ? business : name,
-      phone: mobile,
-      location: location,
-      address: address,
-      farmSize: '',
-    );
+      SellerProfileStore.instance.saveBusinessDetails(
+        name: name,
+        business: business.isNotEmpty ? business : name,
+        phone: mobile,
+        location: location,
+        address: address,
+        farmSize: '',
+      );
     } else {
       SellerProfileStore.instance.mobile = mobile;
     }

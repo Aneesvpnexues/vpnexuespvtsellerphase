@@ -10,19 +10,23 @@ import '../widgets/page_header.dart';
 /// Order Details — completed confirmation state. Replica of Zeplin
 /// "Android Compact - 259".
 ///
-/// This is the final page of the buyer-pickup flow: the seller reaches it only
-/// after entering the correct 4-digit pickup code on the pickup-code state
-/// (154). It shows the completed check, the wallet credit and a simple
-/// "Back to orders" pill that returns to the My Orders tab.
+/// This is the final page of the buyer-pickup flow: the seller reaches it after
+/// entering a 4-digit pickup code on the pickup-code state (154) — any code is
+/// accepted for now, there is no backend yet. It shows the completed check, the
+/// wallet credit and a simple "Back to orders" pill that returns to the My
+/// Orders tab and marks the order delivered.
 ///
 /// Built against a 412x917 artboard, sharing the 154/165 header and segment
 /// tabs. Geometry is measured from the design PNG at 2x.
 class OrderConfirmationScreen extends StatelessWidget {
-  const OrderConfirmationScreen({super.key});
+  const OrderConfirmationScreen({super.key, this.orderId = '#NX4582'});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
   static const double trimTop = 49;
+
+  /// Order that was completed; "Back to orders" marks it delivered.
+  final String orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -37,35 +41,43 @@ class OrderConfirmationScreen extends StatelessWidget {
           child: DefaultTextStyle(
             style: const TextStyle(fontFamily: 'Roboto'),
             child: Stack(
-              children: const [
-                Positioned(
+              children: [
+                const Positioned(
                   left: 0,
                   top: 73,
                   child: PageHeader(title: 'Order Details'),
                 ),
-                Positioned(left: 22, top: 117, child: _SegmentTabs()),
-                Positioned(left: 22, top: 201, child: _Divider()),
-                Positioned(left: 125, top: 203.5, child: _SuccessBadge()),
-                Positioned(
+                const Positioned(left: 22, top: 117, child: _SegmentTabs()),
+                const Positioned(left: 22, top: 201, child: _Divider()),
+                const Positioned(
+                  left: 125,
+                  top: 203.5,
+                  child: _SuccessBadge(),
+                ),
+                const Positioned(
                   left: 0,
                   right: 0,
                   top: 380,
                   child: _OrderCompleted(),
                 ),
-                Positioned(
+                const Positioned(
                   left: 0,
                   right: 0,
                   top: 420,
                   child: _CollectedCaption(),
                 ),
-                Positioned(
+                const Positioned(
                   left: 0,
                   right: 0,
                   top: 441,
                   child: _OrderReference(),
                 ),
-                Positioned(left: 22, top: 477.5, child: _WalletCard()),
-                Positioned(left: 22, top: 834, child: _BackButton()),
+                const Positioned(left: 22, top: 477.5, child: _WalletCard()),
+                Positioned(
+                  left: 22,
+                  top: 834,
+                  child: _BackButton(orderId: orderId),
+                ),
               ],
             ),
           ),
@@ -412,13 +424,17 @@ class _WalletIconPainter extends CustomPainter {
 }
 
 class _BackButton extends StatelessWidget {
-  const _BackButton();
+  const _BackButton({required this.orderId});
+
+  final String orderId;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => goToOrdersRoot(context),
+      // The order is complete and collected at this point: mark it delivered
+      // locally on the way back to the list (no backend yet).
+      onTap: () => goToOrdersRoot(context, completedOrderId: orderId),
       child: HoverPress.button(
         child: Container(
           width: 368,

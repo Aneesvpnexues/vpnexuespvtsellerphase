@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/order_store.dart';
 import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
@@ -15,20 +16,20 @@ import '../widgets/slide_drag_detector.dart';
 /// (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae10ae8ab8b653609477).
 ///
-/// Built against a 412x1098 artboard. The four code boxes accept the demo
-/// code shared by every order and user: [demoCode]. When the entered code
-/// does not match, the boxes turn red, show an error line and clear; the
-/// slide CTA stays locked until four digits are present. A valid code hands
-/// over to the confirmation screen.
+/// Built against a 412x1098 artboard. The four code boxes accept ANY 4-digit
+/// code for now: there is no backend yet, so the check is a placeholder that
+/// just has to unlock the slide CTA. A valid code moves the order to
+/// confirmed in the local status store and hands over to the confirmation
+/// screen.
 class OrderPickupCodeScreen extends StatefulWidget {
-  const OrderPickupCodeScreen({super.key});
+  const OrderPickupCodeScreen({super.key, this.orderId = '#NX4582'});
 
   static const double designWidth = 412;
   static const double designHeight = 1098;
   static const double trimTop = 49;
 
-  /// Universal demo pickup code (no backend yet).
-  static const String demoCode = '4582';
+  /// Order this screen belongs to; its status is marked confirmed here.
+  final String orderId;
 
   @override
   State<OrderPickupCodeScreen> createState() => _OrderPickupCodeScreenState();
@@ -65,20 +66,18 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
 
   bool _submit() {
     if (!_complete) return false;
-    if (_code.text == OrderPickupCodeScreen.demoCode) {
-      goToOrderConfirmation(
-        context,
-        amount: 2840,
-        itemsCount: 3,
-        orderId: '#NX4582',
-        dateTime: DateTime.now(),
-      );
-      return true;
-    }
-    _code.clear();
-    setState(() => _error = true);
-    _codeFocus.requestFocus();
-    return false;
+    // TEMPORARY: any 4-digit OTP is accepted while there is no backend to
+    // check the buyer's code against. The order moves to confirmed in the
+    // local status store; replace this block with the real verification.
+    OrderStore.instance.markOrder(widget.orderId, OrderStatus.confirmed);
+    goToOrderConfirmation(
+      context,
+      orderId: widget.orderId,
+      amount: 2840,
+      itemsCount: 3,
+      dateTime: DateTime.now(),
+    );
+    return true;
   }
 
   @override
@@ -101,7 +100,11 @@ class _OrderPickupCodeScreenState extends State<OrderPickupCodeScreen> {
                   ),
                 ),
                 const Positioned(left: 22, top: 117, child: _SegmentTabs()),
-                const Positioned(left: 25, top: 172, child: _HeroCard()),
+                Positioned(
+                  left: 25,
+                  top: 172,
+                  child: _HeroCard(orderId: widget.orderId),
+                ),
                 const Positioned(left: 22, top: 358, child: _BuyerCard()),
                 const Positioned(left: 22, top: 552, child: _DeliveryCard()),
                 Positioned(
@@ -232,7 +235,9 @@ class _Dot extends StatelessWidget {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard();
+  const _HeroCard({required this.orderId});
+
+  final String orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +283,7 @@ class _HeroCard extends StatelessWidget {
             left: 16,
             top: 12,
             child: _Label(
-              AppStrings.trOf(context, 'ORDER #NX4582'),
+              AppStrings.trOf(context, 'ORDER $orderId'),
               AppTextStyles.orderId,
               width: 107,
               height: 15,

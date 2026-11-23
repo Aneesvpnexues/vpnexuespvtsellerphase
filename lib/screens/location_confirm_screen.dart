@@ -26,25 +26,38 @@ import 'seller_type_screen.dart';
 /// card is editable and both directions stay in sync through Nominatim
 /// geocoding. "Confirm location" persists the pick to [SellerProfileStore]
 /// (shared with Business Details), writes it to Supabase
-/// (`seller_profiles.location` / `business_address`) with a pending-retry
-/// marker when offline, and calls the backend before STEP 02.
+/// (`seller_profiles.location` / `business_address` plus the pin
+/// coordinates) with a pending-retry marker left behind when the write
+/// fails, and opens STEP 02 only after the server confirmed it — a failed
+/// save keeps the seller here with the real error instead of a fake
+/// success.
 ///
 /// Built against a 412x917 artboard, so every offset below is taken straight
 /// from the design PNG.
 class LocationConfirmScreen extends StatefulWidget {
-  const LocationConfirmScreen({super.key});
+  const LocationConfirmScreen({super.key, this.useCurrentLocation = false});
 
   static const double designWidth = 412;
   static const double designHeight = 917;
 
+  /// True when the seller arrived here through Step 01's "Use my current
+  /// location": the screen then fixes the GPS position on open (services
+  /// check, permission prompt and settings guidance included) instead of
+  /// only geocoding the stored address text.
+  ///
+  /// The "Select it Manually" link and every other entry point (onboarding
+  /// resume, Business Details) keep the default `false`, so they never
+  /// trigger a permission dialog on their own.
+  final bool useCurrentLocation;
+
   /// Retries a location write that failed while offline.
   ///
-  /// The State's `_persistLocation` stores a `{label, address}` marker BEFORE
-  /// attempting the write and clears it only on success, so a seller who
-  /// confirmed their address with no connectivity keeps it for the next
-  /// login. Called from Splash (Firebase session resume) and the OTP login
-  /// (logout -> login again, where Splash does not re-run). Failure leaves
-  /// the marker in place for the next attempt.
+  /// The State's `_persistLocation` stores a `{label, address, latitude,
+  /// longitude}` marker BEFORE attempting the write and clears it only on
+  /// success, so a seller who confirmed their address with no connectivity
+  /// keeps it for the next login. Called from Splash (Firebase session
+  /// resume) and the OTP login (logout -> login again, where Splash does not
+  /// re-run). Failure leaves the marker in place for the next attempt.
   static void retryPendingLocation({required String uid, String? phone}) {
     final AppStorage? storage = AppStorage.current;
     final String raw =
@@ -59,6 +72,8 @@ class LocationConfirmScreen extends StatefulWidget {
         }
         final String label = (decoded['label'] ?? '').toString().trim();
         final String address = (decoded['address'] ?? '').toString().trim();
+        final double? latitude = _doubleOrNull(decoded['latitude']);
+        final double? longitude = _doubleOrNull(decoded['longitude']);
         if (label.isEmpty && address.isEmpty) {
           await storage?.remove(StorageKeys.pendingLocationKey);
           return;
@@ -69,6 +84,8 @@ class LocationConfirmScreen extends StatefulWidget {
             .saveLocationDetails(
               label: label,
               address: address,
+              latitude: latitude,
+              longitude: longitude,
               phone: (phone ?? '').trim().isNotEmpty
                   ? phone!.trim()
                   : AuthFlow.instance.currentUserPhone,
@@ -86,6 +103,13 @@ class LocationConfirmScreen extends StatefulWidget {
         debugPrint('[LocationConfirm] pending location retry failed: $error');
       }
     }());
+  }
+
+  /// Marker values are written by this app only, but a hand-edited or
+  /// truncated marker must never crash the retry.
+  static double? _doubleOrNull(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse((value ?? '').toString().trim());
   }
 
   @override
@@ -114,6 +138,12 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
   Timer? _searchDebounce;
   Timer? _reverseDebounce;
 
+  /// True while a "use my current location" fix is running: it drives the
+  /// map-card spinner and doubles as the in-flight guard, so a double tap
+  /// (or the auto-run racing the recenter button) can never fire a second
+  /// permission dialog or a second GPS request.
+  bool _locating = false;
+
   @override
   void initState() {
     super.initState();
@@ -136,9 +166,17 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     _labelController.addListener(_onLabelEdited);
     _addressController.addListener(_onAddressEdited);
 
-    // No coordinates yet: geocode the label so the map opens on the address
-    // the seller already typed elsewhere (e.g. Business Details).
-    if (store.pickedLatitude == null) {
+    if (widget.useCurrentLocation) {
+      // Explicit "Use my current location" tap: fix the GPS position as soon
+      // as the screen is up. The label geocode below is skipped on this path
+      // because the GPS result supersedes whatever text the store already
+      // carried — the two lookups can never overwrite each other.
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 300), _recenter),
+      );
+    } else if (store.pickedLatitude == null) {
+      // No coordinates yet: geocode the label so the map opens on the address
+      // the seller already typed elsewhere (e.g. Business Details).
       unawaited(
         Future<void>.delayed(const Duration(milliseconds: 300), _initialLocate),
       );
@@ -296,50 +334,165 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     _scheduleReverse();
   }
 
-  /// Recentre on the seller's GPS position, falling back to the last saved
-  /// coordinates (or the current pin) when permission is denied.
+  /// Recentre on the seller's GPS position — the map card's recenter button,
+  /// and (with [LocationConfirmScreen.useCurrentLocation]) automatically when
+  /// the screen was opened from Step 01's "Use my current location".
+  ///
+  /// Order of operations: location services -> permission -> fix ->
+  /// reverse geocode. Disabled services and a permanently denied permission
+  /// both open a dialog that hands the user to the OS settings instead of
+  /// failing silently; a plain denial gets an explanatory message.
+  ///
+  /// [_locating] is set synchronously before the first await (so nothing can
+  /// run this twice) and cleared in `finally`; every await is followed by a
+  /// `mounted` check, so a fix resolving after disposal never touches a dead
+  /// widget. Falls back to no movement rather than pinning stale coordinates.
   Future<void> _recenter() async {
-    LatLng? target;
+    if (_locating || !mounted) return;
+    setState(() => _locating = true);
     try {
+      // GPS off: say so and offer the OS location settings, instead of
+      // letting getCurrentPosition fail into a silent catch.
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (!mounted) return;
+        await _guideToSettings(
+          title: 'Location services are off',
+          message:
+              'Turn on GPS (location services) to use your current location, '
+              'then try again.',
+          actionLabel: 'Open settings',
+          open: Geolocator.openLocationSettings,
+        );
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
+      if (!mounted) return;
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (!mounted) return;
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        target = _savedOrNull();
-      } else {
+      if (permission == LocationPermission.deniedForever) {
+        await _guideToSettings(
+          title: 'Location permission denied',
+          message:
+              'Location access was permanently denied. Allow it for this app '
+              'in your device settings to use your current location.',
+          actionLabel: 'Open settings',
+          open: Geolocator.openAppSettings,
+        );
+        return;
+      }
+      if (permission == LocationPermission.denied) {
+        _showMessage(
+          'Location permission denied. Allow it to use your current location.',
+        );
+        return;
+      }
+
+      try {
         final Position position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
           ),
         ).timeout(const Duration(seconds: 8));
-        target = LatLng(position.latitude, position.longitude);
+        if (!mounted) return;
+        _moveTo(LatLng(position.latitude, position.longitude));
+        _scheduleReverse();
+      } on TimeoutException {
+        if (mounted) {
+          _showMessage('Could not get your location (timed out). Try again.');
+        }
+      } on LocationServiceDisabledException {
+        if (mounted) {
+          _showMessage(
+            'Location services were turned off. Enable GPS and try again.',
+          );
+        }
+      } on PermissionDeniedException {
+        if (mounted) {
+          _showMessage('Location permission was denied.');
+        }
+      } catch (_) {
+        if (mounted) {
+          _showMessage("Couldn't get your location. Please try again.");
+        }
       }
-    } catch (_) {
-      target = _savedOrNull();
+    } finally {
+      if (mounted) setState(() => _locating = false);
     }
-    if (!mounted || target == null) return;
-    _moveTo(target);
-    _scheduleReverse();
   }
 
-  LatLng? _savedOrNull() {
-    final SellerProfileStore store = SellerProfileStore.instance;
-    if (store.pickedLatitude != null && store.pickedLongitude != null) {
-      return LatLng(store.pickedLatitude!, store.pickedLongitude!);
+  /// Explains why a setting has to change and, on the confirm tap, hands the
+  /// user to the OS. The dialog is only shown while mounted, and the settings
+  /// intent itself needs no BuildContext, so a disposal during the await
+  /// cannot leak a dead context.
+  Future<void> _guideToSettings({
+    required String title,
+    required String message,
+    required String actionLabel,
+    required Future<bool> Function() open,
+  }) async {
+    if (!mounted) return;
+    final bool confirmed =
+        await showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) => AlertDialog(
+                title: Text(title),
+                content: Text(message),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(actionLabel),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+    if (!confirmed || !mounted) return;
+    try {
+      await open();
+    } catch (_) {
+      _showMessage('Could not open the device settings from here.');
     }
-    return null;
   }
 
   // ---------------------------------------------------------------------------
   // Confirm
   // ---------------------------------------------------------------------------
 
-  void _confirm() {
+  /// True while STEP 01 is being written to Supabase: the confirm button
+  /// turns into a spinner and ignores taps, so a double tap cannot submit
+  /// the step twice.
+  bool _saving = false;
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  /// Saves the confirmed pick and only then opens STEP 02: nothing
+  /// navigates forward before the server acknowledged the write, so a step
+  /// is never marked done on an unconfirmed save and no success is faked.
+  Future<void> _confirm() async {
+    if (_saving) return;
     final SellerProfileStore store = SellerProfileStore.instance;
     final String label = _labelController.text.trim();
     final String address = _addressController.text.trim();
+    if (label.isEmpty && address.isEmpty) {
+      _showMessage('Move the pin or enter an address to continue.');
+      return;
+    }
     store.setPickedLocation(
       label: label,
       address: address,
@@ -348,75 +501,94 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     );
     // Every location display (home, profile, orders, Business & Farm)
     // reads businessLocation/businessAddress — mirror the pick so all of
-    // them switch to it right away.
+    // them switch to it right away (this is the local half of the save).
     store.setBusinessLocation(location: label, address: address);
-    // STEP 01 is done the moment the pick is confirmed — record it so a
-    // relaunch mid-onboarding resumes on the next unfinished page, not here.
-    store.setLocationComplete(true);
+
+    FocusScope.of(context).unfocus();
+    setState(() => _saving = true);
+
+    // Best-effort `PUT /onboarding/location` for the legacy backend: it must
+    // never gate navigation, so it runs alongside the Supabase write.
     unawaited(_saveLocation());
 
-    // Supabase is the source the app reads back on every login. Capture the
-    // messenger and the translated warning while this route's context is
-    // still valid, then let onboarding continue either way (retry-on-login
-    // covers an offline failure).
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    unawaited(
-      _persistLocation(
-        label: label,
-        address: address,
-        phone: store.mobile,
-        messenger: messenger,
-        warning:
-            'Could not save your location to the server. It will retry at next login.',
-      ),
+    final bool saved = await _persistLocation(
+      label: label,
+      address: address,
+      phone: store.mobile,
+      latitude: _center.latitude,
+      longitude: _center.longitude,
     );
+    if (!mounted) return;
+    setState(() => _saving = false);
 
+    if (!saved) {
+      // Real error surfaced; the pending marker written above stays in
+      // place for the retry on the next login. The seller remains on
+      // STEP 01 — nothing was marked complete without a confirmed write.
+      _showMessage(
+        'Could not save your location to the server. '
+        'Check your connection and try again.',
+      );
+      return;
+    }
+
+    // STEP 01 is done the moment the pick is confirmed AND saved — record
+    // it so a relaunch mid-onboarding resumes on the next unfinished page.
+    store.setLocationComplete(true);
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const Step02SellerTypeScreen()),
     );
   }
 
   /// Writes the confirmed address to `seller_profiles.location` /
-  /// `business_address`.
+  /// `business_address` (with the map coordinates) and returns whether the
+  /// server accepted it.
   ///
   /// A pending marker is stored BEFORE the attempt and cleared only on
   /// success, so a failed write is retried on the next login instead of
-  /// being lost. On failure [warning] is shown on [messenger] (captured
-  /// before navigating away) and onboarding continues anyway.
-  static Future<void> _persistLocation({
+  /// being lost. The caller decides what a `false` means for navigation —
+  /// here it always means "stay on this step".
+  static Future<bool> _persistLocation({
     required String label,
     required String address,
     required String phone,
-    required ScaffoldMessengerState messenger,
-    required String warning,
+    double? latitude,
+    double? longitude,
   }) async {
     final AppStorage? storage = AppStorage.current;
     const String key = StorageKeys.pendingLocationKey;
     try {
       await storage?.writeString(
         key,
-        jsonEncode(<String, String>{'label': label, 'address': address}),
+        jsonEncode(<String, Object?>{
+          'label': label,
+          'address': address,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        }),
       );
     } catch (_) {
       // Marker is best-effort; the direct attempt below still runs.
     }
     try {
       await SupabaseProductApi()
-          .saveLocationDetails(label: label, address: address, phone: phone)
+          .saveLocationDetails(
+            label: label,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            phone: phone,
+          )
           .timeout(const Duration(seconds: 15));
       try {
         await storage?.remove(key);
       } catch (_) {}
+      debugPrint('[LocationConfirm] location saved');
+      return true;
     } catch (error) {
       debugPrint('[LocationConfirm] saveLocationDetails failed: $error');
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(warning),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      return false;
     }
   }
 
@@ -466,6 +638,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
               child: _MapCard(
                 map: _buildMap(),
                 onRecenter: _recenter,
+                locating: _locating,
               ),
             ),
             Positioned(
@@ -487,7 +660,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
             Positioned(
               left: 24,
               top: 731,
-              child: _ConfirmButton(onConfirm: _confirm),
+              child: _ConfirmButton(onConfirm: _confirm, saving: _saving),
             ),
           ],
         ),
@@ -599,10 +772,19 @@ class _Subtitle extends StatelessWidget {
 }
 
 class _MapCard extends StatelessWidget {
-  const _MapCard({required this.map, required this.onRecenter});
+  const _MapCard({
+    required this.map,
+    required this.onRecenter,
+    this.locating = false,
+  });
 
   final Widget map;
   final VoidCallback onRecenter;
+
+  /// Shown while a GPS fix is running: a scrim + spinner over the map. It
+  /// ignores pointer input, so the seller can still drag the map meanwhile —
+  /// the sequence guards in the geocode path already handle that race.
+  final bool locating;
 
   @override
   Widget build(BuildContext context) {
@@ -631,6 +813,24 @@ class _MapCard extends StatelessWidget {
             Positioned.fill(child: map),
             const Positioned(left: 9, top: 22, child: IgnorePointer(child: _DragPill())),
             Positioned(left: 300, top: 245, child: _RecenterButton(onTap: onRecenter)),
+            if (locating)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    color: Color(0x2E000000),
+                    child: Center(
+                      child: SizedBox(
+                        width: 26,
+                        height: 26,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -861,16 +1061,21 @@ class _LocationCard extends StatelessWidget {
 }
 
 class _ConfirmButton extends StatelessWidget {
-  const _ConfirmButton({required this.onConfirm});
+  const _ConfirmButton({required this.onConfirm, this.saving = false});
 
   final VoidCallback onConfirm;
+
+  /// True while STEP 01 is being written: the label swaps for a spinner and
+  /// taps are ignored, so the step can never be submitted twice.
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onConfirm,
+      onTap: saving ? null : onConfirm,
       child: HoverPress.button(
+        enabled: !saving,
         child: Container(
           key: const Key('confirmLocationButton'),
           width: 364,
@@ -887,16 +1092,25 @@ class _ConfirmButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Text(
-            'Confirm location',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              height: 1,
-              letterSpacing: 0.2,
-              color: AppColors.surface,
-            ),
-          ),
+          child: saving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.surface,
+                  ),
+                )
+              : const Text(
+                  'Confirm location',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                    letterSpacing: 0.2,
+                    color: AppColors.surface,
+                  ),
+                ),
         ),
       ),
     );

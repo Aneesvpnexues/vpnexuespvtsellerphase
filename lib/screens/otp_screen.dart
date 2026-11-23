@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../data/api_error.dart';
 import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/seller_product_repository.dart';
@@ -9,6 +10,8 @@ import '../data/session_store.dart';
 import '../data/supabase_product_api.dart';
 import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
+import '../services/edge_api.dart';
+import '../services/onboarding_flow.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -140,31 +143,34 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  /// After successful OTP verification, open the local login session and
-  /// fetch the seller's existing data from Supabase using the authenticated
-  /// mobile number, then continue on the home page.
-  ///
-  /// Login never routes back into the onboarding steps — those belong to the
-  /// sign-up flow, which walks them from STEP 01 through Bank Details before
-  /// reaching Home. The completion flags are still recorded below so the
-  /// profile and settings screens can show which sections are done.
+  /// After successful OTP verification: opens the local login session,
+  /// links this phone to the seller's records on the server, restores
+  /// everything Supabase has for this seller and routes to Home — or, when
+  /// an onboarding section is still unfinished, to that section instead of
+  /// Home, so a reinstall never re-asks something already answered.
   Future<void> _routeAfterVerification() async {
     if (_entered) return;
     _entered = true;
     AuthFlow.instance.autoVerified = null;
 
-    // Clear any stale data from a previous login session.
-    SellerProfileStore.instance.resetCompletionFlags();
-    ProductStore.instance.clear();
+    final SellerProfileStore store = SellerProfileStore.instance;
+
+    // Clear any stale data from a previous login session. Products saved
+    // on this device stay on disk (persist: false) so the refresh below
+    // can restore them.
+    store.resetCompletionFlags();
+    ProductStore.instance.clear(persist: false);
     WalletStore.instance.reset();
 
     // Get the verified phone number from Firebase Auth (null-safe in tests).
     final String? firebasePhone = AuthFlow.instance.currentUserPhone;
     final String firebaseUid = AuthFlow.instance.firebaseUid ?? '';
 
-    // Set the user_id for product queries and all user-scoped lookups.
+    // Set the user_id for product queries and all user-scoped lookups. The
+    // UID is only written when there is one: an empty value would wipe the
+    // pending registration id this device's onboarding writes are keyed by.
     ProductStore.instance.userId = firebaseUid;
-    SellerProfileStore.instance.userId = firebaseUid;
+    if (firebaseUid.isNotEmpty) store.userId = firebaseUid;
 
     // Retry a location write that failed while offline (marker left by
     // LocationConfirmScreen) — Splash does not re-run on this login path.
@@ -184,30 +190,59 @@ class _OtpScreenState extends State<OtpScreen> {
     // Pull the wallet ledger in the background — Profile reads it later.
     unawaited(WalletStore.instance.refresh());
 
-    SellerProfileStore.instance.mobile = firebasePhone ?? widget.phone;
+    store.mobile = firebasePhone ?? widget.phone;
 
     // Record that this session was opened through Login (OTP). The splash
-    // screen uses it on the next launch to continue on Home instead of
-    // restarting the onboarding steps — and, because the UID is stored with
-    // it, to re-run every user-scoped lookup even if Firebase has not
-    // restored its own session yet. Recorded before the Supabase lookup so
-    // an unreachable backend can never send a login back to onboarding.
+    // screen uses it on the next launch to decide where to continue — and,
+    // because the UID is stored with it, to re-run every user-scoped lookup
+    // even if Firebase has not restored its own session yet. Recorded before
+    // the Supabase lookup so an unreachable backend can never send a login
+    // back to onboarding without a reason.
     SessionStore.instance.startSession(
       phone: firebasePhone ?? widget.phone,
-      userName: SellerProfileStore.instance.name,
+      userName: store.name,
       method: SessionStore.loginMethod,
       uid: firebaseUid,
     );
 
+    // -------------------------------------------------------------------------
+    // Server-side link. The phone number comes from the token Firebase just
+    // verified — never from this client — so nobody can take over somebody
+    // else's pending registration by typing their number. Runs before the
+    // restore below so the rows written during onboarding (keyed by the
+    // registration id) resolve to this Firebase account.
+    // -------------------------------------------------------------------------
+    Map<String, dynamic>? link;
+    try {
+      link = await EdgeApi.instance.linkAccount();
+    } on ApiException catch (error) {
+      // Real error, surfaced: the seller still signs in, but the link will
+      // be retried on the next login.
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+    if (!mounted) return;
+
     // Look up the seller's Supabase rows for whatever phone number was just
     // verified. Nothing here is specific to one number: the profile match
     // tries the exact E.164 value, then the last 10 digits (display format),
-    // then the Firebase UID, and bank/KYC are always checked under both the
-    // Firebase UID and the profile row's id.
+    // then the Firebase UID, then this device's pending registration id, and
+    // bank/KYC are checked under every candidate id.
+    bool foundAnyRow = false;
+    final String registrationId = SellerProfileStore.instance.registrationId;
     if (mounted) {
       try {
         final api = SupabaseProductApi();
-        api.userId = firebaseUid;
+        api.userId = firebaseUid.isNotEmpty ? firebaseUid : registrationId;
         final profile = await api.getProfileByPhone(
           firebasePhone ?? widget.phone,
           userId: firebaseUid,
@@ -218,10 +253,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
         // Products are written under the Firebase UID, so keep that as the
         // store's user_id. Profile/bank/KYC rows may live under a legacy
-        // backend id, so look those up under both ids.
+        // backend id or under the pending registration id this device used
+        // before the first OTP, so look those up under every candidate.
         final List<String> candidateIds = <String>{
           firebaseUid,
           profileUserId,
+          registrationId,
         }.where((String id) => id.trim().isNotEmpty).toList();
 
         if (profile != null) {
@@ -229,7 +266,7 @@ class _OtpScreenState extends State<OtpScreen> {
           // Refresh the cached session display name with the Supabase row.
           SessionStore.instance.startSession(
             phone: firebasePhone ?? widget.phone,
-            userName: SellerProfileStore.instance.name,
+            userName: store.name,
             method: SessionStore.loginMethod,
             uid: firebaseUid,
           );
@@ -249,7 +286,7 @@ class _OtpScreenState extends State<OtpScreen> {
           bankDetails = SupabaseProductApi.mostCompleteBankAccount(accounts);
           // Publish every row to the store so Profile / Bank screens show
           // the saved account immediately instead of a placeholder.
-          SellerProfileStore.instance.setBankAccounts(accounts);
+          store.setBankAccounts(accounts);
           verificationDetails =
               await api.getVerificationForUsers(candidateIds);
 
@@ -258,13 +295,13 @@ class _OtpScreenState extends State<OtpScreen> {
             final activeBankId = await api.getActiveBankAccountId(
               firebaseUid,
             );
-            SellerProfileStore.instance.setActiveBankAccountId(
+            store.setActiveBankAccountId(
               activeBankId,
             );
           }
         }
 
-        final bool profileComplete =
+        final bool serverProfileComplete =
             profile != null && _isProfileComplete(profile);
         final bool personalComplete =
             profile != null && _isPersonalComplete(profile);
@@ -273,32 +310,71 @@ class _OtpScreenState extends State<OtpScreen> {
         final bool verificationComplete = verificationDetails != null &&
             _isVerificationComplete(verificationDetails);
 
-        SellerProfileStore.instance.setCompletion(
-          profileComplete: profileComplete,
+        // STEP 01/STEP 02 are not part of setCompletion, so merge them here
+        // from the profile row: a saved location means STEP 01 is done, and
+        // business details could only have been saved after the seller type
+        // was chosen (STEP 02 precedes STEP 03).
+        final bool locationComplete = store.locationComplete ||
+            (profile != null && _isLocationComplete(profile));
+        final bool sellerTypeComplete = store.sellerTypeComplete ||
+            serverProfileComplete;
+
+        store.setCompletion(
+          profileComplete: serverProfileComplete,
           bankComplete: bankComplete,
           verificationComplete: verificationComplete,
           personalComplete: personalComplete,
         );
+        store.setLocationComplete(locationComplete);
+        store.setSellerTypeComplete(sellerTypeComplete);
 
-        if (!mounted) return;
-        _goHome();
-        return;
+        foundAnyRow = profile != null ||
+            bankDetails != null ||
+            verificationDetails != null;
       } catch (_) {
-        // Supabase lookup failed — the home page still opens with whatever
-        // is cached locally.
+        // Supabase lookup failed — the flags saved on this device still
+        // decide the route below.
       }
     }
 
-    // No Supabase row for this number: a login still lands on Home — walking
-    // the onboarding steps belongs to the sign-up flow.
+    if (!mounted) return;
+
+    // Route by completion when the restore actually told us something, or
+    // when the server confirmed this phone owns a pending registration that
+    // has no rows yet (a seller who signed up on another device and is
+    // logging in for the first time) — that seller starts at STEP 01 instead
+    // of being dropped on Home with an empty profile. When nothing at all
+    // could be read (offline, legacy account with no rows) the home page
+    // still opens, exactly like an ordinary login.
+    final String linkKind = (link?['kind'] ?? '').toString().trim();
+    final bool resumeOnboarding = foundAnyRow ||
+        linkKind == 'registration' ||
+        store.locationComplete ||
+        store.sellerTypeComplete;
+    if (resumeOnboarding) {
+      OnboardingFlow.resume(context, clearStack: true);
+      return;
+    }
     _goHome();
   }
 
-  /// Determines whether the seller profile section is complete based on
-  /// required Supabase fields being non-empty.
+  /// Determines whether the seller profile (Business Details) section is
+  /// complete based on required Supabase fields being non-empty.
   bool _isProfileComplete(Map<String, dynamic> profile) {
     final fields = <String>[
       profile['business_name'] ?? '',
+      profile['location'] ?? '',
+      profile['business_address'] ?? '',
+    ];
+    return fields.every(
+      (value) => value.toString().trim().isNotEmpty,
+    );
+  }
+
+  /// Determines whether STEP 01 (Location) has been answered: the profile row
+  /// carries both the label and the full address.
+  bool _isLocationComplete(Map<String, dynamic> profile) {
+    final fields = <String>[
       profile['location'] ?? '',
       profile['business_address'] ?? '',
     ];
@@ -333,12 +409,17 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   /// Determines whether verification/KYC is complete based on at least one
-  /// document URL being present.
+  /// document URL **or** file name being present (the file-name columns are
+  /// written by the metadata-only path, when nothing is uploaded to
+  /// Cloudinary yet).
   bool _isVerificationComplete(Map<String, dynamic> verification) {
     final fields = <String>[
       verification['aadhaar_card'] ?? '',
       verification['pan_card'] ?? '',
       verification['business_registration'] ?? '',
+      verification['aadhaar_file_name'] ?? '',
+      verification['pan_file_name'] ?? '',
+      verification['business_file_name'] ?? '',
     ];
     return fields.any(
       (value) => value.toString().trim().isNotEmpty,
@@ -369,22 +450,26 @@ class _OtpScreenState extends State<OtpScreen> {
     final String business =
         (profile['business_name'] ?? '').toString().trim();
     final String sellerTypeStr =
-        (profile['seller_type'] ?? 'farmer').toString().trim().toLowerCase();
-    SellerType sellerType;
-    switch (sellerTypeStr) {
-      case 'trader':
-        sellerType = SellerType.trader;
-      case 'fpo':
-        sellerType = SellerType.fpo;
-      default:
-        sellerType = SellerType.farmer;
-    }
+        (profile['seller_type'] ?? '').toString().trim().toLowerCase();
     // Set location even when no name exists yet so the address shows up
     // regardless of how far onboarding has progressed.
     SellerProfileStore.instance.setBusinessLocation(
       location: location,
       address: address,
     );
+    // A seller type stored on the row means STEP 02 was answered — restore
+    // it so Profile / Personal Details show the saved choice instead of the
+    // default. An empty (legacy) value leaves whatever this device knows.
+    if (sellerTypeStr.isNotEmpty) {
+      switch (sellerTypeStr) {
+        case 'trader':
+          SellerProfileStore.instance.setSellerType(SellerType.trader);
+        case 'fpo':
+          SellerProfileStore.instance.setSellerType(SellerType.fpo);
+        case 'farmer':
+          SellerProfileStore.instance.setSellerType(SellerType.farmer);
+      }
+    }
     if (name.isNotEmpty) {
       SellerProfileStore.instance.saveBusinessDetails(
         name: name,

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -6,7 +7,9 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'api_error.dart';
 import 'product_store.dart';
+import 'seller_profile_store.dart';
 import '../services/auth_flow.dart';
+import '../services/edge_api.dart';
 
 /// Supabase REST API client with user-scoped privacy.
 ///
@@ -90,9 +93,13 @@ class SupabaseProductApi {
     return _productFromWriteResponse(response, 'Could not add the product.');
   }
 
-  /// Inserts a `seller_bank_details` row and returns the saved row
-  /// (PostgREST echoes it because of `Prefer: return=representation`), or
-  /// null when the response carried no body.
+  /// Inserts a `seller_bank_details` row through the `seller-bank` Edge
+  /// Function and returns the saved row, or null when the response carried no
+  /// body.
+  ///
+  /// Bank rows are the one table the public anon key may no longer touch
+  /// (`022_bank_lockdown.sql`), so every read/write goes through the server
+  /// function, which checks that the caller owns the row it is touching.
   ///
   /// When [updateId] is set, the existing row is updated instead — reopening
   /// the bank page and pressing Continue must not stack a duplicate row for
@@ -107,86 +114,43 @@ class SupabaseProductApi {
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
-    final Map<String, dynamic> row = <String, dynamic>{
-      'user_id': userId!.trim(),
-      'account_houlder_name': holderName.trim(),
-      'bank_name': bankName.trim(),
-      'account_number': accountNumber.trim(),
-      'IFSC_code': ifsc.trim().toUpperCase(),
-    };
-
-    final String id = (updateId ?? '').trim();
-    if (id.isNotEmpty) {
-      final http.Response patch = await _client.patch(
-        Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details').replace(
-          queryParameters: <String, String>{
-            'id': 'eq.$id',
-            'user_id': 'eq.${userId!.trim()}',
-          },
-        ),
-        headers: _writeHeaders,
-        body: jsonEncode(row),
+    try {
+      return await EdgeApi.instance.bankUpsert(
+        userId: _identityId,
+        holderName: holderName,
+        bankName: bankName,
+        accountNumber: accountNumber,
+        ifsc: ifsc,
+        updateId: updateId,
       );
-      debugPrint(
-        '[supabase_product_api] saveBankDetails PATCH(id=$id) status=${patch.statusCode} body=${patch.body}',
-      );
-      if (patch.statusCode < 200 || patch.statusCode >= 300) {
-        throw _serverError(
-          patch,
-          'Could not save bank details.',
-          migration: '010_seller_bank_details_id.sql',
+    } on ApiException catch (error) {
+      // The row was deleted since prefill — insert a fresh one instead of
+      // dropping what the seller just typed.
+      if (error.statusCode == 404 && (updateId ?? '').trim().isNotEmpty) {
+        return EdgeApi.instance.bankUpsert(
+          userId: _identityId,
+          holderName: holderName,
+          bankName: bankName,
+          accountNumber: accountNumber,
+          ifsc: ifsc,
         );
       }
-      final Object? patched = _decode(patch.body);
-      if (patched is List && patched.isNotEmpty && patched.first is Map) {
-        return Map<String, dynamic>.from(patched.first as Map);
-      }
-      if (patched is! List) return null;
-      // Empty list: the row was deleted since prefill — fall through and
-      // insert a fresh one.
+      rethrow;
     }
-
-    final http.Response response = await _client.post(
-      Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details'),
-      headers: _writeHeaders,
-      body: jsonEncode(<String, dynamic>{
-        'id': DateTime.now().millisecondsSinceEpoch,
-        ...row,
-      }),
-    );
-    debugPrint('[supabase_product_api] saveBankDetails status=${response.statusCode} body=${response.body}');
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _serverError(
-        response,
-        'Could not save bank details.',
-        migration: '010_seller_bank_details_id.sql',
-      );
-    }
-    final Object? decoded = _decode(response.body);
-    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
-      return Map<String, dynamic>.from(decoded.first as Map);
-    }
-    return null;
   }
 
   Future<void> deleteBankDetails() async {
     _ensureConfigured();
     _ensureSignedIn();
-    final http.Response response = await _client.delete(
-      Uri.parse('$_supabaseUrl/rest/v1/seller_bank_details').replace(
-        queryParameters: <String, String>{
-          'user_id': 'eq.${userId!.trim()}',
-        },
-      ),
-      headers: _headers,
+    final List<Map<String, dynamic>> rows = await getBankDetailsForUsers(
+      <String>{_identityId, SellerProfileStore.instance.userId}
+          .where((String id) => id.trim().isNotEmpty)
+          .toList(),
     );
-    debugPrint('[supabase_product_api] deleteBankDetails status=${response.statusCode} body=${response.body}');
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _serverError(
-        response,
-        'Could not delete bank details.',
-        migration: '010_seller_bank_details_id.sql',
-      );
+    for (final Map<String, dynamic> row in rows) {
+      final String id = (row['id'] ?? '').toString().trim();
+      if (id.isEmpty) continue;
+      await EdgeApi.instance.bankDelete(id);
     }
   }
 
@@ -194,6 +158,10 @@ class SupabaseProductApi {
     String? aadhaarUrl,
     String? panUrl,
     String? businessUrl,
+    String? aadhaarFileName,
+    String? panFileName,
+    String? businessFileName,
+    String? kycStatus,
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
@@ -210,13 +178,25 @@ class SupabaseProductApi {
         'Prefer': 'return=representation,resolution=merge-duplicates',
       },
       body: jsonEncode(<String, dynamic>{
-        'user_id': userId!.trim(),
+        'user_id': _identityId,
         if (aadhaarUrl != null && aadhaarUrl.trim().isNotEmpty)
           'aadhaar_card': aadhaarUrl.trim(),
         if (panUrl != null && panUrl.trim().isNotEmpty)
           'pan_card': panUrl.trim(),
         if (businessUrl != null && businessUrl.trim().isNotEmpty)
           'business_registration': businessUrl.trim(),
+        // Metadata only: the actual files stay on the device in this phase
+        // (no Cloudinary upload), but their names/status are persisted so
+        // Step 04 can show what is already saved on any device.
+        if (aadhaarFileName != null && aadhaarFileName.trim().isNotEmpty)
+          'aadhaar_file_name': aadhaarFileName.trim(),
+        if (panFileName != null && panFileName.trim().isNotEmpty)
+          'pan_file_name': panFileName.trim(),
+        if (businessFileName != null && businessFileName.trim().isNotEmpty)
+          'business_file_name': businessFileName.trim(),
+        if (kycStatus != null && kycStatus.trim().isNotEmpty)
+          'kyc_status': kycStatus.trim(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       }),
     );
     debugPrint(
@@ -230,6 +210,189 @@ class SupabaseProductApi {
         migration: migration,
       );
     }
+  }
+
+  /// Generates the uuid that keys a new `seller_registrations` row.
+  ///
+  /// The signup table deliberately has **no SELECT policy for `anon`**, so the
+  /// row can never be read back after it is written. Asking PostgREST for
+  /// `Prefer: return=representation` would make Postgres re-read the row it
+  /// just inserted, the SELECT policy refuses it and the whole insert rolls
+  /// back with `42501 new row violates row-level security policy`. Generating
+  /// the id here instead means nothing ever has to be read back.
+  static String _newRegistrationId() {
+    final Random random = Random.secure();
+    final List<int> bytes = List<int>.generate(
+      16,
+      (_) => random.nextInt(256),
+      growable: false,
+    );
+    // RFC 4122 version 4 (random) ...
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    // ... with the 10xx variant bits.
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    final StringBuffer hex = StringBuffer();
+    for (int i = 0; i < bytes.length; i++) {
+      if (i == 4 || i == 6 || i == 8 || i == 10) hex.write('-');
+      hex.write(bytes[i].toRadixString(16).padLeft(2, '0'));
+    }
+    return hex.toString();
+  }
+
+  /// Creates the pending signup record (Step "Sign Up": name + phone only).
+  ///
+  /// No Firebase user exists yet at this point, so the row is inserted with
+  /// the anon key under the `anon_can_register` RLS policy: `status` stays
+  /// `pending` and only the Edge Function `seller-link-account` may later
+  /// attach a verified Firebase UID to it. The row id is generated by this
+  /// client (see [_newRegistrationId]) and returned, because `anon` may
+  /// INSERT but must never SELECT on this table.
+  ///
+  /// A duplicate number answers `409` from the unique index and is surfaced
+  /// as a plain message — never as a silent success.
+  Future<Map<String, dynamic>> createRegistration({
+    required String name,
+    required String phoneE164,
+  }) async {
+    _ensureConfigured();
+    final String trimmedName = name.trim();
+    final String trimmedPhone = phoneE164.trim();
+    if (trimmedName.isEmpty || trimmedPhone.isEmpty) {
+      throw const ApiException('Enter your name and phone number.');
+    }
+
+    final String registrationId = _newRegistrationId();
+    final http.Response response = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_registrations'),
+      headers: <String, String>{
+        ..._writeHeaders,
+        // Overrides _writeHeaders: seller_registrations has no SELECT policy
+        // for anon, so the inserted row must NOT be read back (see
+        // _newRegistrationId).
+        'Prefer': 'return=minimal',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'id': registrationId,
+        'name': trimmedName,
+        'phone_e164': trimmedPhone,
+        'status': 'pending',
+        'phone_verified': false,
+        // Made explicit so the policy's `firebase_uid IS NULL` check never
+        // depends on a column default that an older schema might define.
+        'firebase_uid': null,
+      }),
+    );
+    debugPrint(
+      '[supabase_product_api] createRegistration status=${response.statusCode} '
+      'body=${response.body}',
+    );
+    if (response.statusCode == 409 ||
+        response.body.contains('duplicate key') ||
+        response.body.contains('23505')) {
+      throw const ApiException(
+        'This phone number is already registered. Please use Login instead.',
+        statusCode: 409,
+      );
+    }
+    _requireOk(
+      response,
+      'Could not create your account. Please try again.',
+      '021_seller_registrations_setup.sql',
+    );
+    // `return=minimal` answers 201 with an empty body on purpose: the row is
+    // written but never read back (anon holds no SELECT policy on this table),
+    // so the id generated above *is* the id of the stored row.
+    return <String, dynamic>{
+      'id': registrationId,
+      'name': trimmedName,
+      'phone_e164': trimmedPhone,
+      'status': 'pending',
+    };
+  }
+
+  /// Persists the STEP 02 answer on `seller_profiles.seller_type`.
+  ///
+  /// The seller type is chosen before the rest of the profile exists, so this
+  /// patches an existing row when there is one and inserts a minimal row
+  /// (keyed by the current identity and phone number) when there is not —
+  /// never a duplicate: the row is always resolved through
+  /// [_existingProfileId] first.
+  Future<void> saveSellerType(String sellerType) async {
+    _ensureConfigured();
+    _ensureSignedIn();
+    const String migration = '009_seller_profiles_write.sql';
+    final String value = sellerType.trim().isEmpty
+        ? 'farmer'
+        : sellerType.trim().toLowerCase();
+    final String now = DateTime.now().toUtc().toIso8601String();
+    final String phone = _phoneForWrites();
+
+    final String existing = await _existingProfileId(phone: phone);
+    if (existing.isNotEmpty) {
+      final http.Response patch = await _client.patch(
+        Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
+          queryParameters: <String, String>{'user_id': 'eq.$existing'},
+        ),
+        headers: _writeHeaders,
+        body: jsonEncode(<String, dynamic>{
+          'seller_type': value,
+          'updated_at': now,
+        }),
+      );
+      debugPrint(
+        '[supabase_product_api] saveSellerType PATCH ${patch.statusCode} '
+        'body=${patch.body}',
+      );
+      _requireOk(
+        patch,
+        'Could not save your seller type.',
+        _migrationFor(patch, migration),
+      );
+      return;
+    }
+
+    final Map<String, dynamic> insert = <String, dynamic>{
+      'seller_type': value,
+      'created_at': now,
+      'updated_at': now,
+      if (phone.isNotEmpty) 'phone_number': phone,
+      if (SellerProfileStore.instance.name.trim().isNotEmpty)
+        'display_name': SellerProfileStore.instance.name.trim(),
+    };
+    if (!_isRegistrationId(_identityId) && _identityId.isNotEmpty) {
+      insert['firebase_uid'] = _identityId;
+    }
+    final http.Response post = await _client.post(
+      Uri.parse('$_supabaseUrl/rest/v1/seller_profiles'),
+      headers: _writeHeaders,
+      body: jsonEncode(insert),
+    );
+    debugPrint(
+      '[supabase_product_api] saveSellerType POST ${post.statusCode} '
+      'body=${post.body}',
+    );
+    _requireOk(
+      post,
+      'Could not save your seller type.',
+      _migrationFor(post, migration),
+    );
+    final Object? decoded = _decode(post.body);
+    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+      final String saved = (decoded.first as Map)['user_id']?.toString() ?? '';
+      if (saved.trim().isNotEmpty) {
+        // Remember the row so the next step patches instead of inserting.
+        SellerProfileStore.instance.userId = saved.trim();
+      }
+    }
+  }
+
+  /// The phone number every write should carry so a row created before OTP
+  /// can still be found by phone (and linked) after the login OTP.
+  String _phoneForWrites() {
+    final String fromAuth = AuthFlow.instance.currentUserPhone ?? '';
+    if (fromAuth.trim().isNotEmpty) return fromAuth.trim();
+    return SellerProfileStore.instance.mobile.trim();
   }
 
   Future<Product> updateProduct(Product product) async {
@@ -356,25 +519,45 @@ class SupabaseProductApi {
     }
   }
 
-  /// Rejects the call if no Firebase user is signed in. No product operation
-  /// may run anonymously — this prevents IDOR.
+  /// Rejects the call if no identity is available for the seller. No product
+  /// operation may run anonymously — this prevents IDOR.
   ///
   /// Auto-populates [userId] from [AuthFlow.instance.firebaseUid] so that any
   /// SupabaseProductApi instance (created in any screen) picks up the
-  /// currently logged-in seller's Firebase UID without manual wiring.
+  /// currently logged-in seller's Firebase UID without manual wiring. When
+  /// there is no Firebase user yet (the Sign Up tab saves before any OTP
+  /// exists) the pending `seller_registrations.id` recorded at signup is used
+  /// instead, so every pre-OTP write lands on the same seller.
   void _ensureSignedIn() {
-    if ((userId == null || userId!.trim().isEmpty) &&
-        (AuthFlow.instance.firebaseUid == null ||
-            AuthFlow.instance.firebaseUid!.trim().isEmpty)) {
-      throw const ApiException(
-        'You must be signed in to access your products. '
-        'Please complete phone OTP login and try again.',
-      );
+    if (userId != null && userId!.trim().isNotEmpty) return;
+
+    final String uid = AuthFlow.instance.firebaseUid?.trim() ?? '';
+    if (uid.isNotEmpty) {
+      userId = uid;
+      return;
     }
-    if (userId == null || userId!.trim().isEmpty) {
-      userId = AuthFlow.instance.firebaseUid?.trim();
+
+    final String registrationId =
+        SellerProfileStore.instance.registrationId.trim();
+    if (registrationId.isNotEmpty) {
+      userId = registrationId;
+      return;
     }
+
+    throw const ApiException(
+      'You must be signed in to access your data. '
+      'Please sign up or complete phone OTP login and try again.',
+    );
   }
+
+  /// True when [id] is the pending-registration uuid rather than a Firebase
+  /// Auth UID — such a value must never be written into `firebase_uid`.
+  static bool _isRegistrationId(String id) =>
+      id.trim() == SellerProfileStore.instance.registrationId.trim() &&
+      id.trim().isNotEmpty;
+
+  /// The identity the seller's rows are keyed by, after [_ensureSignedIn].
+  String get _identityId => userId!.trim();
 
   void _ensureId(String id, String action) {
     if (id.trim().isEmpty) {
@@ -397,13 +580,20 @@ class SupabaseProductApi {
             lower.contains('could not find the') ||
             response.body.contains('PGRST204') ||
             (lower.contains('column') && lower.contains('does not exist')));
-    final bool needsGrant = response.statusCode == 401 ||
-        response.statusCode == 403 ||
-        lower.contains('permission denied') ||
-        lower.contains('row-level security');
     final bool needsForeignKey =
         lower.contains('foreign key constraint') ||
         response.body.contains('23503');
+    // 401/403, "permission denied" or "row-level security" (SQLSTATE 42501):
+    // the database's own security rules refused the statement. This does NOT
+    // automatically mean a migration is missing — re-running the SQL file is
+    // harmless, but the real cause is usually a policy that targets another
+    // role, or a request trying to read a row back from a table `anon` is
+    // only allowed to write to (Prefer: return=representation).
+    final bool securityRules = response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        lower.contains('permission denied') ||
+        lower.contains('row-level security') ||
+        response.body.contains('42501');
     if (needsForeignKey) {
       return ApiException(
         'Supabase still has an auth-era foreign key on this table. Run '
@@ -412,10 +602,20 @@ class SupabaseProductApi {
         statusCode: response.statusCode,
       );
     }
-    if (needsSchema || needsGrant) {
+    if (needsSchema) {
       return ApiException(
         'Supabase is not ready for writes yet. Run '
         '$migration in the Supabase SQL Editor, then try again. ($message)',
+        statusCode: response.statusCode,
+      );
+    }
+    if (securityRules) {
+      return ApiException(
+        'Supabase refused this write because of a database security rule '
+        '(row-level security). If you have not run $migration in the '
+        'Supabase SQL Editor yet, run it there; if you already have, check '
+        'in the SQL Editor that its policy for role "anon" exists on the '
+        'target table. ($message)',
         statusCode: response.statusCode,
       );
     }
@@ -491,6 +691,15 @@ class SupabaseProductApi {
     if (trimmedUid.isNotEmpty && _looksLikeUuid(trimmedUid)) {
       return _profileWhere('user_id', 'eq.$trimmedUid');
     }
+
+    // Rows created by the Sign Up tab (before any OTP) are keyed by the
+    // pending registration id when the seller has not signed in yet — try it
+    // so an onboarding finished on this device still finds its own row.
+    final String registrationId =
+        SellerProfileStore.instance.registrationId.trim();
+    if (registrationId.isNotEmpty && registrationId != trimmedUid) {
+      return _profileWhere('user_id', 'eq.$registrationId');
+    }
     return null;
   }
 
@@ -507,7 +716,20 @@ class SupabaseProductApi {
   /// The `seller_profiles` columns every lookup in this file selects.
   static const String _profileSelect =
       'user_id,display_name,phone_number,location,business_address,'
+      'business_name,seller_type,latitude,longitude,created_at,updated_at';
+
+  /// [_profileSelect] without the STEP 01 coordinates. Used as a retry when a
+  /// database that has not run `021_seller_registrations_setup.sql` answers
+  /// 400 for the newer columns, so a profile lookup never fails entirely
+  /// just because those two columns are missing.
+  static const String _profileSelectBase =
+      'user_id,display_name,phone_number,location,business_address,'
       'business_name,seller_type,created_at,updated_at';
+
+  static const List<String> _profileSelectVariants = <String>[
+    _profileSelect,
+    _profileSelectBase,
+  ];
 
   /// Fetches up to 10 `seller_profiles` rows whose `phone_number` ends with
   /// [suffix]. The result still needs [_phoneMatches] filtering: `like` only
@@ -515,23 +737,25 @@ class SupabaseProductApi {
   Future<List<Map<String, dynamic>>> _profileRowsEndingWith(
     String suffix,
   ) async {
-    final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
-      queryParameters: <String, String>{
-        'select': _profileSelect,
-        'phone_number': 'like.%$suffix',
-        'limit': '10',
-      },
-    );
-    final http.Response response = await _client.get(uri, headers: _headers);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      return const <Map<String, dynamic>>[];
+    for (final String select in _profileSelectVariants) {
+      final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles')
+          .replace(
+        queryParameters: <String, String>{
+          'select': select,
+          'phone_number': 'like.%$suffix',
+          'limit': '10',
+        },
+      );
+      final http.Response response = await _client.get(uri, headers: _headers);
+      if (response.statusCode < 200 || response.statusCode >= 300) continue;
+      final Object? decoded = _decode(response.body);
+      if (decoded is! List) return const <Map<String, dynamic>>[];
+      return decoded
+          .whereType<Map>()
+          .map((Map row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
     }
-    final Object? decoded = _decode(response.body);
-    if (decoded is! List) return const <Map<String, dynamic>>[];
-    return decoded
-        .whereType<Map>()
-        .map((Map row) => Map<String, dynamic>.from(row))
-        .toList(growable: false);
+    return const <Map<String, dynamic>>[];
   }
 
   /// Strips everything that is not a digit from [value].
@@ -560,20 +784,22 @@ class SupabaseProductApi {
     String column,
     String value,
   ) async {
-    final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
-      queryParameters: <String, String>{
-        'select': _profileSelect,
-        column: value,
-        'limit': '1',
-      },
-    );
-    final http.Response response = await _client.get(uri, headers: _headers);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    for (final String select in _profileSelectVariants) {
+      final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/seller_profiles')
+          .replace(
+        queryParameters: <String, String>{
+          'select': select,
+          column: value,
+          'limit': '1',
+        },
+      );
+      final http.Response response = await _client.get(uri, headers: _headers);
+      if (response.statusCode < 200 || response.statusCode >= 300) continue;
+      final Object? decoded = _decode(response.body);
+      if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+        return Map<String, dynamic>.from(decoded.first as Map);
+      }
       return null;
-    }
-    final Object? decoded = _decode(response.body);
-    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
-      return Map<String, dynamic>.from(decoded.first as Map);
     }
     return null;
   }
@@ -586,12 +812,8 @@ class SupabaseProductApi {
   /// `limit: 1` used to pick a half-filled row and wrongly report the bank
   /// section as incomplete.
   Future<Map<String, dynamic>?> getBankDetailsByUserId(String userId) async {
-    final List<Map<String, dynamic>> rows = await _rowsWhere(
-      table: 'seller_bank_details',
-      column: 'user_id',
-      value: userId,
-      select:
-          'id,user_id,account_houlder_name,bank_name,account_number,IFSC_code',
+    final List<Map<String, dynamic>> rows = await getBankDetailsForUsers(
+      <String>[userId],
     );
     return _mostComplete(rows, _bankFieldCount);
   }
@@ -611,23 +833,37 @@ class SupabaseProductApi {
 /// and returns them all as a list.
 ///
 /// A seller may have rows under both the Firebase UID and a legacy backend
-/// id, so the caller passes both.
+/// id, so the caller passes both. The caller's own identity (pending
+/// registration id before OTP, Firebase UID after) is always added to the
+/// request so rows written during onboarding are found too. The actual read
+/// happens inside the `seller-bank` Edge Function, which only ever returns
+/// rows this caller owns.
 Future<List<Map<String, dynamic>>> getBankDetailsForUsers(
   List<String> userIds,
 ) async {
-  final List<Map<String, dynamic>> allAccounts = [];
-  for (final String id in userIds) {
-    if (id.trim().isEmpty) continue;
-    final List<Map<String, dynamic>> rows = await _rowsWhere(
-      table: 'seller_bank_details',
-      column: 'user_id',
-      value: id,
-      select:
-          'id,user_id,account_houlder_name,bank_name,account_number,IFSC_code',
-    );
-    allAccounts.addAll(rows);
-  }
-  return allAccounts;
+  _ensureConfigured();
+  final String? presented = _presentedIdentity();
+  final Set<String> wanted = <String>{
+    for (final String id in userIds)
+      if (id.trim().isNotEmpty) id.trim(),
+    if (presented != null) presented,
+  };
+  if (wanted.isEmpty) return const <Map<String, dynamic>>[];
+  return EdgeApi.instance.bankRead(
+    wanted.toList(growable: false),
+    userId: presented,
+  );
+}
+
+/// The id this device's seller presents to the Edge Functions: the Firebase
+/// UID once logged in, otherwise the pending registration id recorded at
+/// signup. Null when neither is known (nothing may be read then).
+String? _presentedIdentity() {
+  final String uid = (userId ?? '').trim();
+  if (uid.isNotEmpty) return uid;
+  final String registrationId =
+      SellerProfileStore.instance.registrationId.trim();
+  return registrationId.isEmpty ? null : registrationId;
 }
 
 /// Fetches the active_bank_account_id from seller_profiles for a seller.
@@ -715,7 +951,14 @@ static final RegExp _uuidPattern = RegExp(
       table: 'seller_verify_your_details',
       column: 'user_id',
       value: userId,
-      select: 'user_id,aadhaar_card,pan_card,business_registration',
+      // Includes the metadata-only columns (file names / status) written by
+      // this phase; falls back to the original three when the database has
+      // not run 021 yet.
+      select:
+          'user_id,aadhaar_card,pan_card,business_registration,'
+          'aadhaar_file_name,pan_file_name,business_file_name,kyc_status',
+      fallbackSelect:
+          'user_id,aadhaar_card,pan_card,business_registration',
     );
     return _mostComplete(rows, _verificationFieldCount);
   }
@@ -741,30 +984,37 @@ static final RegExp _uuidPattern = RegExp(
   }
 
   /// Reads every row of [table] where [column] equals [value].
+  ///
+  /// [fallbackSelect] is tried once when [select] is rejected (a column from
+  /// a not-yet-run migration), so a missing new column degrades to the old
+  /// columns instead of losing the whole row.
   Future<List<Map<String, dynamic>>> _rowsWhere({
     required String table,
     required String column,
     required String value,
     required String select,
+    String? fallbackSelect,
   }) async {
     final String trimmed = value.trim();
     if (trimmed.isEmpty) return const <Map<String, dynamic>>[];
-    final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/$table').replace(
-      queryParameters: <String, String>{
-        'select': select,
-        column: 'eq.$trimmed',
-      },
-    );
-    final http.Response response = await _client.get(uri, headers: _headers);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      return const <Map<String, dynamic>>[];
+    for (final String chosen in <String>[select, fallbackSelect ?? '']) {
+      if (chosen.isEmpty) continue;
+      final Uri uri = Uri.parse('$_supabaseUrl/rest/v1/$table').replace(
+        queryParameters: <String, String>{
+          'select': chosen,
+          column: 'eq.$trimmed',
+        },
+      );
+      final http.Response response = await _client.get(uri, headers: _headers);
+      if (response.statusCode < 200 || response.statusCode >= 300) continue;
+      final Object? decoded = _decode(response.body);
+      if (decoded is! List) return const <Map<String, dynamic>>[];
+      return decoded
+          .whereType<Map>()
+          .map((Map row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
     }
-    final Object? decoded = _decode(response.body);
-    if (decoded is! List) return const <Map<String, dynamic>>[];
-    return decoded
-        .whereType<Map>()
-        .map((Map row) => Map<String, dynamic>.from(row))
-        .toList(growable: false);
+    return const <Map<String, dynamic>>[];
   }
 
   /// Returns the row with the highest [score], or null for an empty list.
@@ -798,15 +1048,25 @@ static final RegExp _uuidPattern = RegExp(
     return count;
   }
 
-  /// How many of the three KYC document urls are non-empty (0-3).
+  /// How many of the three KYC document slots are filled (0-3).
+  ///
+  /// A slot counts when it has a document URL **or** the file name saved by
+  /// the metadata-only path (no Cloudinary upload in this phase), so a device
+  /// that never uploaded anything still recognises its own completed Step 04.
   static int _verificationFieldCount(Map<String, dynamic> row) {
+    const List<List<String>> slots = <List<String>>[
+      <String>['aadhaar_card', 'aadhaar_file_name'],
+      <String>['pan_card', 'pan_file_name'],
+      <String>['business_registration', 'business_file_name'],
+    ];
     int count = 0;
-    for (final String key in <String>[
-      'aadhaar_card',
-      'pan_card',
-      'business_registration',
-    ]) {
-      if ((row[key] ?? '').toString().trim().isNotEmpty) count++;
+    for (final List<String> keys in slots) {
+      for (final String key in keys) {
+        if ((row[key] ?? '').toString().trim().isNotEmpty) {
+          count++;
+          break;
+        }
+      }
     }
     return count;
   }
@@ -833,20 +1093,24 @@ static final RegExp _uuidPattern = RegExp(
       'business_name': businessName.trim(),
       'seller_type': sellerType.trim().isEmpty ? 'farmer' : sellerType.trim(),
       'updated_at': now,
-      if (activeBankAccountId != null && activeBankAccountId!.isNotEmpty)
+      if (activeBankAccountId != null && activeBankAccountId.isNotEmpty)
         'active_bank_account_id': activeBankAccountId.trim(),
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty)
         'avatar_url': avatarUrl.trim(),
     };
 
-    final String uid = userId!.trim();
+    final String uid = _identityId;
     final String existing = await _existingProfileId(phone: mobile);
     if (existing.isNotEmpty) {
       final Map<String, dynamic> patch = Map<String, dynamic>.from(body)
         ..removeWhere((_, Object? value) => value is String && value.isEmpty);
       // Link the row to this Firebase account so the next login finds it by
       // `firebase_uid` even if the phone number was never stored on it.
-      if (uid.isNotEmpty) patch['firebase_uid'] = uid;
+      // A pre-OTP registration id is not a Firebase UID and must not be
+      // written here — the post-OTP link step replaces it.
+      if (uid.isNotEmpty && !_isRegistrationId(uid)) {
+        patch['firebase_uid'] = uid;
+      }
       final http.Response response = await _client.patch(
         Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
           queryParameters: <String, String>{'user_id': 'eq.$existing'},
@@ -867,7 +1131,9 @@ static final RegExp _uuidPattern = RegExp(
 
     // `user_id` is a uuid generated by the database (016); the Firebase
     // Auth UID belongs in `firebase_uid`, never in the uuid column.
-    if (uid.isNotEmpty) body['firebase_uid'] = uid;
+    if (uid.isNotEmpty && !_isRegistrationId(uid)) {
+      body['firebase_uid'] = uid;
+    }
     body['created_at'] = now;
     final http.Response response = await _client.post(
       Uri.parse('$_supabaseUrl/rest/v1/seller_profiles'),
@@ -908,6 +1174,8 @@ static final RegExp _uuidPattern = RegExp(
     required String label,
     required String address,
     String? phone,
+    double? latitude,
+    double? longitude,
   }) async {
     _ensureConfigured();
     _ensureSignedIn();
@@ -917,15 +1185,23 @@ static final RegExp _uuidPattern = RegExp(
     final String fullAddress = address.trim();
     if (location.isEmpty && fullAddress.isEmpty) return;
 
+    final String resolvedPhone =
+        (phone ?? '').trim().isNotEmpty ? phone!.trim() : _phoneForWrites();
+    final String knownName = SellerProfileStore.instance.name.trim();
+
     final Map<String, dynamic> body = <String, dynamic>{
       'location': location,
       'business_address': fullAddress,
       'updated_at': now,
+      // The phone is always carried so a row created before OTP can be found
+      // (and linked to the Firebase UID) after the login verification.
+      if (resolvedPhone.isNotEmpty) 'phone_number': resolvedPhone,
+      if (knownName.isNotEmpty) 'display_name': knownName,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
 
-    final String existing = await _existingProfileId(
-      phone: phone ?? AuthFlow.instance.currentUserPhone,
-    );
+    final String existing = await _existingProfileId(phone: resolvedPhone);
     if (existing.isNotEmpty) {
       final http.Response patch = await _client.patch(
         Uri.parse('$_supabaseUrl/rest/v1/seller_profiles').replace(
@@ -945,11 +1221,11 @@ static final RegExp _uuidPattern = RegExp(
       return;
     }
 
-    final String uid = userId!.trim();
+    final String uid = _identityId;
     final Map<String, dynamic> insert = <String, dynamic>{
       ...body,
       'created_at': now,
-      if (uid.isNotEmpty) 'firebase_uid': uid,
+      if (uid.isNotEmpty && !_isRegistrationId(uid)) 'firebase_uid': uid,
     };
     final http.Response post = await _client.post(
       Uri.parse('$_supabaseUrl/rest/v1/seller_profiles'),
@@ -964,6 +1240,15 @@ static final RegExp _uuidPattern = RegExp(
       'Could not save your location.',
       _migrationFor(post, migration),
     );
+    final Object? decoded = _decode(post.body);
+    if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+      final String saved = (decoded.first as Map)['user_id']?.toString() ?? '';
+      if (saved.trim().isNotEmpty) {
+        // Remember the row so later steps patch it instead of inserting a
+        // second profile for the same seller.
+        SellerProfileStore.instance.userId = saved.trim();
+      }
+    }
   }
 
   /// Persists the FCM registration token on this seller's profile row.

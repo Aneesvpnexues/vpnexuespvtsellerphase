@@ -30,11 +30,23 @@ typedef ProductSaver = Future<Product> Function(
 );
 
 /// "Add Products" screen for farmers and grocery shop owners to list items.
+///
+/// Opened with [product] it becomes the **edit** form: the fields open
+/// prefilled from that listing and saving updates it in place instead of
+/// creating a new one.
 class AddProductsScreen extends StatefulWidget {
-  const AddProductsScreen({super.key, this.photoPicker, this.productSaver});
+  const AddProductsScreen({
+    super.key,
+    this.photoPicker,
+    this.productSaver,
+    this.product,
+  });
 
   final ProductPhotoPicker? photoPicker;
   final ProductSaver? productSaver;
+
+  /// The existing listing to edit. Null means the screen adds a new one.
+  final Product? product;
 
   /// Fallbacks for tests that open this screen through [goToAddProduct],
   /// which builds it without injectable dependencies.
@@ -49,8 +61,9 @@ class AddProductsScreen extends StatefulWidget {
   static const double designWidth = 412;
 
   /// Extended height so the Continue button can scroll fully above the pinned
-  /// bottom navigation bar (which covers the last [BottomNavBar.barHeight]
-  /// design-px of the viewport) and provides extra room for the keyboard.
+  /// bottom navigation bar (which covers the last
+  /// [BottomNavBar.defaultBarHeight] design-px of the viewport) and provides
+  /// extra room for the keyboard.
   static const double designHeight = 1680;
 
   @override
@@ -88,16 +101,44 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
   @override
   void initState() {
     super.initState();
-    // Rebuild progress indicator dynamically when text fields change
-    _name.addListener(_onFormChanged);
-    _price.addListener(_onFormChanged);
-    _description.addListener(_onFormChanged);
-
     // Initialize delivery toggles from the shared store so the product form
     // reflects the seller's global preference.
     final store = SellerProfileStore.instance;
     _buyerPickup = store.buyerPickup;
     _delivery = store.delivery;
+
+    // Edit mode opens with the existing listing's values. Applied before
+    // the change listeners attach, so the prefill never fires setState
+    // while this state is still being initialized.
+    _prefillFromProduct(widget.product);
+
+    // Rebuild progress indicator dynamically when text fields change
+    _name.addListener(_onFormChanged);
+    _price.addListener(_onFormChanged);
+    _description.addListener(_onFormChanged);
+  }
+
+  /// Whether the screen updates an existing listing instead of adding one.
+  bool get _isEditing => widget.product != null;
+
+  /// Prefills the form from [product]; a no-op on the plain add screen.
+  void _prefillFromProduct(Product? product) {
+    if (product == null) return;
+    _name.text = product.name;
+    _price.text = product.price == product.price.roundToDouble()
+        ? product.price.toStringAsFixed(0)
+        : product.price.toStringAsFixed(2);
+    _description.text = product.description;
+    final int categoryIndex = _categories.indexOf(product.category);
+    _category = categoryIndex >= 0 ? categoryIndex : 0;
+    // The chips are ordered Active / Out of stock / Draft, which is exactly
+    // the ProductStatus enum order.
+    _status = product.status.index;
+    _quantity = product.quantity;
+    _selectedUnit = _units.contains(product.unit) ? product.unit : 'kg';
+    _photos.addAll(product.photos);
+    _buyerPickup = product.buyerPickupEnabled;
+    _delivery = product.deliveryEnabled;
   }
 
   void _onFormChanged() {
@@ -312,6 +353,24 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
     }
   }
 
+  /// The edit-mode result: the product being edited with every field the
+  /// form owns replaced by the current form values.
+  Product _editedProduct(ProductDraft draft) {
+    final Product product = widget.product!;
+    return product.copyWith(
+      name: draft.name,
+      category: draft.category,
+      price: draft.price,
+      unit: draft.unit,
+      quantity: draft.quantity,
+      description: draft.description,
+      status: draft.status,
+      photos: List<ProductPhoto>.unmodifiable(_photos),
+      buyerPickupEnabled: draft.buyerPickupEnabled,
+      deliveryEnabled: draft.deliveryEnabled,
+    );
+  }
+
   Future<void> _saveProduct() async {
     if (_isSaving) return;
     final String name = _name.text.trim();
@@ -369,9 +428,15 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
           widget.productSaver ?? AddProductsScreen.debugProductSaver;
       if (saver != null) {
         await saver(draft, _photos);
+      } else if (_isEditing) {
+        // Update the existing listing in place: copyWith keeps the id, the
+        // owner and any image urls the product already had.
+        await SellerProductRepository().updateProduct(_editedProduct(draft));
       } else {
-        // Persist to Supabase (photos first via Cloudinary) so the product
-        // survives an app restart; the repository also upserts the store.
+        // TEMPORARY: while Cloudinary/Supabase writes are disabled the
+        // repository saves the product (photos included) on the device, so
+        // it shows on Home right away and survives a restart. Moving it
+        // back to the database happens inside the repository.
         await SellerProductRepository().addProduct(
           draft,
           _photos,
@@ -380,7 +445,16 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppStrings.trOf(context, 'Product added successfully!'))),
+        SnackBar(
+          content: Text(
+            AppStrings.trOf(
+              context,
+              _isEditing
+                  ? 'Product updated successfully!'
+                  : 'Product added successfully!',
+            ),
+          ),
+        ),
       );
       Navigator.of(context).maybePop();
     } catch (e) {
@@ -438,10 +512,14 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                       scrollable: true,
                       child: Stack(
                         children: [
-                          const Positioned(
+                          Positioned(
                             left: 0,
                             top: 24,
-                            child: PageHeader(title: 'Add Products'),
+                            child: PageHeader(
+                              title: _isEditing
+                                  ? AppStrings.trOf(context, 'Edit Product')
+                                  : AppStrings.trOf(context, 'Add Products'),
+                            ),
                           ),
                           Positioned(
                             left: 24,
@@ -934,7 +1012,12 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                             child: SizedBox(
                               width: 364,
                               height: 54,
-                              child: _ContinueButton(onTap: _saveProduct),
+                              child: _ContinueButton(
+                              onTap: _saveProduct,
+                              label: _isEditing
+                                  ? AppStrings.trOf(context, 'Save')
+                                  : AppStrings.trOf(context, 'Continue'),
+                            ),
                             ),
                           ),
                         ],
@@ -952,12 +1035,12 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
                         alignment: Alignment.bottomCenter,
                         child: SizedBox(
                           width: BottomNavBar.designWidth * scale,
-                          height: BottomNavBar.barHeight * scale,
+                          height: BottomNavBar.defaultBarHeight * scale,
                           child: FittedBox(
                             fit: BoxFit.fill,
                             child: SizedBox(
                               width: BottomNavBar.designWidth,
-                              height: BottomNavBar.barHeight,
+                              height: BottomNavBar.defaultBarHeight,
                               child: BottomNavBar(
                                 selectedIndex: null,
                                 onHomeTap: () => goToHome(context),
@@ -1127,9 +1210,12 @@ class _DeliveryToggle extends StatelessWidget {
 }
 
 class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.onTap});
+  const _ContinueButton({required this.onTap, required this.label});
 
   final VoidCallback onTap;
+
+  /// "Continue" while adding, "Save" while editing an existing listing.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -1156,7 +1242,7 @@ class _ContinueButton extends StatelessWidget {
           ],
         ),
             child: Text(
-              AppStrings.trOf(context, 'Continue'),
+              label,
               style: AppTextStyles.button,
             ),
       ),

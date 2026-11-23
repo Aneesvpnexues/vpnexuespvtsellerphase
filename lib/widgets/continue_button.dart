@@ -15,6 +15,7 @@ class ContinueButton extends StatelessWidget {
     required this.onTap,
     this.buttonKey,
     this.enabled = true,
+    this.loading = false,
   });
 
   /// Design width of the pill on the 412-wide artboards.
@@ -30,8 +31,13 @@ class ContinueButton extends StatelessWidget {
   final Key? buttonKey;
   final bool enabled;
 
+  /// True while this step is saving: the label swaps for a spinner and taps
+  /// are ignored, so a double tap can never submit the same step twice.
+  final bool loading;
+
   @override
   Widget build(BuildContext context) {
+    final bool active = enabled && !loading;
     return SafeArea(
       top: false,
       child: Padding(
@@ -45,9 +51,9 @@ class ContinueButton extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) => GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: enabled ? onTap : null,
+              onTap: active ? onTap : null,
               child: HoverPress.button(
-                enabled: enabled,
+                enabled: active,
                 child: Container(
                   key: buttonKey,
                   width: math.min(constraints.maxWidth, designWidth),
@@ -55,7 +61,7 @@ class ContinueButton extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: enabled
+                      colors: active
                           ? const [
                               AppColors.continueGradientStart,
                               AppColors.continueGradientEnd,
@@ -66,7 +72,7 @@ class ContinueButton extends StatelessWidget {
                             ],
                     ),
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: enabled
+                    boxShadow: active
                         ? const [
                             BoxShadow(
                               color: AppColors.continueGlow,
@@ -76,7 +82,19 @@ class ContinueButton extends StatelessWidget {
                           ]
                         : null,
                   ),
-                  child: const Text('Continue', style: AppTextStyles.button),
+                  child: loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.surface,
+                          ),
+                        )
+                      : const Text(
+                          'Continue',
+                          style: AppTextStyles.button,
+                        ),
                 ),
               ),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/order_store.dart';
+import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -10,7 +11,7 @@ import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
 import '../widgets/slide_drag_detector.dart';
 
-/// Order Details — replica of Zeplin "Android Compact - 135"
+/// Order Details — static replica of Zeplin "Android Compact - 135"
 /// (project 6a8d49709e27bd8b35213d35,
 /// screen 6ad1ae16aa9fda71b12bf121).
 ///
@@ -18,19 +19,27 @@ import '../widgets/slide_drag_detector.dart';
 /// tall content. Slide-to-accept hands over to [OrderPickupCodeScreen];
 /// "Reject order" asks for confirmation and pops back to My Orders.
 ///
-/// Every section renders the [order] it is handed — order id, buyer
-/// details, ordered products, quantities, totals, status and progress
-/// stages — so opening a different row of My Orders always shows that
-/// order's own summary instead of a fixed one (SELLER-020).
+/// The page tracks [orderId] through the local status store: pending ->
+/// accepted on slide to accept, confirmed on the pickup OTP, delivered on
+/// the completed state. TEMPORARY: those moves are in memory only until the
+/// database is wired in.
 class OrderDetailsScreen extends StatelessWidget {
-  const OrderDetailsScreen({super.key, required this.order});
-
-  /// The order this screen is showing.
-  final OrderDetail order;
+  const OrderDetailsScreen({
+    super.key,
+    this.orderId = '#NX4582',
+    this.initialStatus = OrderStatus.pending,
+  });
 
   static const double designWidth = 412;
   static const double designHeight = 1567;
   static const double trimTop = 49;
+
+  /// Order this page shows; also the key the local status store tracks.
+  final String orderId;
+
+  /// Status the order was opened with — the seeded status from My Orders —
+  /// used until the local status store moves it.
+  final OrderStatus initialStatus;
 
   Future<void> _confirmReject(BuildContext context) async {
     final bool? reject = await showDialog<bool>(
@@ -39,71 +48,112 @@ class OrderDetailsScreen extends StatelessWidget {
       builder: (BuildContext dialogContext) => const _RejectConfirmDialog(),
     );
     if (reject == true && context.mounted) {
+      // TEMPORARY: local status only — swap for the backend write later.
+      OrderStore.instance.markOrder(orderId, OrderStatus.rejected);
       Navigator.of(context).pop();
     }
   }
 
+  /// Bottom slide action for the order's current status.
+  ///
+  /// pending  -> marks accepted and opens the pickup code (OTP) screen
+  /// accepted -> opens the pickup code screen, the OTP there confirms it
+  /// confirmed -> marks delivered and opens the completed state
+  void _onSlide(BuildContext context, OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        OrderStore.instance.markOrder(orderId, OrderStatus.accepted);
+        goToOrderPickupCode(context, orderId: orderId);
+      case OrderStatus.accepted:
+        goToOrderPickupCode(context, orderId: orderId);
+      case OrderStatus.confirmed:
+        OrderStore.instance.markOrder(orderId, OrderStatus.delivered);
+        goToOrderConfirmation(
+          context,
+          orderId: orderId,
+          dateTime: DateTime.now(),
+        );
+      case OrderStatus.delivered:
+      case OrderStatus.rejected:
+        break;
+    }
+  }
+
+  /// Slide label for [status]; null hides the bar because the order is
+  /// already finished (delivered or rejected).
+  static String? _slideLabelFor(OrderStatus status) => switch (status) {
+    OrderStatus.pending => 'Slide to accept order',
+    OrderStatus.accepted => 'Slide to confirm pickup',
+    OrderStatus.confirmed => 'Slide to complete order',
+    OrderStatus.delivered || OrderStatus.rejected => null,
+  };
+
   @override
   Widget build(BuildContext context) {
-    // The items card grows with the order's line count (see
-    // [_ItemsCard.heightFor]); every card below it shifts by the same
-    // delta and the artboard grows with it, so the design spacing — and
-    // therefore scrolling — stays intact for 2-, 4- or 5-line orders.
-    final double delta =
-        _ItemsCard.heightFor(order.items.length) - _ItemsCard.designHeight;
-    return Scaffold(
-      backgroundColor: AppColors.homeBg,
-      body: SafeArea(
-        bottom: false,
-        child: DesignCanvas(
-          designWidth: designWidth,
-          designHeight: designHeight + delta,
-          trimTop: trimTop,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 73,
-                child: PageHeader(
-                  title: AppStrings.trOf(context, 'Order Details'),
-                ),
+    // TEMPORARY: rebuild straight from the local status store so the page
+    // (hero, progress strip, actions) reflects the move immediately.
+    return AnimatedBuilder(
+      animation: OrderStore.instance,
+      builder: (BuildContext context, _) {
+        final OrderStatus status = OrderStore.instance.statusOf(
+          orderId,
+          fallback: initialStatus,
+        );
+        final String? slideLabel = _slideLabelFor(status);
+        final bool canReject =
+            status == OrderStatus.pending || status == OrderStatus.accepted;
+        return Scaffold(
+          backgroundColor: AppColors.homeBg,
+          body: SafeArea(
+            bottom: false,
+            child: DesignCanvas(
+              designWidth: designWidth,
+              designHeight: designHeight,
+              trimTop: trimTop,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 73,
+                    child: PageHeader(
+                      title: AppStrings.trOf(context, 'Order Details'),
+                    ),
+                  ),
+                  Positioned(left: 22, top: 117, child: const _SegmentTabs()),
+                  Positioned(
+                    left: 25,
+                    top: 172,
+                    child: _OrderHero(orderId: orderId, status: status),
+                  ),
+                  Positioned(left: 22, top: 394, child: const _BuyerCard()),
+                  Positioned(left: 22, top: 588, child: const _ItemsCard()),
+                  Positioned(left: 22, top: 862, child: const _SummaryCard()),
+                  Positioned(left: 22, top: 1082, child: const _DeliveryCard()),
+                  if (canReject)
+                    Positioned(
+                      left: 21,
+                      top: 1424,
+                      width: 364,
+                      height: 48,
+                      child: _RejectButton(
+                        onTap: () => _confirmReject(context),
+                      ),
+                    ),
+                  if (slideLabel != null)
+                    Positioned(
+                      left: 21,
+                      top: 1494,
+                      child: _SlideAccept(
+                        label: slideLabel,
+                        onAccept: () => _onSlide(context, status),
+                      ),
+                    ),
+                ],
               ),
-              Positioned(
-                left: 22,
-                top: 117,
-                child: _SegmentTabs(pickupType: order.pickupType),
-              ),
-              Positioned(left: 25, top: 172, child: _OrderHero(order: order)),
-              Positioned(left: 22, top: 394, child: _BuyerCard(order: order)),
-              Positioned(left: 22, top: 588, child: _ItemsCard(order: order)),
-              Positioned(
-                left: 22,
-                top: 862 + delta,
-                child: _SummaryCard(order: order),
-              ),
-              Positioned(
-                left: 22,
-                top: 1082 + delta,
-                child: _DeliveryCard(order: order),
-              ),
-              Positioned(
-                left: 21,
-                top: 1424 + delta,
-                width: 364,
-                height: 48,
-                child: _RejectButton(
-                  onTap: () => _confirmReject(context),
-                ),
-              ),
-              Positioned(
-                left: 21,
-                top: 1494 + delta,
-                child: const _SlideAccept(),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -264,160 +314,6 @@ class _RejectConfirmDialog extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Order data shown by this screen
-// ---------------------------------------------------------------------------
-
-/// One product line of an order, exactly as the Order Items card lists it.
-class OrderDetailItem {
-  const OrderDetailItem({
-    required this.image,
-    required this.name,
-    required this.quantity,
-    required this.rate,
-  });
-
-  /// Thumbnail shown in the row (and in the My Orders list tile).
-  final String image;
-  final String name;
-
-  /// Quantity in kilograms and rate in rupees per kilogram. The line total
-  /// is derived from them so the Order Summary can never disagree with the
-  /// items displayed above it.
-  final int quantity;
-  final int rate;
-
-  int get total => quantity * rate;
-  String get quantityLabel => '$quantity kg';
-  String get rateLabel => '\u20B9$rate/kg';
-  String get totalLabel => _rupees(total);
-}
-
-/// Everything the Order Details screen displays for one selected order:
-/// identity, buyer, products, totals, status and progress stage.
-class OrderDetail {
-  const OrderDetail({
-    required this.orderId,
-    required this.date,
-    required this.status,
-    required this.pickupType,
-    required this.buyerName,
-    required this.buyerLocation,
-    required this.buyerPhone,
-    required this.buyerType,
-    required this.items,
-    required this.expectedPickupDate,
-    required this.buyerNote,
-    this.deliveryCharges = 0,
-  });
-
-  /// Order id including the leading '#', e.g. `#NX4582`.
-  final String orderId;
-
-  /// Placed-on timestamp shown in the hero card.
-  final String date;
-
-  final OrderStatus status;
-  final PickupType pickupType;
-
-  final String buyerName;
-  final String buyerLocation;
-  final String buyerPhone;
-  final String buyerType;
-
-  final List<OrderDetailItem> items;
-  final String expectedPickupDate;
-  final String buyerNote;
-
-  /// Flat delivery fee in rupees (0 for buyer-pickup orders).
-  final int deliveryCharges;
-
-  int get itemsTotal =>
-      items.fold(0, (int sum, OrderDetailItem item) => sum + item.total);
-  int get totalAmount => itemsTotal + deliveryCharges;
-
-  String get itemsTotalLabel => _rupees(itemsTotal);
-  String get deliveryChargesLabel => _rupees(deliveryCharges);
-  String get totalAmountLabel => _rupees(totalAmount);
-
-  /// Hero headline / caption / pill / progress stage, all derived from the
-  /// order's own status so the summary can never contradict the list.
-  String get heroTitle => switch (status) {
-    OrderStatus.pending => 'New Order',
-    OrderStatus.accepted => 'Order Accepted',
-    OrderStatus.confirmed => 'Order Confirmed',
-    OrderStatus.delivered => 'Order Delivered',
-    OrderStatus.rejected => 'Order Rejected',
-  };
-
-  String get heroCaption => switch (status) {
-    OrderStatus.pending => 'Waiting for your response',
-    OrderStatus.accepted => 'Ready for buyer pickup',
-    OrderStatus.confirmed => 'Pickup scheduled',
-    OrderStatus.delivered => 'Order completed',
-    OrderStatus.rejected => 'Buyer notified',
-  };
-
-  /// Short label of the hero status pill.
-  String get statusPillLabel => switch (status) {
-    OrderStatus.delivered => 'Done',
-    OrderStatus.rejected => 'Rejected',
-    _ => 'Active',
-  };
-
-  /// Index of the current progress stage: 0 Active, 1 Pickup, 2 Completed.
-  int get progressStage => switch (status) {
-    OrderStatus.pending => 0,
-    OrderStatus.accepted => 1,
-    OrderStatus.confirmed => 1,
-    OrderStatus.delivered => 2,
-    OrderStatus.rejected => 0,
-  };
-
-  /// Design values used by the Zeplin QA preview (`main_order_preview.dart`).
-  static const OrderDetail sample = OrderDetail(
-    orderId: '#NX4582',
-    date: '12 Mar 2024, 10:24 AM',
-    status: OrderStatus.pending,
-    pickupType: PickupType.buyerPickup,
-    buyerName: 'Akash Stores',
-    buyerLocation: 'Salem, Tamil Nadu',
-    buyerPhone: '+91 12345 67890',
-    buyerType: 'Retailer',
-    items: <OrderDetailItem>[
-      OrderDetailItem(
-        image: 'assets/order/tomatoes.png',
-        name: 'Fresh Tomatoes',
-        quantity: 50,
-        rate: 24,
-      ),
-      OrderDetailItem(
-        image: 'assets/order/chillies.png',
-        name: 'Green Chillies',
-        quantity: 30,
-        rate: 40,
-      ),
-      OrderDetailItem(
-        image: 'assets/order/chillies2.png',
-        name: 'Green Chillies',
-        quantity: 20,
-        rate: 22,
-      ),
-    ],
-    expectedPickupDate: '25 Mar 2024',
-    buyerNote:
-        'Please ensure fresh quality and proper\npacking. Call me before ready for pickup.',
-  );
-}
-
-/// Groups the last three digits so totals read like the design (`₹2,840`).
-String _rupees(int value) {
-  final String digits = value.toString();
-  if (digits.length <= 3) return '\u20B9$digits';
-  final int cut = digits.length - 3;
-  return '\u20B9${digits.substring(0, cut)},${digits.substring(cut)}';
-}
-
 /// Small helper that places a text inside the exact Zeplin text box so the
 /// glyphs sit at the same vertical offset as the design.
 ///
@@ -457,11 +353,7 @@ class _Label extends StatelessWidget {
 }
 
 class _SegmentTabs extends StatelessWidget {
-  const _SegmentTabs({required this.pickupType});
-
-  /// The order's own fulfilment mode: the active half of the toggle and the
-  /// delivery copy below follow it.
-  final PickupType pickupType;
+  const _SegmentTabs();
 
   @override
   Widget build(BuildContext context) {
@@ -479,73 +371,79 @@ class _SegmentTabs extends StatelessWidget {
               border: Border.all(color: const Color(0x14000000)),
             ),
           ),
-          if (pickupType == PickupType.buyerPickup) ...[
-            Positioned(
-              left: 4,
-              top: 4,
-              child: Container(
-                width: 177,
-                height: 37,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderDark,
-                  borderRadius: BorderRadius.all(Radius.circular(23)),
-                ),
-                child: Text(
-                  AppStrings.trOf(context, 'Buyer Pickup'),
-                  style: AppTextStyles.orderSegmentActive,
-                ),
+          Positioned(
+            left: 4,
+            top: 4,
+            child: Container(
+              width: 177,
+              height: 37,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.orderDark,
+                borderRadius: BorderRadius.all(Radius.circular(23)),
               ),
-            ),
-            Positioned(
-              left: 238,
-              top: 10,
-              child: _Label(
-                AppStrings.trOf(context, 'Delivery'),
-                AppTextStyles.orderSegmentIdle,
-                width: 50,
-              ),
-            ),
-          ] else ...[
-            Positioned(
-              left: 187,
-              top: 4,
-              child: Container(
-                width: 177,
-                height: 37,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.orderDark,
-                  borderRadius: BorderRadius.all(Radius.circular(23)),
-                ),
-                child: Text(
-                  AppStrings.trOf(context, 'Delivery'),
-                  style: AppTextStyles.orderSegmentActive,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 50,
-              top: 10,
-              child: _Label(
+              child: Text(
                 AppStrings.trOf(context, 'Buyer Pickup'),
-                AppTextStyles.orderSegmentIdle,
-                width: 92,
+                style: AppTextStyles.orderSegmentActive,
               ),
             ),
-          ],
+          ),
+          Positioned(
+            left: 238,
+            top: 10,
+            child: _Label(
+              AppStrings.trOf(context, 'Delivery'),
+              AppTextStyles.orderSegmentIdle,
+              width: 50,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _OrderHero extends StatelessWidget {
-  const _OrderHero({required this.order});
+/// Hero copy per order status. TEMPORARY: in-memory only until the order
+/// data comes from the database.
+String _heroTitle(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'New Order',
+  OrderStatus.accepted => 'Accepted',
+  OrderStatus.confirmed => 'Confirmed',
+  OrderStatus.delivered => 'Completed',
+  OrderStatus.rejected => 'Rejected',
+};
 
-  /// The selected order: its id, timestamp, status-derived headline and
-  /// progress stage all come from here.
-  final OrderDetail order;
+String _heroCaption(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'Waiting for your response',
+  OrderStatus.accepted => 'Waiting for the buyer to arrive',
+  OrderStatus.confirmed => 'Pickup code verified with the buyer',
+  OrderStatus.delivered => 'Order completed and collected',
+  OrderStatus.rejected => 'You declined this order',
+};
+
+String _statusPillLabel(OrderStatus status) => switch (status) {
+  OrderStatus.pending => 'Active',
+  OrderStatus.accepted => 'Accepted',
+  OrderStatus.confirmed => 'Confirmed',
+  OrderStatus.delivered => 'Completed',
+  OrderStatus.rejected => 'Rejected',
+};
+
+/// Progress strip step that is highlighted for [status]: 0 Active while the
+/// order waits, 1 Pickup once it is confirmed, 2 Completed when delivered.
+/// -1 highlights nothing (rejected).
+int _activeStepIndex(OrderStatus status) => switch (status) {
+  OrderStatus.pending || OrderStatus.accepted => 0,
+  OrderStatus.confirmed => 1,
+  OrderStatus.delivered => 2,
+  OrderStatus.rejected => -1,
+};
+
+class _OrderHero extends StatelessWidget {
+  const _OrderHero({required this.orderId, required this.status});
+
+  final String orderId;
+  final OrderStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -611,7 +509,7 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 12,
             child: _Label(
-              AppStrings.trOf(context, 'ORDER ${order.orderId}'),
+              AppStrings.trOf(context, 'ORDER $orderId'),
               AppTextStyles.orderId,
               width: 107,
               height: 15,
@@ -621,9 +519,9 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 32,
             child: _Label(
-              AppStrings.trOf(context, order.heroTitle),
+              AppStrings.trOf(context, _heroTitle(status)),
               AppTextStyles.orderHeroTitle,
-              width: 149,
+              width: 200,
               height: 34,
             ),
           ),
@@ -631,58 +529,69 @@ class _OrderHero extends StatelessWidget {
             left: 16,
             top: 67,
             child: _Label(
-              AppStrings.trOf(context, order.heroCaption),
+              AppStrings.trOf(context, _heroCaption(status)),
               AppTextStyles.orderHeroCaption,
-              width: 126,
+              width: 240,
               height: 13,
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 16,
             top: 90,
             child: _Label(
-              order.date,
+              '12 Mar 2024, 10:24 AM',
               AppTextStyles.orderHeroMeta,
               width: 113,
               height: 13,
             ),
           ),
           Positioned(
-            left: 284,
+            right: 17,
             top: 15,
-            child: Container(
-              width: 61,
-              height: 19,
-              decoration: const BoxDecoration(
-                color: AppColors.orderDark,
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 294,
-            top: 22,
-            child: _Dot(size: 5, color: AppColors.orderDivider),
-          ),
-          Positioned(
-            left: 301.5,
-            top: 15,
-            child: _Label(
-              AppStrings.trOf(context, order.statusPillLabel),
-              AppTextStyles.orderPillLabel.copyWith(
-                color: AppColors.orderDivider,
-              ),
-              width: 34,
-              height: 20,
-            ),
+            child: _StatusPill(label: _statusPillLabel(status)),
           ),
           Positioned(
             left: 17,
             top: 118,
-            child: _ProgressStrip(stage: order.progressStage),
+            child: _ProgressStrip(activeIndex: _activeStepIndex(status)),
           ),
         ],
         ),
+      ),
+    );
+  }
+}
+
+/// Dark status chip in the hero card: dot + label, sized to its text so the
+/// longer labels (Accepted, Confirmed) still fit inside the card.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 19,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: const BoxDecoration(
+        color: AppColors.orderDark,
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _Dot(size: 5, color: AppColors.orderDivider),
+          const SizedBox(width: 4),
+          Text(
+            AppStrings.trOf(context, label),
+            maxLines: 1,
+            softWrap: false,
+            style: AppTextStyles.orderPillLabel.copyWith(
+              color: AppColors.orderDivider,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -705,11 +614,11 @@ class _Dot extends StatelessWidget {
 }
 
 class _ProgressStrip extends StatelessWidget {
-  const _ProgressStrip({required this.stage});
+  const _ProgressStrip({this.activeIndex = 0});
 
-  /// Index of the order's current progress stage: 0 Active, 1 Pickup,
-  /// 2 Completed. Stages up to and including it are shown as reached.
-  final int stage;
+  /// Index of the highlighted step (0 Active, 1 Pickup, 2 Completed);
+  /// -1 leaves every step idle, which is how a rejected order reads.
+  final int activeIndex;
 
   static const List<_Step> steps = [
     _Step('Active', _StepIcon.bolt, 38),
@@ -739,7 +648,7 @@ class _ProgressStrip extends StatelessWidget {
             Positioned(
               left: steps[i].left,
               top: 16,
-              child: _StepCircle(step: steps[i], active: i <= stage),
+              child: _StepCircle(step: steps[i], active: i == activeIndex),
             ),
           for (int i = 0; i < steps.length; i++)
             Positioned(
@@ -756,7 +665,7 @@ class _ProgressStrip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: i <= stage
+                    color: i == activeIndex
                         ? AppColors.orderDark
                         : const Color(0x8C0D3B20),
                   ),
@@ -783,42 +692,29 @@ class _StepCircle extends StatelessWidget {
   const _StepCircle({required this.step, required this.active});
 
   final _Step step;
-
-  /// Whether the order has reached (or passed) this stage: reached circles
-  /// are dark with a glyph that stays legible on that background (the lime
-  /// bolt for the first stage, a white tick afterwards), while the stages
-  /// still ahead keep the design's light-grey icon on a white circle.
   final bool active;
 
   @override
   Widget build(BuildContext context) {
     final Widget icon;
-    if (active && step.icon != _StepIcon.bolt) {
-      icon = Image.asset(
-        'assets/order/ic_step_tick_white.png',
-        width: 16,
-        height: 16,
-      );
-    } else {
-      switch (step.icon) {
-        case _StepIcon.bolt:
-          icon = CustomPaint(
-            size: const Size(15, 19),
-            painter: _BoltPainter(color: AppColors.orderLime),
-          );
-        case _StepIcon.download:
-          icon = Image.asset(
-            'assets/order/ic_step_download.png',
-            width: 18,
-            height: 18,
-          );
-        case _StepIcon.flag:
-          icon = Image.asset(
-            'assets/order/ic_step_flag.png',
-            width: 16,
-            height: 16,
-          );
-      }
+    switch (step.icon) {
+      case _StepIcon.bolt:
+        icon = CustomPaint(
+          size: const Size(15, 19),
+          painter: _BoltPainter(color: AppColors.orderLime),
+        );
+      case _StepIcon.download:
+        icon = Image.asset(
+          'assets/order/ic_step_download.png',
+          width: 18,
+          height: 18,
+        );
+      case _StepIcon.flag:
+        icon = Image.asset(
+          'assets/order/ic_step_flag.png',
+          width: 16,
+          height: 16,
+        );
     }
     return Container(
       width: 36,
@@ -891,10 +787,7 @@ class _DashedLine extends CustomPainter {
 }
 
 class _BuyerCard extends StatelessWidget {
-  const _BuyerCard({required this.order});
-
-  /// The selected order's buyer: name, location, phone and buyer type.
-  final OrderDetail order;
+  const _BuyerCard();
 
   @override
   Widget build(BuildContext context) {
@@ -958,11 +851,11 @@ class _BuyerCard extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 95,
             top: 44,
             child: _Label(
-              order.buyerName,
+              'Akash Stores',
               AppTextStyles.orderStoreName,
               width: 133,
             ),
@@ -980,7 +873,7 @@ class _BuyerCard extends StatelessWidget {
             left: 109,
             top: 75,
             child: _Label(
-              order.buyerLocation,
+              SellerProfileStore.instance.locationDisplay,
               AppTextStyles.orderMuted,
               width: 90,
               height: 13,
@@ -995,11 +888,11 @@ class _BuyerCard extends StatelessWidget {
               height: 12,
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 109,
             top: 95,
             child: _Label(
-              order.buyerPhone,
+              '+91 12345 67890',
               AppTextStyles.orderMuted,
               width: 86,
               height: 13,
@@ -1021,7 +914,7 @@ class _BuyerCard extends StatelessWidget {
             left: 253,
             top: 45,
             child: _Label(
-              AppStrings.trOf(context, order.buyerType),
+              AppStrings.trOf(context, 'Retailer'),
               AppTextStyles.orderBuyerType,
               width: 49,
               height: 20,
@@ -1112,28 +1005,14 @@ class _BuyerCard extends StatelessWidget {
   }
 }
 
-/// Order Items card: lists the selected order's own products and
-/// quantities. Its height grows with the line count ([heightFor]); the
-/// Order Details layout shifts everything below by the same delta.
 class _ItemsCard extends StatelessWidget {
-  const _ItemsCard({required this.order});
-
-  final OrderDetail order;
-
-  /// Height of the card in the design for three rows (the reference the
-  /// artboard offsets below are measured from).
-  static const double designHeight = 260;
-
-  /// Card height for [itemCount] rows: first row at y=58, rows pitched 63
-  /// apart, 17px bottom padding (58 + 59 + 63*(n-1) + 17 = 71 + 63n).
-  static double heightFor(int itemCount) => 71.0 + 63 * itemCount;
+  const _ItemsCard();
 
   @override
   Widget build(BuildContext context) {
-    final List<OrderDetailItem> items = order.items;
     return Container(
       width: 368,
-      height: heightFor(items.length),
+      height: 260,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
@@ -1190,18 +1069,39 @@ class _ItemsCard extends StatelessWidget {
               width: 98,
             ),
           ),
-          for (int i = 0; i < items.length; i++)
-            Positioned(
-              left: 16,
-              top: 58 + i * 63.0,
-              child: _ItemRow(
-                image: items[i].image,
-                name: items[i].name,
-                qty: items[i].quantityLabel,
-                rate: items[i].rateLabel,
-                price: items[i].totalLabel,
-              ),
+          const Positioned(
+            left: 16,
+            top: 58,
+            child: _ItemRow(
+              image: 'assets/order/tomatoes.png',
+              name: 'Fresh Tomatoes',
+              qty: '50 kg',
+              rate: '\u20B924/kg',
+              price: '\u20B91,400',
             ),
+          ),
+          const Positioned(
+            left: 16,
+            top: 121,
+            child: _ItemRow(
+              image: 'assets/order/chillies.png',
+              name: 'Green Chillies',
+              qty: '30 kg',
+              rate: '\u20B940/kg',
+              price: '\u20B91,200',
+            ),
+          ),
+          const Positioned(
+            left: 16,
+            top: 184,
+            child: _ItemRow(
+              image: 'assets/order/chillies2.png',
+              name: 'Green Chillies',
+              qty: '20 kg',
+              rate: '\u20B922/kg',
+              price: '\u20B9440',
+            ),
+          ),
         ],
       ),
     );
@@ -1271,11 +1171,7 @@ class _ItemRow extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.order});
-
-  /// The selected order's own totals: items total, delivery charges and
-  /// grand total (derived from its item lines, so they always add up).
-  final OrderDetail order;
+  const _SummaryCard();
 
   @override
   Widget build(BuildContext context) {
@@ -1358,11 +1254,11 @@ class _SummaryCard extends StatelessWidget {
                 width: 120,
               ),
             ),
-            Positioned(
+            const Positioned(
               left: 287,
               top: 76,
               child: _Label(
-                order.itemsTotalLabel,
+                '\u20B92,840',
                 AppTextStyles.orderRowValue,
                 width: 65,
               ),
@@ -1376,14 +1272,10 @@ class _SummaryCard extends StatelessWidget {
                 width: 140,
               ),
             ),
-            Positioned(
+            const Positioned(
               left: 318,
               top: 104,
-              child: _Label(
-                order.deliveryChargesLabel,
-                AppTextStyles.orderRowValue,
-                width: 30,
-              ),
+              child: _Label('\u20B90', AppTextStyles.orderRowValue, width: 30),
             ),
             Positioned(
               left: 16,
@@ -1403,11 +1295,11 @@ class _SummaryCard extends StatelessWidget {
                 width: 120,
               ),
             ),
-            Positioned(
+            const Positioned(
               left: 264,
               top: 148,
               child: _Label(
-                order.totalAmountLabel,
+                '\u20B92,840',
                 AppTextStyles.orderTotalValue,
                 width: 84,
               ),
@@ -1420,15 +1312,10 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _DeliveryCard extends StatelessWidget {
-  const _DeliveryCard({required this.order});
-
-  /// The selected order's fulfilment mode, expected pickup date and the
-  /// buyer's note.
-  final OrderDetail order;
+  const _DeliveryCard();
 
   @override
   Widget build(BuildContext context) {
-    final bool isDelivery = order.pickupType == PickupType.delivery;
     return Container(
       width: 368,
       height: 324,
@@ -1522,10 +1409,7 @@ class _DeliveryCard extends StatelessWidget {
                     left: 63,
                     top: 5,
                     child: _Label(
-                      AppStrings.trOf(
-                        context,
-                        isDelivery ? 'Home Delivery' : 'Buyer Pickup',
-                      ),
+                      AppStrings.trOf(context, 'Buyer Pickup'),
                       AppTextStyles.orderSubTitle,
                       width: 140,
                     ),
@@ -1539,9 +1423,7 @@ class _DeliveryCard extends StatelessWidget {
                       child: Text(
                         AppStrings.trOf(
                           context,
-                          isDelivery
-                              ? 'Delivery partner will drop the order at\nyour delivery address'
-                              : 'Buyer will pick up the order  from your\nlocation',
+                          'Buyer will pick up the order  from your\nlocation',
                         ),
                         style: AppTextStyles.orderSubText,
                       ),
@@ -1574,11 +1456,11 @@ class _DeliveryCard extends StatelessWidget {
                       width: 160,
                     ),
                   ),
-                  Positioned(
+                  const Positioned(
                     left: 63,
                     top: 86,
                     child: _Label(
-                      order.expectedPickupDate,
+                      '25 Mar 2024',
                       AppTextStyles.orderDate,
                       width: 100,
                     ),
@@ -1651,7 +1533,7 @@ class _DeliveryCard extends StatelessWidget {
                       width: 256,
                       height: 34,
                       child: Text(
-                        AppStrings.trOf(context, order.buyerNote),
+                        AppStrings.trOf(context, 'Please ensure fresh quality and proper\npacking. Call me before ready for pickup.'),
                         style: AppTextStyles.orderNoteText,
                       ),
                     ),
@@ -1667,7 +1549,13 @@ class _DeliveryCard extends StatelessWidget {
 }
 
 class _SlideAccept extends StatefulWidget {
-  const _SlideAccept();
+  const _SlideAccept({required this.label, required this.onAccept});
+
+  /// Status-dependent slide label, e.g. "Slide to accept order".
+  final String label;
+
+  /// Runs the status transition for the current order status.
+  final VoidCallback onAccept;
 
   @override
   State<_SlideAccept> createState() => _SlideAcceptState();
@@ -1713,7 +1601,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   void _onDragEnd(DragEndDetails details) {
     if (_knobX >= _threshold || details.velocity.pixelsPerSecond.dx > 300) {
       setState(() => _knobX = _end);
-      goToOrderPickupCode(context);
+      widget.onAccept();
       return;
     }
     _controller.value = ((_knobX - _start) / _travel).clamp(0.0, 1.0);
@@ -1724,7 +1612,7 @@ class _SlideAcceptState extends State<_SlideAccept>
   Widget build(BuildContext context) {
     return HoverPress.slide(
       child: SlideDragDetector(
-        onTap: () => goToOrderPickupCode(context),
+        onTap: widget.onAccept,
         onUpdate: _onDragUpdate,
         onEnd: _onDragEnd,
         child: Container(
@@ -1778,9 +1666,9 @@ class _SlideAcceptState extends State<_SlideAccept>
                 left: 112,
                 top: 15,
                 child: _Label(
-                  AppStrings.trOf(context, 'Slide to accept order'),
+                  AppStrings.trOf(context, widget.label),
                   AppTextStyles.orderSlideLabel,
-                  width: 180,
+                  width: 220,
                 ),
               ),
             ],

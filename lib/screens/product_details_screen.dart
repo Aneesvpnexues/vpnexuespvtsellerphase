@@ -7,6 +7,7 @@ import '../data/seller_product_repository.dart';
 import '../data/seller_profile_store.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_navigation.dart';
 import '../widgets/design_canvas.dart';
 import '../widgets/hover_press.dart';
 import '../widgets/page_header.dart';
@@ -37,7 +38,9 @@ class ProductDetailsScreen extends StatefulWidget {
   final ProductDeleter? productDeleter;
 
   static const double designWidth = 412;
-  static const double designHeight = 1564;
+
+  /// 1564 + 52 for the Edit product button added above Delete product.
+  static const double designHeight = 1616;
   static const double trimTop = 49;
 
   static const String shareBaseUrl = String.fromEnvironment(
@@ -153,6 +156,39 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<Product> _updateRemote(Product product) {
     return SellerProductRepository().updateProduct(product);
+  }
+
+  /// Opens the Add Products screen in edit mode for the current listing,
+  /// then reloads this page from the store so the saved changes show up.
+  Future<void> _openEditProduct() async {
+    final Product? product = _product;
+    if (product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This sample product cannot be edited.')),
+      );
+      return;
+    }
+    await goToEditProduct(context, product);
+    if (!mounted) return;
+    Product? found;
+    for (final Product item in ProductStore.instance.products) {
+      if (item.id == product.id) {
+        found = item;
+        break;
+      }
+    }
+    // Closing the form without saving keeps the same instance — nothing to
+    // refresh in that case.
+    if (found == null || identical(found, product)) return;
+    final Product updated = found;
+    setState(() => _loadProduct(updated));
+    if (_photoController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _photoController.hasClients) {
+          _photoController.jumpToPage(0);
+        }
+      });
+    }
   }
 
   Future<void> _deleteProduct() async {
@@ -470,9 +506,49 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ),
               ),
+              // Edit product — same 362x53 pill as Delete, in green so the
+              // destructive action stays visually secondary.
               Positioned(
                 left: 27,
                 top: 1404,
+                width: 362,
+                height: 53,
+                child: GestureDetector(
+                  key: const ValueKey('edit-product'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openEditProduct,
+                  child: HoverPress.button(
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3F1CC),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(22.5),
+                        ),
+                        border: Border.all(color: const Color(0xFFD1DEBC)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 15,
+                            color: Color(0xFF0F4324),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppStrings.trOf(context, 'Edit product'),
+                            style: _Styles.editLabel,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 27,
+                top: 1475,
                 width: 362,
                 height: 53,
                 child: GestureDetector(
@@ -521,7 +597,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
               Positioned(
                 left: 25,
-                top: 1494,
+                top: 1546,
                 width: 362,
                 height: 53,
                 child: GestureDetector(
@@ -1028,6 +1104,14 @@ class _Styles {
     fontWeight: FontWeight.w700,
     letterSpacing: 0.25,
     color: Color(0xFFD34B3D),
+  );
+
+  static const TextStyle editLabel = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.25,
+    color: Color(0xFF0F4324),
   );
 }
 

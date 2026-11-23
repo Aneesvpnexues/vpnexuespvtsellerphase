@@ -3,7 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
+import 'screens/seller_home_screen.dart';
 import 'data/api_config.dart';
 import 'data/app_storage.dart';
 import 'data/product_store.dart';
@@ -60,8 +60,8 @@ Future<void> _initFirebase() async {
 /// Loads the persistent local storage once before the first frame, so the
 /// one-time splash flag ([SplashScreen.hasSeenSplash]), the restored session
 /// (whether it was opened by login or sign-up), every registered sign-up
-/// account and the saved onboarding progress are readable synchronously from
-/// the very first build.
+/// account, the saved onboarding progress and the products saved on this
+/// device are readable synchronously from the very first build.
 ///
 /// If storage is unavailable (e.g. a broken platform channel or a widget
 /// test without a mock) the app still boots with in-memory defaults: the
@@ -73,6 +73,9 @@ Future<void> _hydrateStorage() async {
     await SessionStore.instance.attachStorage(storage);
     await UserStore.instance.attachStorage(storage);
     await SellerProfileStore.instance.attachStorage(storage);
+    // Last, so a failure here never skips the stores above; product
+    // hydration also guards its own decode.
+    ProductStore.instance.attachStorage(storage);
   } catch (error) {
     // Run in-memory; every store keeps its defaults. The debug log matters:
     // without persisted storage a restart looks like a fresh install and the
@@ -108,7 +111,7 @@ class SellerApp extends StatelessWidget {
           navigatorKey: rootNavigatorKey,
           scaffoldMessengerKey: NetworkService.instance.messengerKey,
           theme: ThemeData(fontFamily: 'Inter'),
-          home: const SplashScreen(),
+          home: const SellerHomeScreen(),
         );
       },
     );

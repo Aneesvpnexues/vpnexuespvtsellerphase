@@ -50,7 +50,7 @@ dependencies:
   supabase_flutter: ^2.18.3
   # Persistent local storage: seller profile, products, registered sign-up
   # accounts and the active session all survive app restarts through this.
-  shared_preferences: ^2.3.0
+  shared_preferences: ^2.5.6
   connectivity_plus: ^7.3.2
   geolocator: ^13.0.0
   flutter_map: ^6.2.1

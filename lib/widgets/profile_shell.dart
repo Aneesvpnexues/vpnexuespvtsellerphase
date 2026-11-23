@@ -20,7 +20,10 @@ import 'page_header.dart';
 ///
 /// Renders the back-button/Profile header, balance card, seller summary,
 /// stats row, Account/Business/App tab bar, [listCard] below the tabs, and
-/// the shared [BottomNavBar] at the artboard bottom. Built against a
+/// the shared [BottomNavBar] pinned to the viewport bottom (outside the
+/// artboard, exactly as My Products hosts it, so the bar always spans the
+/// full screen width instead of inheriting the artboard's letterbox inset).
+/// Built against a
 /// 412x924 artboard (the Zeplin 412x980 frame minus the 56px top-padding
 /// trim above the header); on other viewports the [Artboard] viewport scales
 /// it down on small screens and up (capped at 1.5x) on large ones so nothing
@@ -82,52 +85,66 @@ class _ProfileShellState extends State<ProfileShell> {
       backgroundColor: AppColors.dashboardBg,
       body: SafeArea(
         bottom: false,
-        child: Artboard(
-          designWidth: ProfileShell.designWidth,
-          designHeight: ProfileShell.designHeight,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: -2,
-                top: 25,
-                child: PageHeader(
-                  title: AppStrings.trOf(context, 'Profile'),
-                  onBack: () => goToHome(context),
+        child: Stack(
+          children: [
+            // Content stays inside the scaled artboard...
+            Positioned.fill(
+              child: Artboard(
+                designWidth: ProfileShell.designWidth,
+                designHeight: ProfileShell.designHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: -2,
+                      top: 25,
+                      child: PageHeader(
+                        title: AppStrings.trOf(context, 'Profile'),
+                        onBack: () => goToHome(context),
+                      ),
+                    ),
+                    const Positioned(left: 17, top: 65, child: _BalanceCard()),
+                    Positioned(
+                      left: 17,
+                      top: 336,
+                      child: _SellerCard(
+                        onPersonalDetails: widget.onPersonalDetails,
+                      ),
+                    ),
+                    const Positioned(left: 17, top: 427, child: _StatsRow()),
+                    Positioned(
+                      left: 17,
+                      top: 502,
+                      child: _TabBar(
+                        selectedTab: widget.selectedTab,
+                        onAccountTab: widget.onAccountTab,
+                        onBusinessTab: widget.onBusinessTab,
+                        onAppTab: widget.onAppTab,
+                      ),
+                    ),
+                    Positioned(left: 17, top: 560, child: widget.listCard),
+                  ],
                 ),
               ),
-              const Positioned(left: 17, top: 65, child: _BalanceCard()),
-              Positioned(
-                left: 17,
-                top: 336,
-                child: _SellerCard(onPersonalDetails: widget.onPersonalDetails),
+            ),
+            // ...while the pinned nav sits outside it, matching My Products:
+            // full viewport width, default bar height, no letterbox inset.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PinnedBottomNav(
+                selectedIndex: 3,
+                onHomeTap: () => goToHome(context),
+                onProductsTap: () => goToProducts(context),
+                onAddTap: () => goToAddProduct(context),
+                onOrdersTap: () => goToOrders(context),
+                onProfileTap: () => goToProfile(context),
               ),
-              const Positioned(left: 17, top: 427, child: _StatsRow()),
-              Positioned(
-                left: 17,
-                top: 502,
-                child: _TabBar(
-                  selectedTab: widget.selectedTab,
-                  onAccountTab: widget.onAccountTab,
-                  onBusinessTab: widget.onBusinessTab,
-                  onAppTab: widget.onAppTab,
-                ),
-              ),
-              Positioned(left: 17, top: 560, child: widget.listCard),
-              Positioned(
-                left: 0,
-                bottom: 0,
-                child: BottomNavBar(
-                  selectedIndex: 3,
-                  onHomeTap: () => goToHome(context),
-                  onProductsTap: () => goToProducts(context),
-                  onAddTap: () => goToAddProduct(context),
-                  onOrdersTap: () => goToOrders(context),
-                  onProfileTap: () => goToProfile(context),
-                ),
-              ),
-            ],
-          ),
+
+            ),
+          ],
+
         ),
       ),
     );

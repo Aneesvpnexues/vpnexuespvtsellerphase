@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/country_codes.dart';
+import '../data/api_error.dart';
 import '../data/seller_profile_store.dart';
 import '../data/session_store.dart';
+import '../data/supabase_product_api.dart';
 import '../data/user_store.dart';
 import '../services/auth_flow.dart';
+import '../services/edge_api.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../l10n/app_strings.dart';
@@ -23,15 +26,17 @@ import 'otp_screen.dart';
 /// other sizes it scales down uniformly instead of overflowing.
 ///
 /// The segmented Login / Sign Up control switches between the two states:
-/// - Login (default): hero + phone number form; "Send OTP" opens the OTP
-///   screen; the phone field accepts up to 10 digits. A verified login
-///   continues straight to the home page (see [OtpScreen]).
-/// - Sign Up: identical layout with the phone form swapped for Name / E-Mail /
-///   Password fields. "Create account" validates all three fields inline (red
-///   message inside each invalid box), stores the account locally and starts
-///   the sign-up session at STEP 01, so the seller walks every onboarding
-///   step — location, seller type, business, verify, personal, bank — before
-///   reaching the home page. Both states share the terms footer.
+/// - Login (default): hero + phone number form. "Send OTP" first asks the
+///   backend whether the number already has an account; only then is the SMS
+///   sent (see [_sendOtp]). A verified login continues on the OTP screen,
+///   which restores the seller's data and routes to Home or the first
+///   unfinished onboarding step.
+/// - Sign Up: Name + Phone only. "Create account" stores a *pending*
+///   registration (no OTP, no Firebase session yet) in Supabase and locally,
+///   then walks the seller through STEP 01 Location onward. The server links
+///   that registration to the Firebase account the first time the seller
+///   logs in with OTP.
+/// Both states share the terms footer.
 class WelcomeSellerScreen extends StatefulWidget {
   const WelcomeSellerScreen({super.key});
 
@@ -49,11 +54,15 @@ class WelcomeSellerScreen extends StatefulWidget {
 }
 
 class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
-  /// Same shape the design uses: something@tld.tld with no spaces.
-  static final RegExp _emailRegExp = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
-
   bool _signUp = false;
+
+  /// Guards the registration check + OTP dispatch on the Login tab.
   bool _sending = false;
+
+  /// Guards "Create account" so a double tap can never insert two pending
+  /// registrations.
+  bool _creating = false;
+
   CountryCode _country = CountryCode.india;
 
   final GlobalKey<_PhoneBoxState> _phoneBoxKey = GlobalKey<_PhoneBoxState>();
@@ -63,26 +72,62 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   // shows its error after the CTA is tapped and clears it as soon as the
   // seller types again.
   String _nameError = '';
-  String _emailError = '';
-  String _passwordError = '';
+  String _phoneError = '';
   final TextEditingController _signUpName = TextEditingController();
-  final TextEditingController _signUpEmail = TextEditingController();
-  final TextEditingController _signUpPassword = TextEditingController();
+  final TextEditingController _signUpPhone = TextEditingController();
 
-  void _showLogin() => setState(() => _signUp = false);
+  /// Digits waiting to be poured into the Login box the moment that tab is
+  /// rebuilt (the box lives in the Login branch of the stack, so it is torn
+  /// down every time the Sign Up tab is opened).
+  String? _pendingLoginDigits;
 
-  void _showSignUp() => setState(() => _signUp = true);
+  /// Login tab: carry the Sign Up field's number over before switching, so
+  /// the seller never loses what they typed (both tabs show the same number).
+  void _showLogin() {
+    final String fromSignUp = _signUpPhone.text.replaceAll(RegExp(r'\D'), '');
+    if (fromSignUp.isNotEmpty) _pendingLoginDigits = fromSignUp;
+    setState(() => _signUp = false);
+    _flushPendingLoginDigits();
+  }
+
+  /// Sign Up tab: carry the Login box's number over before that box is torn
+  /// down, so it survives the switch (mirror of [_showLogin]).
+  void _showSignUp() {
+    final String fromLogin = _phoneBoxKey.currentState?.phoneDigits ?? '';
+    if (fromLogin.isNotEmpty) _signUpPhone.text = fromLogin;
+    setState(() => _signUp = true);
+  }
+
+  /// Writes [_pendingLoginDigits] into the Login box after the current frame
+  /// — the box does not exist until the Login branch has been built.
+  void _flushPendingLoginDigits() {
+    final String? digits = _pendingLoginDigits;
+    if (digits == null || digits.isEmpty) return;
+    _pendingLoginDigits = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _phoneBoxKey.currentState?.setDigits(digits);
+    });
+  }
+
+  /// Sign Up → Login for an **existing** seller: switches tabs with [digits]
+  /// preserved in the Login box and explains why nothing was created.
+  void _backToLogin(String digits, {required String message}) {
+    _pendingLoginDigits = digits;
+    setState(() {
+      _creating = false;
+      _signUp = false;
+    });
+    _flushPendingLoginDigits();
+    _showError(message);
+  }
 
   void _clearNameError() {
     if (_nameError.isNotEmpty) setState(() => _nameError = '');
   }
 
-  void _clearEmailError() {
-    if (_emailError.isNotEmpty) setState(() => _emailError = '');
-  }
-
-  void _clearPasswordError() {
-    if (_passwordError.isNotEmpty) setState(() => _passwordError = '');
+  void _clearPhoneError() {
+    if (_phoneError.isNotEmpty) setState(() => _phoneError = '');
   }
 
   Future<void> _showCountryPicker() async {
@@ -104,8 +149,7 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
   void dispose() {
     AuthFlow.instance.autoVerified = null;
     _signUpName.dispose();
-    _signUpEmail.dispose();
-    _signUpPassword.dispose();
+    _signUpPhone.dispose();
     super.dispose();
   }
 
@@ -115,9 +159,19 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Validates the digits, composes the E.164 number and asks Firebase for
-  /// an SMS. The OTP screen opens only from the codeSent callback, so the
-  /// flow never advances before Firebase accepted the number.
+  /// Login tab: checks that the number already has an account BEFORE asking
+  /// Firebase for an SMS.
+  ///
+  ///  * registered   -> the OTP flow continues exactly as before;
+  ///  * not signed up-> no SMS is sent: the seller is told the account does
+  ///                    not exist and the Sign Up tab opens with the number
+  ///                    already filled in (nothing is cleared by the switch).
+  ///
+  /// No anonymous sign-in happens here (the Firebase project must only hold
+  /// phone users); the check travels without a token and is rate limited
+  /// server side. [signOutAnonymous] is still called as a safety net so a
+  /// stale anonymous session left by an older build can never swallow the
+  /// phone number about to be verified (`credential-already-in-use`).
   Future<void> _sendOtp() async {
     if (_sending) return;
     final String digits = _phoneBoxKey.currentState?.phoneDigits ?? '';
@@ -125,11 +179,46 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
       _showError(AppStrings.trOf(context, 'Enter a valid {digits}-digit mobile number.').replaceAll('{digits}', _country.maxDigits.toString()));
       return;
     }
+    final String e164 = '${_country.dial}$digits';
     final String display = '${_country.dial} $digits';
-    AuthFlow.instance.autoVerified = _openStep01;
+
     setState(() => _sending = true);
+    try {
+      final bool registered = await EdgeApi.instance.isRegistered(phone: e164);
+      if (!mounted) return;
+      if (!registered) {
+        await EdgeApi.instance.signOutAnonymous();
+        if (!mounted) return;
+        setState(() {
+          _sending = false;
+          _signUp = true;
+          _signUpPhone.text = digits;
+          _phoneError = '';
+        });
+        _showError(
+          AppStrings.trOf(context, 'Your account doesn\'t exist. Please sign up first.'),
+        );
+        return;
+      }
+      await EdgeApi.instance.signOutAnonymous();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _showError(error.message);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _showError(
+        AppStrings.trOf(context, 'Could not check your phone number. Please check your connection and try again.'),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    AuthFlow.instance.autoVerified = _openStep01;
     await AuthFlow.instance.sendOtp(
-      e164: '${_country.dial}$digits',
+      e164: e164,
       display: display,
       onCodeSent: () {
         // Instant verification can finish before codeSent; _openStep01 has
@@ -163,65 +252,111 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
     );
   }
 
-  /// Validates Name / E-Mail / Password, stores the new account and seller
-  /// profile locally, opens the sign-up session and sends the new seller into
-  /// the onboarding steps at STEP 01 — the flow then walks STEP 01–03 (location,
-  /// seller type, business), Verify Your Details, Personal Details and Bank
-  /// Details before reaching the home page, with no OTP detour in between.
-  /// Every invalid field reports its problem inline, in red, so all of them
-  /// are visible at once.
-  void _createAccount() {
+  /// Sign Up tab: Name + Phone only.
+  ///
+  /// Manager's rule, in order:
+  ///  1. **Check first** — the same lookup the Login tab uses decides new vs
+  ///     existing (it also catches legacy profile-only accounts);
+  ///  2. existing → straight back to the **Login tab with the number kept**;
+  ///  3. new → store a *pending* registration (`seller_registrations`), save
+  ///     the name/phone locally, open the sign-up session and drop the seller
+  ///     into onboarding at STEP 01. No OTP and no Firebase session happen
+  ///     here: the server links this registration to the Firebase account the
+  ///     first time the seller verifies their number through the Login tab.
+  ///
+  /// Nothing is navigated to until the server confirmed the insert — a failed
+  /// save shows its real message and keeps the seller on the form.
+  Future<void> _createAccount() async {
+    if (_creating) return;
     final String name = _signUpName.text.trim();
-    final String email = _signUpEmail.text.trim();
+    final String digits = _signUpPhone.text.replaceAll(RegExp(r'\D'), '');
     setState(() {
       _nameError = name.isEmpty
           ? AppStrings.trOf(context, 'Enter your name')
           : '';
-      _emailError = _emailRegExp.hasMatch(email)
-          ? ''
-          : AppStrings.trOf(context, 'Enter a valid email address');
-      _passwordError = _signUpPassword.text.length >= 6
-          ? ''
-          : AppStrings.trOf(context, 'Password must be at least 6 characters');
+      _phoneError = digits.length < 8
+          ? AppStrings.trOf(context, 'Enter a valid mobile number')
+          : '';
     });
-    if (_nameError.isNotEmpty ||
-        _emailError.isNotEmpty ||
-        _passwordError.isNotEmpty) {
-      return;
-    }
+    if (_nameError.isNotEmpty || _phoneError.isNotEmpty) return;
     FocusScope.of(context).unfocus();
 
-    // Persist the sign-up details (name, e-mail, password) and the seller
-    // profile, then open the session that marks this as a sign-up: a later
-    // relaunch resumes the onboarding steps instead of skipping them, exactly
-    // like the OTP flow marks its sessions as login.
-    UserStore.instance.register(
-      SellerAccount(
-        name: name,
-        phone: '',
-        email: email,
-        password: _signUpPassword.text,
-      ),
-    );
-    SellerProfileStore.instance.save(
-      name: name,
-      mobile: SellerProfileStore.instance.mobile,
-      email: email,
-      sellerType: SellerProfileStore.instance.sellerType,
-    );
-    SessionStore.instance.startSession(
-      phone: SellerProfileStore.instance.mobile,
-      userName: name,
-      method: SessionStore.signupMethod,
-    );
+    final String e164 = '${_country.dial}$digits';
+    setState(() => _creating = true);
+    try {
+      // 1. Check BEFORE creating anything: an existing seller must be sent
+      //    back to Login, never given a second account.
+      final bool registered = await EdgeApi.instance.isRegistered(phone: e164);
+      if (!mounted) return;
+      if (registered) {
+        _backToLogin(
+          digits,
+          message: AppStrings.trOf(
+            context,
+            'This mobile number already has an account. Please use Login.',
+          ),
+        );
+        return;
+      }
 
-    // A new seller starts onboarding at STEP 01 and walks every step before
-    // reaching the home page. The stack is cleared behind it so the seller
-    // can't back into the sign-up form.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
-      (route) => false,
-    );
+      final Map<String, dynamic> registration =
+          await SupabaseProductApi().createRegistration(
+        name: name,
+        phoneE164: e164,
+      );
+      if (!mounted) return;
+
+      final String registrationId =
+          (registration['id'] ?? '').toString().trim();
+      if (registrationId.isEmpty) {
+        setState(() => _creating = false);
+        _showError(AppStrings.trOf(context, 'Could not create your account. Please try again.'));
+        return;
+      }
+
+      // Local storage, kept in sync with the Supabase row: the registration
+      // id is the identity every pre-OTP onboarding write is keyed by, and it
+      // survives a relaunch so STEP 02 onward keep writing to the same row.
+      final SellerProfileStore store = SellerProfileStore.instance;
+      store.registrationId = registrationId;
+      store.userId = registrationId;
+      UserStore.instance.register(
+        SellerAccount(name: name, phone: e164, email: '', password: ''),
+      );
+      store.save(
+        name: name,
+        mobile: e164,
+        email: '',
+        sellerType: store.sellerType,
+      );
+      SessionStore.instance.startSession(
+        phone: e164,
+        userName: name,
+        method: SessionStore.signupMethod,
+      );
+      // A fresh sign-up starts onboarding from the top; the stack is cleared
+      // so the seller can't back into the sign-up form.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const Step01LocationScreen()),
+        (route) => false,
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      if (error.statusCode == 409) {
+        // A duplicate the pre-check could not see (legacy profile-only
+        // account, or a race): same outcome as the check above.
+        _backToLogin(digits, message: error.message);
+        return;
+      }
+      setState(() => _creating = false);
+      _showError(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _creating = false);
+      _showError(
+        AppStrings.trOf(context, 'Could not create your account. Please check your connection and try again.'),
+      );
+    }
   }
 
   @override
@@ -317,31 +452,23 @@ class _WelcomeSellerScreenState extends State<WelcomeSellerScreen> {
                       left: 24,
                       top: 644,
                       child: _SignUpField(
-                        hint: AppStrings.trOf(context, 'E-Mail'),
-                        controller: _signUpEmail,
-                        keyboardType: TextInputType.emailAddress,
-                        errorText: _emailError,
-                        onInputChanged: _clearEmailError,
-                        textInputAction: TextInputAction.next,
-                      ),
-                    ),
-                    Positioned(
-                      left: 24,
-                      top: 714,
-                      child: _SignUpField(
-                        hint: AppStrings.trOf(context, 'Password'),
-                        controller: _signUpPassword,
-                        obscure: true,
-                        errorText: _passwordError,
-                        onInputChanged: _clearPasswordError,
+                        hint: AppStrings.trOf(context, 'Phone Number'),
+                        controller: _signUpPhone,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        errorText: _phoneError,
+                        onInputChanged: _clearPhoneError,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _createAccount(),
                       ),
                     ),
                     Positioned(
                       left: 24,
-                      top: 784,
-                      child: _CreateAccountButton(onTap: _createAccount),
+                      top: 714,
+                      child: _CreateAccountButton(
+                        loading: _creating,
+                        onTap: _createAccount,
+                      ),
                     ),
                   ] else ...[
                     const Positioned(
@@ -656,6 +783,13 @@ class _PhoneBoxState extends State<_PhoneBox> {
   /// Digits-only phone number entered by the user.
   String get phoneDigits => _controller.text.replaceAll(RegExp(r'\D'), '');
 
+  /// Replaces the field's content with [digits] — used when the number typed
+  /// on the other tab is carried over so switching tabs never loses it.
+  void setDigits(String digits) {
+    if (digits == _controller.text) return;
+    _controller.text = digits;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -808,10 +942,6 @@ class _Footer extends StatelessWidget {
 /// Sign Up state: input box styled like the login fields (same fill, border
 /// and radius) holding a typeable [TextFormField] with a gray placeholder.
 ///
-/// When [obscure] is set (Password), an eye icon is added to the right:
-/// hidden state shows a gray eye-off icon, tapping it reveals the password
-/// and turns the icon into a blue eye.
-///
 /// When [errorText] is set (after "Create account" found the form invalid)
 /// the red message is drawn inside the box, under the input line, so the
 /// layout does not shift; [onInputChanged] lets the parent clear it as soon
@@ -821,11 +951,11 @@ class _SignUpField extends StatefulWidget {
     required this.hint,
     required this.controller,
     this.keyboardType,
-    this.obscure = false,
     this.errorText = '',
     this.onInputChanged,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.inputFormatters,
   });
 
   final String hint;
@@ -833,23 +963,19 @@ class _SignUpField extends StatefulWidget {
   /// Owned by the parent form so "Create account" can read the value.
   final TextEditingController controller;
   final TextInputType? keyboardType;
-  final bool obscure;
 
   /// Validation message drawn inside the box; empty means no error.
   final String errorText;
   final VoidCallback? onInputChanged;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onFieldSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<_SignUpField> createState() => _SignUpFieldState();
 }
 
 class _SignUpFieldState extends State<_SignUpField> {
-  bool _visible = false;
-
-  void _toggleVisible() => setState(() => _visible = !_visible);
-
   void _onChanged() {
     setState(() {});
     widget.onInputChanged?.call();
@@ -896,12 +1022,12 @@ class _SignUpFieldState extends State<_SignUpField> {
             child: TextFormField(
               controller: widget.controller,
               keyboardType: widget.keyboardType,
+              inputFormatters: widget.inputFormatters,
               textInputAction: widget.textInputAction,
               onFieldSubmitted: widget.onFieldSubmitted,
               // Ensures scrolling reveals the active field as well as the
               // "Create account" button at the bottom of the Sign Up stack.
               scrollPadding: const EdgeInsets.only(bottom: 310),
-              obscureText: widget.obscure && !_visible,
               textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 fontSize: 16,
@@ -919,26 +1045,6 @@ class _SignUpFieldState extends State<_SignUpField> {
                   vertical: hasError ? 4 : 17,
                 ),
                 counterText: '',
-                suffixIcon: widget.obscure
-                    ? IconButton(
-                        key: const Key('passwordToggle'),
-                        onPressed: _toggleVisible,
-                        tooltip: _visible
-                            ? AppStrings.trOf(context, 'Hide password')
-                            : AppStrings.trOf(context, 'Show password'),
-                        icon: Icon(
-                          _visible ? Icons.visibility : Icons.visibility_off,
-                          size: 22,
-                          color: _visible
-                              ? AppColors.passwordShown
-                              : AppColors.hintGray,
-                        ),
-                      )
-                    : null,
-                suffixIconConstraints: const BoxConstraints(
-                  minHeight: 44,
-                  minWidth: 44,
-                ),
               ),
             ),
           ),
@@ -954,14 +1060,20 @@ class _SignUpFieldState extends State<_SignUpField> {
 }
 
 class _CreateAccountButton extends StatelessWidget {
-  const _CreateAccountButton({required this.onTap});
+  const _CreateAccountButton({required this.onTap, this.loading = false});
 
   final VoidCallback onTap;
+
+  /// While the registration is being saved on the server the label swaps for
+  /// a spinner and taps are ignored, so a double tap can never create two
+  /// accounts.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      onTap: loading ? null : onTap,
       child: Container(
         width: 364,
         height: 52,
@@ -977,7 +1089,19 @@ class _CreateAccountButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(AppStrings.trOf(context, 'Create account'), style: AppTextStyles.sendOtp),
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.surface,
+                ),
+              )
+            : Text(
+                AppStrings.trOf(context, 'Create account'),
+                style: AppTextStyles.sendOtp,
+              ),
       ),
     );
   }

@@ -4,21 +4,16 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../data/api_error.dart';
-import '../data/cloudinary_upload_api.dart';
-import '../data/product_store.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../services/kyc_document_validator.dart';
+import '../services/onboarding_flow.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/artboard.dart';
 import '../widgets/continue_button.dart';
 import '../widgets/hover_press.dart';
-import 'bank_detaile.dart';
-import 'business_details_screen.dart';
-import 'personal_details_screen.dart';
-import 'seller_home_screen.dart';
 
 typedef DocumentPicker = Future<PickedDocument?> Function();
 
@@ -36,6 +31,14 @@ class PickedDocument {
 
 enum _DocumentSlot { aadhaar, pan, business }
 
+/// What the right-hand pill of a document card shows.
+///
+/// [upload] is the empty-state prompt (never "Under review"), the three
+/// review states mirror the server's `kyc_status`, and [hidden] is a document
+/// that exists only on this device — nothing has been submitted for it yet,
+/// so it claims no status at all.
+enum _DocStatus { upload, submitted, verified, rejected, hidden }
+
 /// "Verify your details" — replica of Zeplin "Android Compact - 84"
 /// (project 6a8d49709e27bd8b35213d35, screen 6ad1adb13fd164a524fed4e6).
 ///
@@ -45,8 +48,13 @@ enum _DocumentSlot { aadhaar, pan, business }
 /// sizes the [Artboard] viewport scales it down on small screens and up (capped
 /// at 1.5x) on large ones instead of overflowing. The back arrow pops
 /// the route; each document card opens the system file browser for an image or
-/// PDF; Continue uploads images to Cloudinary, saves URLs to Supabase, then
-/// opens [BankDetaileScreen].
+/// PDF; Continue saves the picked documents' file names (metadata only — the
+/// files stay on the device in this phase) to Supabase and only then moves to
+/// the next unfinished onboarding step (STEP 05 Bank Details, or Home).
+///
+/// Documents already stored for this seller are loaded on open, so a return
+/// visit shows the actual saved file names and badges instead of asking for
+/// the same papers again.
 class VerifyDetaileScreen extends StatefulWidget {
   const VerifyDetaileScreen({super.key, this.documentPicker});
 
@@ -61,49 +69,171 @@ class VerifyDetaileScreen extends StatefulWidget {
 }
 
 class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
+  /// Documents picked on this device in the current visit.
   final Map<_DocumentSlot, PickedDocument> _documents = {};
+
+  /// Documents already stored on the server for this seller, keyed by slot
+  /// with the stored file name (or the file name derived from a saved URL)
+  /// as the value — this is what the cards show when nothing new is picked.
+  final Map<_DocumentSlot, String> _savedNames = {};
+
+  /// Normalised `kyc_status` of this seller's KYC row — already returned by
+  /// [SupabaseProductApi.getVerificationForUsers], stored lower-cased, and
+  /// null when the server carries no value. The column is row-level, so all
+  /// three cards read the same status.
+  String? _kycStatus;
+
   _DocumentSlot? _pickingSlot;
   bool _saving = false;
+
+  /// Set when the seller taps Continue while a document is still missing:
+  /// each empty card's upload icon then turns into the red warning icon
+  /// (same button, same position) until it is filled.
+  bool _missingWarned = false;
+
+  /// True once the KYC row has actually been read back from Supabase. Only
+  /// then do we *know* what is on record; when the load never produced a row
+  /// (offline, no ids) the completion flag restored at login still vouches
+  /// for a seller who already finished this section, so a failed load can
+  /// never trap them (they could not re-upload offline either).
+  bool _serverRowRead = false;
+
+  /// Which Supabase columns hold each card's document (metadata first, the
+  /// legacy Cloudinary URL column as the second chance).
+  static const Map<_DocumentSlot, List<String>> _slotKeys =
+      <_DocumentSlot, List<String>>{
+    _DocumentSlot.aadhaar: <String>['aadhaar_file_name', 'aadhaar_card'],
+    _DocumentSlot.pan: <String>['pan_file_name', 'pan_card'],
+    _DocumentSlot.business: <String>[
+      'business_file_name',
+      'business_registration',
+    ],
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedDocuments();
+  }
+
+  /// Reads the KYC row saved for this seller so STEP 04 shows the documents
+  /// that already exist instead of an empty card again. Candidate ids cover
+  /// the Firebase UID and the pre-OTP registration id this device may have
+  /// written under.
+  ///
+  /// A failure only costs the display: the Continue gate also accepts the
+  /// completion flag restored at login, so an offline load can never trap a
+  /// seller who already finished this section.
+  Future<void> _loadSavedDocuments() async {
+    final SellerProfileStore store = SellerProfileStore.instance;
+    final List<String> candidateIds = <String>{
+      store.userId,
+      store.registrationId,
+    }.where((String id) => id.trim().isNotEmpty).toList();
+    if (candidateIds.isEmpty) return;
+    try {
+      final Map<String, dynamic>? row = await SupabaseProductApi()
+          .getVerificationForUsers(candidateIds);
+      if (!mounted || row == null) return;
+      final Map<_DocumentSlot, String> loaded = <_DocumentSlot, String>{};
+      for (final MapEntry<_DocumentSlot, List<String>> entry
+          in _slotKeys.entries) {
+        final String? name = _savedNameOf(row, entry.value);
+        if (name != null && name.isNotEmpty) loaded[entry.key] = name;
+      }
+      // Row-level review status. Only written when the server actually
+      // carries a value, so a row from before the column existed (or a
+      // fallback select that missed it) keeps null and the cards fall back
+      // to a conservative state instead of a guess.
+      final String status =
+          (row['kyc_status'] ?? '').toString().trim().toLowerCase();
+      setState(() {
+        // The server answered, so the gate may now trust the (possibly
+        // empty) record instead of the login-time completion flag.
+        _serverRowRead = true;
+        _savedNames.addAll(loaded);
+        if (status.isNotEmpty) _kycStatus = status;
+      });
+    } catch (error) {
+      debugPrint('[Verify] could not load saved documents: $error');
+    }
+  }
+
+  /// First non-empty value among [keys]: a plain file name is returned as
+  /// is, a stored document URL is reduced to its last path segment so the
+  /// card shows a readable name rather than a link.
+  static String? _savedNameOf(Map<String, dynamic> row, List<String> keys) {
+    for (final String key in keys) {
+      final String value = (row[key] ?? '').toString().trim();
+      if (value.isEmpty) continue;
+      if (!value.startsWith('http')) return value;
+      final List<String> segments =
+          Uri.tryParse(value)?.pathSegments ?? const <String>[];
+      final String last = segments.isNotEmpty ? segments.last.trim() : '';
+      if (last.isEmpty) return value;
+      try {
+        return Uri.decodeComponent(last);
+      } catch (_) {
+        return last;
+      }
+    }
+    return null;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   Future<void> _pickDocument(_DocumentSlot slot) async {
     if (_pickingSlot != null) return;
     setState(() => _pickingSlot = slot);
-
-    PickedDocument? document;
     try {
-      document = await (widget.documentPicker ?? _pickDocumentFromDevice)();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppStrings.trOf(context, 'Could not open the file picker.'))),
-        );
+      PickedDocument? document;
+      try {
+        document = await (widget.documentPicker ?? _pickDocumentFromDevice)();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppStrings.trOf(context, 'Could not open the file picker.'))),
+          );
+        }
       }
-    }
 
-    if (!mounted) return;
-
-    // Blank / unreadable documents are refused here so they never earn a
-    // "Verified" badge, an upload or a saved URL (SELLER-017).
-    if (document != null) {
-      final KycDocumentIssue? issue = await _validate(document);
       if (!mounted) return;
-      if (issue != null) {
-        setState(() => _pickingSlot = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+
+      // Blank / unreadable documents are refused here so they never earn a
+      // "Verified" badge, an upload or a saved URL (SELLER-017).
+      if (document != null) {
+        final KycDocumentIssue? issue = await _validate(document);
+        if (!mounted) return;
+        if (issue != null) {
+          setState(() => _pickingSlot = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
+              ),
             ),
-          ),
-        );
-        return;
+          );
+          return;
+        }
+      }
+
+      setState(() {
+        _pickingSlot = null;
+        if (document != null) _documents[slot] = document;
+      });
+    } finally {
+      // Always release the re-entrancy guard: if the validator or a
+      // snackbar ever throws, _pickingSlot would stay set forever and every
+      // later tap on any card would silently return without opening the
+      // picker.
+      if (mounted && _pickingSlot != null) {
+        setState(() => _pickingSlot = null);
       }
     }
-
-    setState(() {
-      _pickingSlot = null;
-      if (document != null) _documents[slot] = document;
-    });
   }
 
   /// Runs [KycDocumentValidator] over a picked document. Files whose bytes
@@ -167,152 +297,193 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
     }
   }
 
-  /// Uploads a picked document to Cloudinary and returns the secure URL.
-  /// Returns null if the document has no bytes (e.g. only path was available).
-  Future<String?> _uploadDocument(PickedDocument doc) async {
-    final List<int>? bytes = doc.bytes;
-    if (bytes == null || bytes.isEmpty) return null;
-    final uploader = CloudinaryUploadApi(folder: 'seller_kyc');
-    return uploader.upload(
-      ProductPhoto(
-        bytes: Uint8List.fromList(bytes),
-        mimeType: doc.mimeType ?? 'image/jpeg',
-        filename: doc.name,
-      ),
+  /// The name to store for [slot]: the freshly picked file when there is
+  /// one, otherwise the name already on the server (nothing is overwritten).
+  String? _fileNameOf(_DocumentSlot slot) =>
+      _documents[slot]?.name ?? _savedNames[slot];
+
+  /// Whether the card for [slot] has a document (picked here or stored on
+  /// the server) — the precondition for any status badge.
+  bool _slotHasDocument(_DocumentSlot slot) =>
+      _documents.containsKey(slot) || _savedNames.containsKey(slot);
+
+  /// The honest pill for [slot]: no document -> the upload prompt, a document
+  /// picked here but not yet on the server -> the check button (the file is
+  /// on this device), and a document that has reached the server -> its real
+  /// `kyc_status`.
+  ///
+  /// Missing or unrecognised statuses never claim "Verified": an on-record
+  /// document falls back to the conservative "Under review", which is true of
+  /// everything this app has submitted (`kyc_status: 'submitted'`).
+  _DocStatus _statusOf(_DocumentSlot slot) {
+    if (!_slotHasDocument(slot)) return _DocStatus.upload;
+    if (_savedNames[slot] == null) {
+      // Picked in this visit; Continue has not written it to the server.
+      return _DocStatus.hidden;
+    }
+    switch (_kycStatus) {
+      case 'verified':
+      case 'approved':
+      case 'success':
+        return _DocStatus.verified;
+      case 'rejected':
+      case 'failed':
+      case 'declined':
+      case 'denied':
+        return _DocStatus.rejected;
+      case 'submitted':
+      case 'pending':
+      case 'under_review':
+      case 'in_review':
+        return _DocStatus.submitted;
+      default:
+        return _DocStatus.submitted;
+    }
+  }
+
+  /// Width cap for a card's hint/filename line so its right edge always
+  /// clears the status button: the button is right-anchored (`right: 41`)
+  /// and is widest while it reads "Under review". The line starts at x = 89.
+  static double _subtitleWidth(_DocStatus status) {
+    switch (status) {
+      case _DocStatus.hidden:
+      case _DocStatus.upload:
+        // Icon-only buttons are 30 wide -> left edge near x = 341.
+        return 240;
+      case _DocStatus.submitted:
+      case _DocStatus.verified:
+      case _DocStatus.rejected:
+        return 160; // 'Under review' pill starts near x = 266.
+    }
+  }
+
+  /// True when every one of the three mandatory documents is present — a
+  /// validated pick from this visit or a file already on record. STEP 03
+  /// cannot be left until all three cards are filled.
+  bool get _allDocumentsPresent =>
+      _DocumentSlot.values.every(_slotHasDocument);
+
+  /// The Continue gate. Normally all three documents must be present; the
+  /// completion flag restored at login only stands in for them while the KYC
+  /// row could not be read at all, so a failed load can never trap a seller
+  /// who already finished this section (they could not re-upload offline
+  /// either). Once the row has been read the record is authoritative and all
+  /// three documents are required.
+  bool get _canContinue {
+    if (_allDocumentsPresent) return true;
+    if (_serverRowRead) return false;
+    return SellerProfileStore.instance.verificationComplete;
+  }
+
+  /// Called when Continue is tapped while [_canContinue] is false: the
+  /// button is disabled, so this outer tap is the only way the seller can
+  /// ask "why can't I continue?" — the empty cards answer with a warning.
+  void _onBlockedContinue() {
+    if (_saving || _canContinue) return;
+    setState(() => _missingWarned = true);
+    _showMessage(
+      AppStrings.trOf(context, 'Upload all three documents to continue.'),
     );
   }
 
   Future<void> _onContinue() async {
     if (_saving) return;
+
+    // Submit-time gate: re-validate every picked document so the Continue
+    // action itself refuses blank or unreadable files, whatever path they
+    // got in by (SELLER-017).
+    for (final PickedDocument document in _documents.values) {
+      final KycDocumentIssue? issue = await _validate(document);
+      if (issue != null) {
+        if (!mounted) return;
+        _showMessage(AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)));
+        return;
+      }
+    }
+
+    // All three documents are mandatory: a missing one blocks the step and
+    // marks its card, instead of letting the seller walk on with a gap or
+    // being told a fake success. The button is disabled in that state as
+    // well — this guard covers a stale tap.
+    if (!_canContinue) {
+      if (!mounted) return;
+      setState(() => _missingWarned = true);
+      _showMessage(
+        AppStrings.trOf(context, 'Upload all three documents to continue.'),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    FocusScope.of(context).unfocus();
     setState(() => _saving = true);
 
-    bool uploadedThisSession = false;
-    bool offlineSaved = false;
     try {
-      // Submit-time gate: re-validate every picked document so the Continue
-      // action itself refuses blank or unreadable files, whatever path they
-      // got in by (SELLER-017). The `finally` below clears the spinner.
-      for (final PickedDocument document in _documents.values) {
-        final KycDocumentIssue? issue = await _validate(document);
-        if (issue != null) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppStrings.trOf(context, KycDocumentValidator.messageFor(issue)),
-              ),
-            ),
-          );
-          return;
-        }
-      }
-
-      // Upload each picked document to Cloudinary.
-      String? aadhaarUrl;
-      String? panUrl;
-      String? businessUrl;
-
-      if (_documents.containsKey(_DocumentSlot.aadhaar)) {
-        aadhaarUrl = await _uploadDocument(_documents[_DocumentSlot.aadhaar]!);
-      }
-      if (_documents.containsKey(_DocumentSlot.pan)) {
-        panUrl = await _uploadDocument(_documents[_DocumentSlot.pan]!);
-      }
-      if (_documents.containsKey(_DocumentSlot.business)) {
-        businessUrl = await _uploadDocument(_documents[_DocumentSlot.business]!);
-      }
-
-      // Save URLs to Supabase.
-      uploadedThisSession = aadhaarUrl != null ||
-          panUrl != null ||
-          businessUrl != null;
-      if (uploadedThisSession) {
-        final api = SupabaseProductApi();
-        await api.saveVerifyDetails(
-          aadhaarUrl: aadhaarUrl,
-          panUrl: panUrl,
-          businessUrl: businessUrl,
+      // Metadata only: the files themselves stay on this device in this
+      // phase (no Cloudinary upload yet), but their names and the review
+      // status go to Supabase so any device can show what is on file. Only
+      // the slots picked now are written — earlier documents are untouched.
+      if (_documents.isNotEmpty) {
+        await SupabaseProductApi().saveVerifyDetails(
+          aadhaarFileName: _fileNameOf(_DocumentSlot.aadhaar),
+          panFileName: _fileNameOf(_DocumentSlot.pan),
+          businessFileName: _fileNameOf(_DocumentSlot.business),
+          kycStatus: 'submitted',
         );
       }
     } on ApiException catch (error) {
+      // The save did not happen: stay on this step with the server's real
+      // message. Nothing is marked complete and no success is faked.
       if (!mounted) return;
-      // TEMPORARY (offline onboarding): while Cloudinary/Supabase are not
-      // configured, treat the section as saved locally so the walk keeps
-      // moving instead of blocking — see ApiException.isMissingConfiguration.
-      if (!error.isMissingConfiguration) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
-        return;
-      }
-      offlineSaved = true;
-      debugPrint('Verify: continuing without upload (${error.message})');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      setState(() => _saving = false);
+      _showMessage(error.message);
       return;
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _showMessage(
+        AppStrings.trOf(context, 'Could not save your documents. Please try again.'),
+      );
+      debugPrint('[Verify] saveVerifyDetails failed: $error');
+      return;
     }
-
     if (!mounted) return;
+    setState(() => _saving = false);
 
-    // KYC counts as done if anything was just uploaded, if an earlier
-    // session already stored a document, or — temporarily — when the
-    // offline walk skipped the remote save; otherwise Personal Details
-    // would send the seller straight back here.
+    // The server confirmed the write (or the documents were already on
+    // record) — only now does this section count as done.
     final SellerProfileStore profile = SellerProfileStore.instance;
-    final bool verificationComplete = uploadedThisSession ||
-        offlineSaved ||
-        profile.verificationComplete;
     profile.setCompletion(
       profileComplete: profile.profileComplete,
       bankComplete: profile.bankComplete,
-      verificationComplete: verificationComplete,
+      verificationComplete: true,
       personalComplete: profile.personalComplete,
     );
 
-    // Verify -> Personal Details -> Registration -> Bank -> Home: skip
-    // whatever is already done so a returning seller never re-enters
-    // completed pages.
-    if (!profile.personalComplete) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const PersonalDetailsScreen(),
-        ),
-      );
-      return;
-    }
+    // STEP 04 -> STEP 05 Bank Details -> Home, or the first section that is
+    // still unfinished: [OnboardingFlow] owns that order, so a seller is
+    // never sent back to a page they already finished.
+    OnboardingFlow.resume(context, clearStack: false);
+  }
 
-    if (!profile.profileComplete) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Step03BusinessDetailsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (!profile.bankComplete) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BankDetaileScreen(),
-        ),
-      );
-      return;
-    }
-
-    // All sections complete — go to Home.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const SellerHomeScreen()),
-      (Route<dynamic> route) => false,
-    );
+  /// Real profile completion: the share of the five onboarding sections
+  /// (Location, Seller Type, Business, Verify, Bank) that are on record —
+  /// the design's placeholder "75%" is replaced by the actual state.
+  static int _completionPercent(SellerProfileStore store) {
+    final int done = <bool>[
+      store.locationComplete,
+      store.sellerTypeComplete,
+      store.profileComplete,
+      store.verificationComplete,
+      store.bankComplete,
+    ].where((bool complete) => complete).length;
+    return done * 20;
   }
 
   @override
   Widget build(BuildContext context) {
+    final SellerProfileStore store = SellerProfileStore.instance;
+    final int percent = _completionPercent(store);
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -339,8 +510,16 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 // Profile completion card.
                 const Positioned(left: 22, top: 367, child: _PcCard()),
                 const Positioned(left: 34.5, top: 381.4, child: _PcLabel()),
-                const Positioned(right: 40, top: 384.37, child: _PcPercent()),
-                const Positioned(left: 34, top: 406, child: _PcBar()),
+                Positioned(
+                  right: 40,
+                  top: 384.37,
+                  child: _PcPercent(percent: percent),
+                ),
+                Positioned(
+                  left: 34,
+                  top: 406,
+                  child: _PcBar(percent: percent),
+                ),
                 // Verification details section.
                 const Positioned(left: 26, top: 452, child: _SectionTick()),
                 const Positioned(
@@ -357,17 +536,20 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 89,
                   top: 532.94,
-                  width: 246,
+                  width: _subtitleWidth(_statusOf(_DocumentSlot.aadhaar)),
                   child: _DocSubtitle(
                     defaultText: AppStrings.trOf(context, 'For individual farmers'),
-                    document: _documents[_DocumentSlot.aadhaar],
+                    text: _fileNameOf(_DocumentSlot.aadhaar),
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 519,
                   child: _DocStatusBadge(
-                    verified: _documents.containsKey(_DocumentSlot.aadhaar),
+                    status: _statusOf(_DocumentSlot.aadhaar),
+                    warnMissing:
+                        _missingWarned &&
+                        !_slotHasDocument(_DocumentSlot.aadhaar),
                   ),
                 ),
                 const Positioned(left: 23, top: 573, child: _CardPan()),
@@ -376,17 +558,19 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 89,
                   top: 609.81,
-                  width: 246,
+                  width: _subtitleWidth(_statusOf(_DocumentSlot.pan)),
                   child: _DocSubtitle(
                     defaultText: AppStrings.trOf(context, 'For businesses / traders'),
-                    document: _documents[_DocumentSlot.pan],
+                    text: _fileNameOf(_DocumentSlot.pan),
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 595,
                   child: _DocStatusBadge(
-                    verified: _documents.containsKey(_DocumentSlot.pan),
+                    status: _statusOf(_DocumentSlot.pan),
+                    warnMissing:
+                        _missingWarned && !_slotHasDocument(_DocumentSlot.pan),
                   ),
                 ),
                 const Positioned(left: 23, top: 650, child: _CardBusiness()),
@@ -399,17 +583,20 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
                 Positioned(
                   left: 89,
                   top: 686.49,
-                  width: 246,
+                  width: _subtitleWidth(_statusOf(_DocumentSlot.business)),
                   child: _DocSubtitle(
                     defaultText: AppStrings.trOf(context, 'FSSAI / Udyam / GST (if available)'),
-                    document: _documents[_DocumentSlot.business],
+                    text: _fileNameOf(_DocumentSlot.business),
                   ),
                 ),
                 Positioned(
                   right: 41,
                   top: 672,
                   child: _DocStatusBadge(
-                    verified: _documents.containsKey(_DocumentSlot.business),
+                    status: _statusOf(_DocumentSlot.business),
+                    warnMissing:
+                        _missingWarned &&
+                        !_slotHasDocument(_DocumentSlot.business),
                   ),
                 ),
                 // Transparent hit targets covering each full card so taps on
@@ -458,9 +645,29 @@ class _VerifyDetaileScreenState extends State<VerifyDetaileScreen> {
               ],
             ),
           ),
-          ContinueButton(
-            buttonKey: const Key('verify-continue'),
-            onTap: _onContinue,
+          // The CTA stays disabled until all three documents are present.
+          // A disabled ContinueButton drops its own onTap, so this outer
+          // detector is what lets a blocked tap still surface the missing
+          // document warnings; while enabled it stays inert (null onTap) and
+          // the button handles the tap itself.
+          //
+          // MUST stay deferToChild: this detector sizes to the whole screen
+          // (ContinueButton's internal Align expands under the Stack's
+          // bounded loose constraints), so `opaque` would make it a
+          // full-screen hit target painted on top of the Artboard — every
+          // tap, including all three document cards behind it, would be
+          // swallowed and no picker could ever open. deferToChild reports a
+          // hit only where ContinueButton itself does (its pill), leaving
+          // the card hit targets free to open the picker.
+          GestureDetector(
+            behavior: HitTestBehavior.deferToChild,
+            onTap: _canContinue ? null : _onBlockedContinue,
+            child: ContinueButton(
+              buttonKey: const Key('verify-continue'),
+              enabled: _canContinue,
+              loading: _saving,
+              onTap: _onContinue,
+            ),
           ),
         ],
       ),
@@ -639,16 +846,21 @@ class _PcLabel extends StatelessWidget {
 }
 
 class _PcPercent extends StatelessWidget {
-  const _PcPercent();
+  const _PcPercent({required this.percent});
+
+  /// Real completion (0-100) computed from the five onboarding flags.
+  final int percent;
 
   @override
   Widget build(BuildContext context) {
-    return Text(AppStrings.trOf(context, '75%'), style: AppTextStyles.pcPercent);
+    return Text(AppStrings.trOf(context, '$percent%'), style: AppTextStyles.pcPercent);
   }
 }
 
 class _PcBar extends StatelessWidget {
-  const _PcBar();
+  const _PcBar({required this.percent});
+
+  final int percent;
 
   @override
   Widget build(BuildContext context) {
@@ -662,7 +874,7 @@ class _PcBar extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          width: 253.5,
+          width: (338 * percent / 100).clamp(0, 338).toDouble(),
           height: 8,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -947,16 +1159,18 @@ class _TitleAadhaar extends StatelessWidget {
 }
 
 class _DocSubtitle extends StatelessWidget {
-  const _DocSubtitle({required this.defaultText, this.document});
+  /// [text] is the document's name — freshly picked or the one already
+  /// stored on the server; null keeps the informational [defaultText].
+  const _DocSubtitle({required this.defaultText, this.text});
 
   final String defaultText;
-  final PickedDocument? document;
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
-    final selected = document != null;
+    final selected = text != null && text!.trim().isNotEmpty;
     return Text(
-      document?.name ?? defaultText,
+      selected ? text!.trim() : defaultText,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: selected
@@ -989,39 +1203,103 @@ class _TitleBusiness extends StatelessWidget {
   }
 }
 
+/// Right-hand button of a document card.
+///
+/// Icon-only leaf-green button (transparent fill, 1px `#16834A` outline):
+/// no document -> the upload icon, a document picked here but not yet on
+/// the server -> a check icon, both exactly 30x22 with no label.
+/// A document on record -> the review state its real `kyc_status` supports
+/// (see [_VerifyDetaileScreenState._statusOf]) as a labelled pill.
+/// Nothing here ever claims "Verified" on its own: the server says so.
+///
+/// When [warnMissing] is set (Continue tapped while this card's document
+/// was still missing), the empty-state upload icon turns into the red
+/// [Icons.error_outline] warning glyph — same button, same position.
 class _DocStatusBadge extends StatelessWidget {
-  const _DocStatusBadge({required this.verified});
+  const _DocStatusBadge({required this.status, this.warnMissing = false});
 
-  final bool verified;
+  final _DocStatus status;
+
+  /// True when Continue was attempted with this card still empty: show the
+  /// red warning icon instead of the upload icon (upload state only).
+  final bool warnMissing;
 
   @override
   Widget build(BuildContext context) {
+    final Color bg;
+    final Color ink;
+    final IconData icon;
+    final String? label;
+    switch (status) {
+      // Icon-only states: no text at all.
+      case _DocStatus.hidden:
+        // Picked here but not yet written to the server: a check, because
+        // the file is on the device. Same shell as the upload button.
+        bg = Colors.transparent;
+        ink = const Color(0xFF16834A);
+        icon = Icons.check;
+        label = null;
+      case _DocStatus.upload:
+        bg = Colors.transparent;
+        ink = warnMissing ? AppColors.fieldError : const Color(0xFF16834A);
+        icon = warnMissing ? Icons.error_outline : Icons.upload_outlined;
+        label = null;
+      case _DocStatus.verified:
+        bg = AppColors.verifiedBg;
+        ink = AppColors.verifiedText;
+        icon = Icons.check_circle;
+        label = AppStrings.trOf(context, 'Verified');
+      case _DocStatus.rejected:
+        bg = const Color(0xFFFDECEC);
+        ink = AppColors.fieldError;
+        icon = Icons.cancel_outlined;
+        label = AppStrings.trOf(context, 'Rejected');
+      case _DocStatus.submitted:
+        bg = AppColors.verifyUnderReviewBg;
+        ink = AppColors.verifyUnderReviewText;
+        icon = Icons.hourglass_empty;
+        label = AppStrings.trOf(context, 'Under review');
+    }
+
+    // Icon-only shell: a small, fixed 30x22 rounded button. The explicit
+    // width keeps `alignment` from expanding the Container under the loose
+    // constraints `Positioned(right: 41, ...)` provides, so the icon stays
+    // perfectly centred and the button never stretches across the card.
+    if (label == null) {
+      return Container(
+        width: 30,
+        height: 22,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: ink, width: 1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 14, color: ink),
+      );
+    }
+
     return Container(
       height: 22,
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
       decoration: BoxDecoration(
-        color: verified ? AppColors.verifiedBg : AppColors.verifyUnderReviewBg,
-        border: Border.all(
-          color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
-          width: 1,
-        ),
+        color: bg,
+        border: Border.all(color: ink, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            verified ? Icons.check_circle : Icons.hourglass_empty,
-            size: 14,
-            color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
-          ),
+          Icon(icon, size: 14, color: ink),
           const SizedBox(width: 6),
           Text(
-            verified ? AppStrings.trOf(context, 'Verified') : AppStrings.trOf(context, 'Under review'),
+            label,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: verified ? AppColors.verifiedText : AppColors.verifyUnderReviewText,
+              color: ink,
             ),
           ),
         ],

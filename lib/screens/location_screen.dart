@@ -119,10 +119,16 @@ class _Description extends StatelessWidget {
 class _LocationButton extends StatelessWidget {
   const _LocationButton();
 
+  /// Unlike [_ManualLink], this is an explicit "use my current location"
+  /// request: the confirm screen is opened with [LocationConfirmScreen
+  /// .useCurrentLocation], so it immediately checks services/permission and
+  /// fixes the GPS position.
   void _openConfirmPage(BuildContext context) {
     FocusScope.of(context).unfocus();
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const LocationConfirmScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const LocationConfirmScreen(useCurrentLocation: true),
+      ),
     );
   }
 
