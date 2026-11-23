@@ -535,7 +535,6 @@ class _BankDetaileScreenState extends State<BankDetaileScreen> {
               ),
             ),
           ),
-          ),
         ],
       ),
     );

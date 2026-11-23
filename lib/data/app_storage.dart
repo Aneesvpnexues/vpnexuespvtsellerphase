@@ -11,7 +11,6 @@ abstract final class StorageKeys {
   static const String sessionKey = 'session';
   static const String registeredUsersKey = 'registered_users';
   static const String sellerProfileKey = 'seller_profile';
-  static const String avatarKey = 'avatar_url';
   static const String productsKey = 'products';
 
   /// JSON `location/profile/bank/verification/personal` booleans recording
