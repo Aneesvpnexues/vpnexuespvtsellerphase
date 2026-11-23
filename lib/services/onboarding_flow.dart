@@ -12,11 +12,11 @@ import '../screens/verify_detaile.dart';
 /// Type -> STEP 03 Business Details -> STEP 04 Verify Your Details ->
 /// STEP 05 Bank Details -> Home.
 ///
-/// A Sign Up session resumes from the first step whose flag is still false —
-/// on cold start and between steps — so the seller is never sent back to a
-/// page they already finished, and never skips a pending one in favour of
-/// Home. A Login (OTP) session never resumes here: the OTP screen always
-/// opens Home.
+/// Both the cold-start restore ([SplashScreen]) and the post-OTP routing
+/// ([OtpScreen]) resume from the first step whose flag is still false, so a
+/// seller is never sent back to a page they already finished — and never
+/// skips a pending one in favour of Home. A Login (OTP) session never resumes
+/// here: the OTP screen always opens Home.
 class OnboardingFlow {
   const OnboardingFlow._();
 

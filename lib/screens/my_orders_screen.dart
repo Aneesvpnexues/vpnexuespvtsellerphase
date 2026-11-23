@@ -33,16 +33,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   String _searchQuery = '';
 
   @override
-void initState() {
-  super.initState();
-  OrderStore.instance.addListener(_onOrdersChanged);
+  void initState() {
+    super.initState();
+    OrderStore.instance.addListener(_onOrdersChanged);
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted) {
-      _syncDemoOrdersToStore();
-    }
-  });
-}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _syncDemoOrdersToStore();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -52,11 +52,11 @@ void initState() {
   }
 
   void _onOrdersChanged() {
-  if (mounted) {
-    setState(() {});
-    _syncDemoOrdersToStore();
+    if (mounted) {
+      setState(() {});
+      _syncDemoOrdersToStore();
+    }
   }
-}
 
   /// Updates search results immediately while typing.
   void _onSearchChanged(String value) {
@@ -77,13 +77,19 @@ void initState() {
   String _statusOf(_Order order) =>
       OrderStore.instance.statusFor(order.orderId)?.label ??
       order.status;
-void _syncDemoOrdersToStore() {
-  final activeCount = _orders.where(
-    (order) => _statusOf(order) == 'Accepted',
-  ).length;
 
-  OrderStore.instance.setDemoActiveOrdersCount(activeCount);
-}
+  /// Feeds the demo-orders counter ([OrderStore.setDemoActiveOrdersCount])
+  /// from the seeded list so the home/stats surfaces that read
+  /// [OrderStore.activeOrdersCount] show a non-zero seller while the
+  /// backend has not reported orders yet.
+  void _syncDemoOrdersToStore() {
+    final activeCount = _orders.where(
+      (order) => _statusOf(order) == 'Accepted',
+    ).length;
+
+    OrderStore.instance.setDemoActiveOrdersCount(activeCount);
+  }
+
   /// Checks whether an order matches the search query.
   ///
   /// Searches across:
@@ -458,17 +464,19 @@ enum _OrderFilter {
   all('All'),
   active('Active'),
   pending('Pending'),
-  confirmed('Confirmed');
+  confirmed('Confirmed'),
+  rejected('Rejected');
 
   const _OrderFilter(this.label);
 
   final String label;
 
   bool matches(String status) => switch (this) {
-    _OrderFilter.all => true,
+    _OrderFilter.all => status != 'Rejected',
     _OrderFilter.active => status == 'Accepted',
     _OrderFilter.pending => status == 'Pending',
     _OrderFilter.confirmed => status == 'Confirmed',
+    _OrderFilter.rejected => status == 'Rejected',
   };
 }
 
@@ -651,36 +659,24 @@ class _OrderTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double pillLeft = switch (selected) {
-      _OrderFilter.all => 4,
-      _OrderFilter.active => 112,
-      _OrderFilter.pending => 184,
-      _OrderFilter.confirmed => 264,
-    };
-
-    final double pillWidth = switch (selected) {
-      _OrderFilter.all => 99,
-      _OrderFilter.active => 60,
-      _OrderFilter.pending => 81,
-      _OrderFilter.confirmed => 100,
-    };
+    const double tabWidth = 72;
+    final double pillLeft = 4 + selected.index * tabWidth;
 
     TextStyle styleFor(_OrderFilter filter) => TextStyle(
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: FontWeight.w600,
       color: selected == filter
           ? AppColors.textPrimary
           : AppColors.tabGray,
     );
 
+
     return Container(
       width: 368,
       height: 45,
       decoration: const BoxDecoration(
         color: Color(0xB8E3F1CC),
-        borderRadius: BorderRadius.all(
-          Radius.circular(28),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(28)),
       ),
       child: Stack(
         children: [
@@ -689,109 +685,37 @@ class _OrderTabs extends StatelessWidget {
             curve: Curves.easeOut,
             left: pillLeft,
             top: 4,
-            width: pillWidth,
+            width: tabWidth,
             height: 37,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(23),
-                ),
+                borderRadius: BorderRadius.all(Radius.circular(23)),
               ),
             ),
           ),
-
-          Positioned(
-            left: 4,
-            top: 0,
-            width: 99,
-            height: 45,
-            child: GestureDetector(
-              key: const ValueKey('order-filter-all'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelected(_OrderFilter.all),
-              child: HoverPress.chip(
-                child: Center(
-                  child: Text(
-                    AppStrings.trOf(
-                      context,
-                      _OrderFilter.all.label,
+          for (int i = 0; i < _OrderFilter.values.length; i++)
+            Positioned(
+              left: 4 + i * tabWidth,
+              top: 0,
+              width: tabWidth,
+              height: 45,
+              child: GestureDetector(
+                key: ValueKey('order-filter-${_OrderFilter.values[i].name}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelected(_OrderFilter.values[i]),
+                child: HoverPress.chip(
+                  child: Center(
+                    child: Text(
+                      AppStrings.trOf(context, _OrderFilter.values[i].label),
+                      style: styleFor(_OrderFilter.values[i]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    style: styleFor(_OrderFilter.all),
                   ),
                 ),
               ),
             ),
-          ),
-
-          Positioned(
-            left: 103,
-            top: 0,
-            width: 85,
-            height: 45,
-            child: GestureDetector(
-              key: const ValueKey('order-filter-active'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelected(_OrderFilter.active),
-              child: HoverPress.chip(
-                child: Center(
-                  child: Text(
-                    AppStrings.trOf(
-                      context,
-                      _OrderFilter.active.label,
-                    ),
-                    style: styleFor(_OrderFilter.active),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            left: 188,
-            top: 0,
-            width: 88,
-            height: 45,
-            child: GestureDetector(
-              key: const ValueKey('order-filter-pending'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelected(_OrderFilter.pending),
-              child: HoverPress.chip(
-                child: Center(
-                  child: Text(
-                    AppStrings.trOf(
-                      context,
-                      _OrderFilter.pending.label,
-                    ),
-                    style: styleFor(_OrderFilter.pending),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            left: 276,
-            top: 0,
-            width: 88,
-            height: 45,
-            child: GestureDetector(
-              key: const ValueKey('order-filter-confirmed'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelected(_OrderFilter.confirmed),
-              child: HoverPress.chip(
-                child: Center(
-                  child: Text(
-                    AppStrings.trOf(
-                      context,
-                      _OrderFilter.confirmed.label,
-                    ),
-                    style: styleFor(_OrderFilter.confirmed),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

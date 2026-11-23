@@ -1,3 +1,4 @@
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +11,7 @@ abstract final class StorageKeys {
   static const String sessionKey = 'session';
   static const String registeredUsersKey = 'registered_users';
   static const String sellerProfileKey = 'seller_profile';
+  static const String avatarKey = 'avatar_url';
   static const String productsKey = 'products';
 
   /// JSON `location/profile/bank/verification/personal` booleans recording
@@ -20,6 +22,10 @@ abstract final class StorageKeys {
   /// incomplete step after a relaunch, when there is no Firebase UID to read
   /// the same answer back from Supabase.
   static const String onboardingKey = 'onboarding_progress';
+
+  /// Selected UI language code (en, ta, hi, ...). Not session data, so it
+  /// survives logout and splash re-display.
+  static const String languageKey = 'language';
 
   /// Set once the one-time splash screen has been dismissed. Uninstalling
   /// the app clears the preferences, so a fresh install shows the splash

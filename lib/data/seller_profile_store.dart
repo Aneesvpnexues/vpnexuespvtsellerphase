@@ -104,6 +104,23 @@ class SellerProfileStore extends ChangeNotifier {
   String _businessLocation = '';
   String _businessAddress = '';
 
+  /// "What you grow" selection shown on Business & Farm.
+  ///
+  /// Stored on the device with the rest of the local profile: the
+  /// `seller_profiles` table has no crop column, so syncing it to Supabase
+  /// would need a migration first (deferred to a later phase).
+  ///
+  /// Profiles saved before this field existed keep the starter selection
+  /// (the key is simply absent); a selection explicitly saved as an empty
+  /// list restores as empty because the key is present.
+  static const List<String> defaultCrops = <String>[
+    'Tomatoes',
+    'Spinach',
+    'Carrots',
+  ];
+
+  List<String> _crops = List<String>.of(defaultCrops);
+
   // ------------------------------------------------------------
   // SIGNUP LOCATION
   // ------------------------------------------------------------
@@ -155,6 +172,10 @@ class SellerProfileStore extends ChangeNotifier {
   String get businessName => _businessName;
 
   String get farmSize => _farmSize;
+
+  /// The saved "What you grow" selection in display order, without
+  /// duplicates. Unmodifiable: pass a copy to [setSelectedCrops] to change it.
+  List<String> get crops => List<String>.unmodifiable(_crops);
 
   String get businessLocation => _businessLocation;
 
@@ -255,6 +276,21 @@ class SellerProfileStore extends ChangeNotifier {
     return _pickedLocation.trim();
   }
 
+  /// Compatibility getter used by screens that expect this name.
+  String get displayLocation => locationDisplay;
+
+
+  /// Short version of the latest available location for compact UI labels.
+  String get shortLocation {
+    final String location = displayLocation.trim();
+    if (location.isEmpty) return '';
+    const int maxLength = 35;
+    return location.length > maxLength
+        ? '${location.substring(0, maxLength)}...'
+        : location;
+  }
+
+
   /// Seller type with location, when available.
   String get sellerSummary {
     final String location = locationDisplay;
@@ -294,6 +330,7 @@ class SellerProfileStore extends ChangeNotifier {
       _mobile = _readString(profile, 'mobile', _mobile);
       _email = _readString(profile, 'email', _email);
       _registrationId = _readString(profile, 'registrationId', _registrationId);
+
       // The Supabase row key / Firebase uid this device resolved last, kept
       // so a relaunch can read back the same seller's bank/KYC rows without
       // waiting for the background restore to work it out again.
@@ -309,6 +346,11 @@ class SellerProfileStore extends ChangeNotifier {
           _readString(profile, 'businessAddress', _businessAddress);
 
       _farmSize = _readString(profile, 'farmSize', _farmSize);
+
+      // Missing key = a profile saved before this field existed: keep the
+      // starter selection instead of emptying it. An explicitly saved empty
+      // list restores as empty (the key is present).
+      _crops = _readCrops(profile) ?? _crops;
 
       _pickedLocation =
           _readString(profile, 'pickedLocation', _pickedLocation);
@@ -348,6 +390,31 @@ class SellerProfileStore extends ChangeNotifier {
     final value = data[key];
 
     return value is String ? value : fallback;
+  }
+
+  /// The saved crop list, or null when the record predates the field — an
+  /// older profile must keep its starter selection rather than lose it.
+  List<String>? _readCrops(Map<String, Object?> data) {
+    final Object? value = data['crops'];
+    if (value is! List) return null;
+    return normalizeCrops(
+      value.map((Object? item) => item?.toString() ?? ''),
+    );
+  }
+
+  /// Trims every entry, drops blanks and removes case-insensitive
+  /// duplicates (first spelling wins), so one crop can never be stored
+  /// twice no matter where the list came from.
+  static List<String> normalizeCrops(Iterable<String> values) {
+    final List<String> normalized = <String>[];
+    final Set<String> seen = <String>{};
+    for (final String value in values) {
+      final String trimmed = value.trim();
+      if (trimmed.isEmpty) continue;
+      if (!seen.add(trimmed.toLowerCase())) continue;
+      normalized.add(trimmed);
+    }
+    return normalized;
   }
 
   Map<String, Object?> _decodeJson(String? raw) {
@@ -391,6 +458,7 @@ class SellerProfileStore extends ChangeNotifier {
       'businessLocation': _businessLocation,
       'businessAddress': _businessAddress,
       'farmSize': _farmSize,
+      'crops': _crops,
       'pickedLocation': _pickedLocation,
       'pickedAddress': _pickedAddress,
       'pickedLatitude': _pickedLatitude,
@@ -499,6 +567,7 @@ class SellerProfileStore extends ChangeNotifier {
     required String location,
     required String address,
     required String farmSize,
+    List<String>? crops,
   }) {
     _name = name.trim();
     _mobile = phone.trim();
@@ -507,9 +576,32 @@ class SellerProfileStore extends ChangeNotifier {
     _businessAddress = address.trim();
     _farmSize = farmSize.trim();
 
+    // Optional: the Splash/OTP server refetch and the onboarding Step 03
+    // screen call this without crops, and those paths must never wipe a
+    // selection the seller already saved on this device.
+    if (crops != null) _crops = normalizeCrops(crops);
+
     notifyListeners();
 
     // Persist immediately on the device.
+    _persistSellerProfile();
+  }
+
+  /// Saves the Business & Farm "What you grow" selection.
+  ///
+  /// Called by every crop change (toggle, remove, manual add) and by the
+  /// section's Done button, so leaving the screen can never silently drop a
+  /// selection the seller already made.
+  /// [forcePersist] makes Done write even when the selection is unchanged,
+  /// so confirming the section always leaves a saved record behind.
+  void setSelectedCrops(List<String> crops, {bool forcePersist = false}) {
+    final List<String> normalized = normalizeCrops(crops);
+    if (!forcePersist && listEquals(normalized, _crops)) return;
+    _crops = normalized;
+
+    notifyListeners();
+
+    // Persist immediately on the device, like every other profile setter.
     _persistSellerProfile();
   }
 
@@ -678,6 +770,7 @@ class SellerProfileStore extends ChangeNotifier {
     _farmSize = '';
     _businessLocation = '';
     _businessAddress = '';
+    _crops = List<String>.of(defaultCrops);
 
     _pickedLocation = '';
     _pickedAddress = '';

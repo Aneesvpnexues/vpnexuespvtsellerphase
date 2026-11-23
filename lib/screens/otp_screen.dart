@@ -11,6 +11,7 @@ import '../data/supabase_product_api.dart';
 import '../data/wallet_store.dart';
 import '../services/auth_flow.dart';
 import '../services/edge_api.dart';
+import '../services/onboarding_flow.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -144,12 +145,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
   /// After successful OTP verification: opens the local login session,
   /// links this phone to the seller's records on the server, restores
-  /// everything Supabase has for this seller and opens Home.
-  ///
-  /// The restore only fills the stores (profile, bank, KYC, progress flags)
-  /// so every screen shows the saved data — it never picks the destination.
-  /// Every verified login lands on Home, whether the onboarding is finished,
-  /// half done or not started at all.
+  /// everything Supabase has for this seller and routes to Home — or, when
+  /// an onboarding section is still unfinished, to that section instead of
+  /// Home, so a reinstall never re-asks something already answered.
   Future<void> _routeAfterVerification() async {
     if (_entered) return;
     _entered = true;
@@ -197,7 +195,9 @@ class _OtpScreenState extends State<OtpScreen> {
     // Record that this session was opened through Login (OTP). The splash
     // screen uses it on the next launch to decide where to continue — and,
     // because the UID is stored with it, to re-run every user-scoped lookup
-    // even if Firebase has not restored its own session yet.
+    // even if Firebase has not restored its own session yet. Recorded before
+    // the Supabase lookup so an unreachable backend can never send a login
+    // back to onboarding without a reason.
     SessionStore.instance.startSession(
       phone: firebasePhone ?? widget.phone,
       userName: store.name,
@@ -212,8 +212,9 @@ class _OtpScreenState extends State<OtpScreen> {
     // restore below so the rows written during onboarding (keyed by the
     // registration id) resolve to this Firebase account.
     // -------------------------------------------------------------------------
+    Map<String, dynamic>? link;
     try {
-      await EdgeApi.instance.linkAccount();
+      link = await EdgeApi.instance.linkAccount();
     } on ApiException catch (error) {
       // Real error, surfaced: the seller still signs in, but the link will
       // be retried on the next login.
@@ -236,6 +237,7 @@ class _OtpScreenState extends State<OtpScreen> {
     // tries the exact E.164 value, then the last 10 digits (display format),
     // then the Firebase UID, then this device's pending registration id, and
     // bank/KYC are checked under every candidate id.
+    bool foundAnyRow = false;
     final String registrationId = SellerProfileStore.instance.registrationId;
     if (mounted) {
       try {
@@ -324,18 +326,33 @@ class _OtpScreenState extends State<OtpScreen> {
         );
         store.setLocationComplete(locationComplete);
         store.setSellerTypeComplete(sellerTypeComplete);
+        foundAnyRow = profile != null ||
+            bankDetails != null ||
+            verificationDetails != null;
       } catch (_) {
-        // Supabase lookup failed — Home still opens with whatever this
-        // device already has.
+        // Supabase lookup failed — the flags saved on this device still
+        // decide the route below.
       }
     }
 
     if (!mounted) return;
 
-    // Every verified login opens Home. The restore above only filled the
-    // stores; the onboarding completion flags and any unfinished step are
-    // deliberately not consulted here — onboarding is walked by the sign-up
-    // flow only.
+    // Route by completion when the restore actually told us something, or
+    // when the server confirmed this phone owns a pending registration that
+    // has no rows yet (a seller who signed up on another device and is
+    // logging in for the first time) — that seller starts at STEP 01 instead
+    // of being dropped on Home with an empty profile. When nothing at all
+    // could be read (offline, legacy account with no rows) the home page
+    // still opens, exactly like an ordinary login.
+    final String linkKind = (link?['kind'] ?? '').toString().trim();
+    final bool resumeOnboarding = foundAnyRow ||
+        linkKind == 'registration' ||
+        store.locationComplete ||
+        store.sellerTypeComplete;
+    if (resumeOnboarding) {
+      OnboardingFlow.resume(context, clearStack: true);
+      return;
+    }
     _goHome();
   }
 
@@ -421,8 +438,9 @@ class _OtpScreenState extends State<OtpScreen> {
   void _populateProfileStore(Map<String, dynamic> profile) {
     final String name = (profile['display_name'] ?? '').toString().trim();
     final String mobile = (profile['phone_number'] ?? '').toString().trim();
-    // Location/address live on the profile row too — without them every
-    // home/profile/order screen shows the hardcoded placeholder forever.
+    // The seller's chosen location travels with the profile row: it must be
+    // restored, otherwise every screen falls back to a placeholder city and
+    // the place picked during login disappears (BUG_SELLER_023).
     final String location =
         (profile['location'] ?? '').toString().trim();
     final String address =

@@ -29,7 +29,8 @@ import 'otp_screen.dart';
 /// - Login (default): hero + phone number form. "Send OTP" first asks the
 ///   backend whether the number already has an account; only then is the SMS
 ///   sent (see [_sendOtp]). A verified login continues on the OTP screen,
-///   which restores the seller's data and always opens Home.
+///   which restores the seller's data and routes to Home or the first
+///   unfinished onboarding step.
 /// - Sign Up: Name + Phone only. "Create account" stores a *pending*
 ///   registration (no OTP, no Firebase session yet) in Supabase and locally,
 ///   then walks the seller through STEP 01 Location onward. The server links

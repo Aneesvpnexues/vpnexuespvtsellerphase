@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../data/seller_profile_store.dart';
-import '../data/supabase_product_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -54,11 +53,9 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     'Potatoes',
   ];
 
-  final List<String> _selectedCrops = [
-    'Tomatoes',
-    'Spinach',
-    'Carrots',
-  ];
+  /// "What you grow" selection: restored from [SellerProfileStore.crops] in
+  /// [initState] and committed back to the store on every change.
+  final List<String> _selectedCrops = <String>[];
 
   @override
   void initState() {
@@ -86,6 +83,11 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
 );
 
     _manualCropController = TextEditingController();
+
+    // Restore the saved crop selection. Profiles saved before the field
+    // existed carry the store's starter crops; an explicitly saved empty
+    // selection stays empty.
+    _selectedCrops.addAll(_canonicalCrops(profile.crops));
 
     // Initialize delivery toggles from the shared store.
     _buyerPickup = profile.buyerPickup;
@@ -290,6 +292,95 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     _refresh();
   }
 
+  // ---------------------------------------------------------------------------
+  // CROP SELECTION ("What you grow")
+  // ---------------------------------------------------------------------------
+
+  /// Maps a saved selection onto the [_allCrops] spellings where they match
+  /// case-insensitively and drops duplicates, so a manually added "onions"
+  /// can never render as a second chip next to "Onions".
+  List<String> _canonicalCrops(Iterable<String> saved) {
+    final List<String> canonical = <String>[];
+    final Set<String> seen = <String>{};
+    for (final String crop in saved) {
+      final String trimmed = crop.trim();
+      if (trimmed.isEmpty) continue;
+      final String key = trimmed.toLowerCase();
+      if (!seen.add(key)) continue;
+      canonical.add(
+        _allCrops.firstWhere(
+          (String option) => option.toLowerCase() == key,
+          orElse: () => trimmed,
+        ),
+      );
+    }
+    return canonical;
+  }
+
+  /// Whether [crop] is part of the current selection (case-insensitively).
+  bool _isSelected(String crop) => _selectedCrops.any(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+
+  /// Selects or deselects [crop] and commits the new selection straight
+  /// away — the same persist-on-change pattern the rest of the profile
+  /// store uses, so navigating away without pressing Done cannot lose it.
+  void _toggleCrop(String crop) {
+    setState(() {
+      final int index = _selectedCrops.indexWhere(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+      if (index == -1) {
+        _selectedCrops.add(crop);
+      } else {
+        _selectedCrops.removeAt(index);
+      }
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// Removes [crop] through the chip's delete icon in edit mode.
+  void _removeCrop(String crop) {
+    setState(() {
+      _selectedCrops.removeWhere(
+        (String item) => item.toLowerCase() == crop.toLowerCase(),
+      );
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// Adds a manually typed crop, ignoring blanks and duplicates.
+  void _addCrop(String value) {
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty || _isSelected(trimmed)) return;
+    setState(() {
+      _selectedCrops.add(trimmed);
+      _manualCropController.clear();
+    });
+    SellerProfileStore.instance.setSelectedCrops(_selectedCrops);
+  }
+
+  /// "Edit Crops" enters edit mode; "Done" commits the edited selection
+  /// first and only then leaves it, so the button can no longer change just
+  /// the flag and drop the seller's crops.
+  void _onCropsEditTapped() {
+    if (_isEditingCrops) {
+      SellerProfileStore.instance
+          .setSelectedCrops(_selectedCrops, forcePersist: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(AppStrings.trOf(context, 'Crop selection saved.')),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
+    }
+    setState(() => _isEditingCrops = !_isEditingCrops);
+  }
+
   // SAVE BUSINESS AND FARM DETAILS
 
   /// Saves to the store first (UI reacts immediately), then persists the
@@ -300,21 +391,6 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
   final profile = SellerProfileStore.instance;
 
   final String location = _locationController.text.trim();
-
-  profile.saveBusinessDetails(
-    name: profile.name,
-    business: _businessNameController.text.trim(),
-    phone: profile.mobile,
-    location: location,
-    address: location,
-    farmSize: _farmSizeController.text.trim(),
-  );
-
-  // Keep the shared profile store synchronized.
-  profile.setBusinessLocation(
-    location: location,
-    address: location,
-  );
 
   if (!mounted) return;
 
@@ -330,7 +406,30 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     'Could not save your details to the server. Check your connection and try again.',
   );
 
+  // The success message may only follow a save that actually ran: every
+  // field — including the crop selection — is written to the local profile
+  // store inside this try block, and any failure surfaces the error message
+  // instead of a false confirmation.
+  //
+  // Crops stay device-local in this phase: `seller_profiles` has no crop
+  // column (no migration exists that adds one), so syncing them to Supabase
+  // needs a schema change first.
   try {
+    profile.saveBusinessDetails(
+      name: profile.name,
+      business: _businessNameController.text.trim(),
+      phone: profile.mobile,
+      location: location,
+      address: location,
+      farmSize: _farmSizeController.text.trim(),
+      crops: _selectedCrops,
+    );
+
+    // Keep the shared profile store synchronized.
+    profile.setBusinessLocation(
+      location: location,
+      address: location,
+    );
     // await SupabaseProductApi().saveSellerProfile(
     //   name: profile.name,
     //   mobile: profile.mobile,
@@ -340,7 +439,6 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     //   businessAddress: profile.businessAddress,
     //   avatarUrl: profile.avatarUrl,
     // );
-
     if (!mounted) return;
 
     messenger
@@ -352,7 +450,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
         ),
       );
   } catch (error) {
-    debugPrint('[BusinessFarm] saveSellerProfile failed: $error');
+    debugPrint('[BusinessFarm] saveBusinessDetails failed: $error');
 
     if (!mounted) return;
 
@@ -364,6 +462,7 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    return;
   }
 }
 
@@ -604,11 +703,7 @@ if (_locationController.text.trim().isNotEmpty)
               ),
 
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isEditingCrops = !_isEditingCrops;
-                  });
-                },
+                onTap: _onCropsEditTapped,
                 child: Text(
                   _isEditingCrops
                       ? AppStrings.trOf(context, 'Done')
@@ -636,30 +731,31 @@ if (_locationController.text.trim().isNotEmpty)
                 .toSet()
                 .toList()
                 .map((crop) {
-              final isSelected = _selectedCrops.contains(crop);
-              return Chip(
-                label: Text(AppStrings.trOf(context, crop)),
-                backgroundColor:
-                    isSelected ? AppColors.orderDark : Colors.white,
-                labelStyle: isSelected
-                    ? AppTextStyles.businessChipActive
-                    : AppTextStyles.businessChipIdle,
+              final isSelected = _isSelected(crop);
+              return GestureDetector(
+                key: ValueKey('crop-chip-$crop'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _toggleCrop(crop),
+                child: Chip(
+                  label: Text(AppStrings.trOf(context, crop)),
+                  backgroundColor:
+                      isSelected ? AppColors.orderDark : Colors.white,
+                  labelStyle: isSelected
+                      ? AppTextStyles.businessChipActive
+                      : AppTextStyles.businessChipIdle,
 
-                deleteIcon: _isEditingCrops && isSelected
-                    ? const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: Colors.white,
-                      )
-                    : null,
+                  deleteIcon: _isEditingCrops && isSelected
+                      ? const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : null,
 
-                onDeleted: _isEditingCrops && isSelected
-                    ? () {
-                        setState(() {
-                          _selectedCrops.remove(crop);
-                        });
-                      }
-                    : null,
+                  onDeleted: _isEditingCrops && isSelected
+                      ? () => _removeCrop(crop)
+                      : null,
+                ),
               );
             }).toList(),
           ),
@@ -701,6 +797,7 @@ if (_locationController.text.trim().isNotEmpty)
                       ),
                     ),
                     child: TextField(
+                      key: const Key('manual-crop-field'),
                       controller: _manualCropController,
                       style: AppTextStyles.personalValue,
                       decoration: InputDecoration(
@@ -719,22 +816,7 @@ if (_locationController.text.trim().isNotEmpty)
                 const SizedBox(width: 8),
 
                 GestureDetector(
-                  onTap: () {
-                    final text =
-                        _manualCropController.text.trim();
-
-                    if (text.isNotEmpty &&
-                        !_selectedCrops.any(
-                          (crop) =>
-                              crop.toLowerCase() ==
-                              text.toLowerCase(),
-                        )) {
-                      setState(() {
-                        _selectedCrops.add(text);
-                        _manualCropController.clear();
-                      });
-                    }
-                  },
+                  onTap: () => _addCrop(_manualCropController.text),
                   child: Container(
                     height: 41,
                     padding: const EdgeInsets.symmetric(
