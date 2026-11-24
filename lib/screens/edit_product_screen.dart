@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/api_error.dart';
+import '../data/product_image_url.dart';
 import '../data/product_store.dart';
 import '../data/seller_product_repository.dart';
 import '../theme/app_colors.dart';
@@ -331,8 +332,9 @@ class _CoverCard extends StatelessWidget {
     }
     final String? url = product.coverImageUrl;
     if (url != null && url.isNotEmpty) {
+      // 200x162 logical cover — a 600px copy is plenty at any DPR.
       return Image.network(
-        url,
+        optimizeProductImageUrl(url, width: 600),
         fit: BoxFit.cover,
         errorBuilder: (_, _, _) => _coverIcon(product.category),
         loadingBuilder: (_, child, progress) =>

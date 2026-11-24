@@ -1,24 +1,25 @@
 import 'api_config.dart';
 import 'api_error.dart';
+import 'product_image_uploader.dart';
 import 'product_store.dart';
 import 'supabase_product_api.dart';
-import 'supabase_storage_api.dart';
 
 class SellerProductRepository {
   SellerProductRepository({
     SupabaseProductApi? api,
-    SupabaseStorageApi? uploader,
+    ProductImageUploader? uploader,
   }) : _api = api ?? SupabaseProductApi(),
-       _uploader = uploader ?? SupabaseStorageApi();
+       _uploader = uploader ?? ProductImageUploader();
 
   final SupabaseProductApi _api;
-  final SupabaseStorageApi _uploader;
+  final ProductImageUploader _uploader;
 
-  /// Products are stored in Supabase: photos go to the `product-images`
-  /// Storage bucket and the row (name, price, quantity, unit, description,
-  /// status, image URLs) goes to `sellers_products`, keyed by the seller's
-  /// Firebase UID. That is what makes listings survive an uninstall — any
-  /// device that logs in with the same phone number reads them back.
+  /// Products are stored in Supabase: photos go to Cloudinary (through the
+  /// `product-image` Edge Function) and the row (name, price, quantity, unit,
+  /// description, status, image URLs) goes to `sellers_products`, keyed by
+  /// the seller's Firebase UID. That is what makes listings survive an
+  /// uninstall — any device that logs in with the same phone number reads
+  /// them back.
   static const bool saveProductsLocally = false;
 
   /// Whether writes must stay on this device: either the temporary
@@ -37,6 +38,9 @@ class SellerProductRepository {
       return _addLocalProduct(draft, photos, userId: userId);
     }
     try {
+      // Each photo is uploaded on its own; the returned URL (Cloudinary, or
+      // Supabase Storage when the function is unreachable) is what the row
+      // stores in product_img_1..5.
       final List<String> imageUrls = <String>[];
       for (final ProductPhoto photo in photos.take(5)) {
         imageUrls.add(await _uploader.upload(photo, userId: userId));
@@ -100,8 +104,9 @@ class SellerProductRepository {
     return updated;
   }
 
-  /// Deletes the row first, then removes its photos from Storage so a
-  /// deleted listing does not leave images behind in the bucket.
+  /// Deletes the row first, then removes its photos from Cloudinary (or the
+  /// legacy Supabase bucket) so a deleted listing does not leave images
+  /// behind. Cleanup is best effort — see `ProductImageUploader`.
   Future<void> deleteProduct(
     String id, {
     List<String> imageUrls = const <String>[],

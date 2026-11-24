@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/api_error.dart';
+import '../data/product_image_url.dart';
 import '../data/product_store.dart';
 import '../data/seller_product_repository.dart';
 import '../data/seller_profile_store.dart';
@@ -364,7 +365,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             setState(() => _photoIndex = index);
                           },
                           itemBuilder: (context, index) => Image.network(
-                            imageUrls[index],
+                            // Hero image: ~364 logical px wide, so ask the
+                            // CDN for a 1000px copy that stays sharp on
+                            // high-DPR screens without shipping the original.
+                            optimizeProductImageUrl(
+                              imageUrls[index],
+                              width: 1000,
+                            ),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               debugPrint('[product_details] Image.network error index=$index url=${imageUrls[index]} error=$error');

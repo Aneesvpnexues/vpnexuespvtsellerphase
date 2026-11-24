@@ -10,6 +10,12 @@ import 'product_store.dart';
 /// Uploads product photos to the public `product-images` Supabase Storage
 /// bucket and returns the permanent public URL.
 ///
+/// This is now the **fallback** path: new photos prefer Cloudinary through
+/// the `product-image` Edge Function (see `ProductImageUploader`), and this
+/// bucket only takes over when that function is unreachable, so a seller is
+/// never blocked. It also still owns deletion of the URLs written before the
+/// migration.
+///
 /// Photos are stored under `{firebaseUid}/{timestamp}_{random}.{ext}` so a
 /// seller's images live in their own folder and survive reinstalls — the
 /// database row only ever stores the returned URL. Uses the same anon-key

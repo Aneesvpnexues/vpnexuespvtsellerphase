@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_image_url.dart';
 import '../data/product_store.dart';
 
 class ProductImageView extends StatelessWidget {
@@ -22,8 +23,10 @@ class ProductImageView extends StatelessWidget {
     }
     final String? url = product.coverImageUrl;
     if (url != null && url.isNotEmpty) {
+      // List thumbnails: ask the CDN for a 600px-wide, auto-format copy so
+      // the grid never downloads a full-resolution original.
       return Image.network(
-        url,
+        optimizeProductImageUrl(url, width: 600),
         fit: fit,
         errorBuilder: (context, error, stackTrace) =>
             placeholder ?? const _ImageFallback(),

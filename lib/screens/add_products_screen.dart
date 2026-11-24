@@ -436,9 +436,10 @@ class _AddProductsScreenState extends State<AddProductsScreen> {
           _editedProduct(draft),
         );
       } else {
-        // Photos upload to Supabase Storage and the row goes to the
-        // `sellers_products` table, keyed by this seller's Firebase UID —
-        // that is what makes the listing reappear on any other device.
+        // Photos upload to Cloudinary (via the product-image Edge Function)
+        // and the row goes to the `sellers_products` table, keyed by this
+        // seller's Firebase UID — that is what makes the listing reappear on
+        // any other device.
         // When the backend is unreachable the repository keeps the product
         // on the device instead, which `saved.isLocal` reports below.
         saved = await SellerProductRepository().addProduct(
