@@ -443,9 +443,9 @@ const _orders = <_Order>[
   ),
   _Order(
     store: 'Daily Needs',
-    orderId: '#NX4579',
+    orderId: '#NX4578',
     date: '12 Mar 2024, 4:20 AM',
-    recency: 4579,
+    recency: 4578,
     iconBg: AppColors.orderPurpleBg,
     items: '3 items',
     thumbImages: [

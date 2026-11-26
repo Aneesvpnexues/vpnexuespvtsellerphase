@@ -71,6 +71,10 @@ class SellerProfileStore extends ChangeNotifier {
   static const String defaultName = 'Ramesh Kumar';
   static const String defaultMobile = '+91 12345 67890';
 
+  /// Placeholder the Zeplin screens use while the seller has not picked a
+  /// place yet, so unsaved setups still render like the design.
+  static const String defaultLocation = 'Salem, Tamil Nadu';
+
   // ------------------------------------------------------------
   // SELLER PERSONAL DETAILS
   // ------------------------------------------------------------
@@ -266,39 +270,50 @@ class SellerProfileStore extends ChangeNotifier {
 
   String get initials => initialsForName(_name);
 
-  /// Returns the latest available location.
-  /// Empty when neither signup nor Business & Farm has a location.
-  String get locationDisplay {
-    if (_businessLocation.trim().isNotEmpty) {
-      return _businessLocation.trim();
-    }
+  /// The seller's own location: whatever was picked on the login location
+  /// map, else whatever was saved in Business & Farm, else empty when the
+  /// seller has never chosen one.
+  String get savedLocation {
+    final String picked = _pickedLocation.trim();
+    if (picked.isNotEmpty) return picked;
+    return _businessLocation.trim();
+  }
 
-    return _pickedLocation.trim();
+  /// What every screen that shows the seller's place displays —
+  /// [savedLocation] with [defaultLocation] only as a last resort. Home,
+  /// Profile and Address & Location all read this one value, so they can
+  /// never disagree about where the seller is.
+  String get locationDisplay {
+    final String saved = savedLocation;
+    return saved.isNotEmpty ? saved : defaultLocation;
   }
 
   /// Compatibility getter used by screens that expect this name.
   String get displayLocation => locationDisplay;
 
-
-  /// Short version of the latest available location for compact UI labels.
+  /// Compact badge form of [locationDisplay] for tight chips, e.g.
+  /// "Coimbatore, TN" — the city plus the state's initials.
   String get shortLocation {
-    final String location = displayLocation.trim();
-    if (location.isEmpty) return '';
-    const int maxLength = 35;
-    return location.length > maxLength
-        ? '${location.substring(0, maxLength)}...'
-        : location;
-  }
-
-
-  /// Seller type with location, when available.
-  String get sellerSummary {
     final String location = locationDisplay;
-
-    return location.isEmpty
-        ? _sellerType.label
-        : '${_sellerType.label}, $location';
+    final List<String> parts = location
+        .split(',')
+        .map((String part) => part.trim())
+        .where((String part) => part.isNotEmpty)
+        .toList();
+    if (parts.length < 2) return location;
+    final String state = parts[1];
+    final List<String> words = state
+        .split(RegExp(r'\s+'))
+        .where((String word) => word.isNotEmpty)
+        .toList();
+    final String code = words.length > 1
+        ? words.map((String word) => word[0].toUpperCase()).join()
+        : (state.length > 2 ? state.substring(0, 2) : state).toUpperCase();
+    return '${parts.first}, $code';
   }
+
+  /// Seller type with location.
+  String get sellerSummary => '${_sellerType.label}, $locationDisplay';
 
   // ------------------------------------------------------------
   // ATTACH AND RESTORE LOCAL STORAGE

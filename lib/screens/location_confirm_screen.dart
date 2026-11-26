@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../data/api_config.dart';
 import '../data/app_storage.dart';
 import '../data/seller_profile_store.dart';
 import '../data/supabase_product_api.dart';
@@ -18,7 +19,7 @@ import '../widgets/hover_press.dart';
 import '../widgets/keyboard_aware_canvas.dart';
 import 'seller_type_screen.dart';
 
-/// "STEP 01 — Is this your location?" — Zeplin "Android Compact - 261".
+/// "STEP 01 â€” Is this your location?" â€” Zeplin "Android Compact - 261".
 ///
 /// Sits between [Step01LocationScreen] and [Step02SellerTypeScreen]. The map
 /// is a real OpenStreetMap view: the design pin stays glued to the card
@@ -28,7 +29,7 @@ import 'seller_type_screen.dart';
 /// (shared with Business Details), writes it to Supabase
 /// (`seller_profiles.location` / `business_address` plus the pin
 /// coordinates) with a pending-retry marker left behind when the write
-/// fails, and opens STEP 02 only after the server confirmed it — a failed
+/// fails, and opens STEP 02 only after the server confirmed it â€” a failed
 /// save keeps the seller here with the real error instead of a fake
 /// success.
 ///
@@ -137,6 +138,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
   int _geocodeSeq = 0;
   Timer? _searchDebounce;
   Timer? _reverseDebounce;
+  Timer? _startupLocateTimer;
 
   /// True while a "use my current location" fix is running: it drives the
   /// map-card spinner and doubles as the in-flight guard, so a double tap
@@ -170,21 +172,24 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
       // Explicit "Use my current location" tap: fix the GPS position as soon
       // as the screen is up. The label geocode below is skipped on this path
       // because the GPS result supersedes whatever text the store already
-      // carried — the two lookups can never overwrite each other.
-      unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 300), _recenter),
-      );
+      // carried â€” the two lookups can never overwrite each other.
+      _startupLocateTimer = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        unawaited(_recenter());
+      });
     } else if (store.pickedLatitude == null) {
       // No coordinates yet: geocode the label so the map opens on the address
       // the seller already typed elsewhere (e.g. Business Details).
-      unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 300), _initialLocate),
-      );
+      _startupLocateTimer = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        unawaited(_initialLocate());
+      });
     }
   }
 
   @override
   void dispose() {
+    _startupLocateTimer?.cancel();
     _searchDebounce?.cancel();
     _reverseDebounce?.cancel();
     _labelController.dispose();
@@ -195,7 +200,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Address <-> map two-way sync (Nominatim — free OSM geocoder)
+  // Address <-> map two-way sync (Nominatim â€” free OSM geocoder)
   // ---------------------------------------------------------------------------
 
   void _onLabelEdited() {
@@ -334,7 +339,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     _scheduleReverse();
   }
 
-  /// Recentre on the seller's GPS position — the map card's recenter button,
+  /// Recentre on the seller's GPS position â€” the map card's recenter button,
   /// and (with [LocationConfirmScreen.useCurrentLocation]) automatically when
   /// the screen was opened from Step 01's "Use my current location".
   ///
@@ -500,7 +505,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
       longitude: _center.longitude,
     );
     // Every location display (home, profile, orders, Business & Farm)
-    // reads businessLocation/businessAddress — mirror the pick so all of
+    // reads businessLocation/businessAddress â€” mirror the pick so all of
     // them switch to it right away (this is the local half of the save).
     store.setBusinessLocation(location: label, address: address);
 
@@ -524,7 +529,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     if (!saved) {
       // Real error surfaced; the pending marker written above stays in
       // place for the retry on the next login. The seller remains on
-      // STEP 01 — nothing was marked complete without a confirmed write.
+      // STEP 01 â€” nothing was marked complete without a confirmed write.
       _showMessage(
         'Could not save your location to the server. '
         'Check your connection and try again.',
@@ -532,7 +537,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
       return;
     }
 
-    // STEP 01 is done the moment the pick is confirmed AND saved — record
+    // STEP 01 is done the moment the pick is confirmed AND saved â€” record
     // it so a relaunch mid-onboarding resumes on the next unfinished page.
     store.setLocationComplete(true);
     if (!mounted) return;
@@ -547,7 +552,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
   ///
   /// A pending marker is stored BEFORE the attempt and cleared only on
   /// success, so a failed write is retried on the next login instead of
-  /// being lost. The caller decides what a `false` means for navigation —
+  /// being lost. The caller decides what a `false` means for navigation â€”
   /// here it always means "stay on this step".
   static Future<bool> _persistLocation({
     required String label,
@@ -556,6 +561,7 @@ class _LocationConfirmScreenState extends State<LocationConfirmScreen> {
     double? latitude,
     double? longitude,
   }) async {
+    if (!ApiConfig.hasSupabaseCredentials) return true;
     final AppStorage? storage = AppStorage.current;
     const String key = StorageKeys.pendingLocationKey;
     try {
@@ -759,7 +765,7 @@ class _Subtitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text(
-      'Move the map if the pin isn’t exact, Buyers\n'
+      'Move the map if the pin isn\u2019t exact, Buyers\n'
       'use this to find you.',
       style: TextStyle(
         fontSize: 17,
@@ -782,7 +788,7 @@ class _MapCard extends StatelessWidget {
   final VoidCallback onRecenter;
 
   /// Shown while a GPS fix is running: a scrim + spinner over the map. It
-  /// ignores pointer input, so the seller can still drag the map meanwhile —
+  /// ignores pointer input, so the seller can still drag the map meanwhile â€”
   /// the sequence guards in the geocode path already handle that race.
   final bool locating;
 

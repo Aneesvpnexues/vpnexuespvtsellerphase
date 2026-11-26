@@ -78,9 +78,15 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
           : '5',
     );
 
+    // Address & Location opens on the place the seller already chose — the
+    // login location pick first, then a previously saved address — never on
+    // a hardcoded city.
+    final String initialLocation = profile.locationDisplay;
     _locationController = TextEditingController(
-  text: profile.businessLocation.trim(),
-);
+      text: initialLocation == SellerProfileStore.defaultLocation
+          ? profile.businessLocation.trim()
+          : initialLocation,
+    );
 
     _manualCropController = TextEditingController();
 
@@ -97,9 +103,25 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
     _locationController.addListener(_refresh);
     _locationController.addListener(_onLocationEdited);
 
-    // Place a pin at the saved address on first build.
-    _geocodeDebounce =
-        Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
+    // Seed the pin from the stored coordinates when the seller already has
+    // a map pick, so the map opens on their place instead of Bengaluru.
+    // Without coordinates the address text is geocoded after the first build.
+    if (profile.pickedLatitude != null && profile.pickedLongitude != null) {
+      final LatLng point = LatLng(
+        profile.pickedLatitude!,
+        profile.pickedLongitude!,
+      );
+      _center = point;
+      _markers = <Marker>[
+        Marker(
+          point: point,
+          child: const Icon(Icons.location_on, size: 36, color: Colors.red),
+        ),
+      ];
+    } else if (_locationController.text.trim().isNotEmpty) {
+      _geocodeDebounce =
+          Timer(const Duration(milliseconds: 400), _geocodeTypedAddress);
+    }
   }
 
   void _refresh() {
@@ -425,10 +447,17 @@ class _BusinessFarmScreenState extends State<BusinessFarmScreen> {
       crops: _selectedCrops,
     );
 
-    // Keep the shared profile store synchronized.
+    // Keep the shared profile store synchronized, including the picked
+    // location the rest of the app reads, so Home/Profile show the edited place.
     profile.setBusinessLocation(
       location: location,
       address: location,
+    );
+    profile.setPickedLocation(
+      label: location,
+      address: location,
+      latitude: _markers.isNotEmpty ? _center.latitude : profile.pickedLatitude,
+      longitude: _markers.isNotEmpty ? _center.longitude : profile.pickedLongitude,
     );
     // await SupabaseProductApi().saveSellerProfile(
     //   name: profile.name,
