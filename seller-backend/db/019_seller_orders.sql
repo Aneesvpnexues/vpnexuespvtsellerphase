@@ -109,14 +109,19 @@ BEGIN
 END$$;
 
 -- First, fix any invalid status values before adding constraint
+-- NOTE (2026-11-18): the customer app (vpnexues-android-backend) writes
+-- 'placed' on order creation and 'cancelled' on cancel. Restricting the
+-- CHECK to the seller vocabulary alone made every placeOrder/cancelOrder
+-- fail with a check-constraint violation (HTTP 500). Both vocabularies
+-- must stay allowed, and this backfill must not rewrite them either.
 UPDATE public.orders
 SET status = 'pending'
 WHERE status IS NULL 
-   OR status NOT IN ('pending', 'accepted', 'confirmed', 'delivered', 'rejected');
+   OR status NOT IN ('placed', 'pending', 'preparing', 'accepted', 'confirmed', 'delivered', 'rejected', 'cancelled');
 
 -- Status constraint
 ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_status_check;
-ALTER TABLE public.orders ADD CONSTRAINT orders_status_check CHECK (status IN ('pending', 'accepted', 'confirmed', 'delivered', 'rejected'));
+ALTER TABLE public.orders ADD CONSTRAINT orders_status_check CHECK (status IN ('placed', 'pending', 'preparing', 'accepted', 'confirmed', 'delivered', 'rejected', 'cancelled'));
 
 -- Pickup type constraint
 ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_pickup_type_check;
