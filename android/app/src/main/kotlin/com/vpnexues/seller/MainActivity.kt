@@ -1,4 +1,4 @@
-package com.example.seller_app
+package com.vpnexues.seller
 
 import io.flutter.embedding.android.FlutterActivity
 
