@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'api_config.dart';
 import 'api_error.dart';
@@ -57,6 +58,100 @@ class ProductImageApi {
       );
     }
     return url;
+  }
+
+  /// Uploads directly to Cloudinary using the public **unsigned** preset.
+  ///
+  /// This path needs no API secret and no Supabase Edge Function, so product
+  /// photos keep working right after switching to a new Supabase project
+  /// (where the `product-image` function has not been given the Cloudinary
+  /// secrets yet). It is only a fallback: the signed function above stays
+  /// preferred because it scopes each upload to the verified seller folder.
+  Future<String> uploadUnsigned(ProductPhoto photo) async {
+    if (photo.bytes.isEmpty) {
+      throw const ApiException('The selected photo is empty.');
+    }
+    final String cloudName = ApiConfig.cloudinaryCloudName.trim();
+    final String preset = ApiConfig.cloudinaryUploadPreset.trim();
+    if (cloudName.isEmpty || preset.isEmpty) {
+      throw const ApiException('Cloudinary is not configured.');
+    }
+    final String folder = ApiConfig.cloudinaryFolder.trim();
+    final Uri uri =
+        Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+
+    final http.MultipartRequest request = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = preset;
+    if (folder.isNotEmpty) request.fields['folder'] = folder;
+    final String mime = photo.mimeType.trim().isEmpty
+        ? 'image/jpeg'
+        : photo.mimeType.trim();
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        photo.bytes,
+        filename: photo.filename ?? _filenameFor(mime),
+        contentType: MediaType.parse(mime),
+      ),
+    );
+
+    http.Response response;
+    try {
+      final http.StreamedResponse streamed =
+          await _client.send(request).timeout(_uploadTimeout);
+      response = await http.Response.fromStream(streamed);
+    } catch (error) {
+      final String detail =
+          error.toString().replaceAll(RegExp(r'\s+'), ' ');
+      throw ApiException(
+        detail.isEmpty
+            ? 'Could not upload the product photo.'
+            : 'Could not upload the product photo ($detail)',
+      );
+    }
+
+    Object? decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      decoded = null;
+    }
+    final Map<String, dynamic> map = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : <String, dynamic>{};
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final Object? error = map['error'];
+      final String message = error is Map
+          ? (error['message'] ?? '').toString().trim()
+          : (map['message'] ?? '').toString().trim();
+      throw ApiException(
+        message.isNotEmpty ? message : 'Could not upload the product photo.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    final String url =
+        (map['secure_url'] ?? map['url'] ?? '').toString().trim();
+    if (url.isEmpty) {
+      throw const ApiException(
+        'The image service returned an invalid response.',
+      );
+    }
+    return url;
+  }
+
+  static String _filenameFor(String mimeType) {
+    switch (mimeType.toLowerCase()) {
+      case 'image/png':
+        return 'product.png';
+      case 'image/webp':
+        return 'product.webp';
+      case 'image/gif':
+        return 'product.gif';
+      default:
+        return 'product.jpg';
+    }
   }
 
   /// Best-effort removal of the [urls] that point at Cloudinary.

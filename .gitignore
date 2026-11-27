@@ -62,6 +62,9 @@ app.*.map.json
 assets/config/supabase.json
 assets/config/cloudinary.json
 
+# Local env file containing real API/secret keys (never commit)
+env.example.txt
+
 # Local-only folders (not pushed)
 .kilo/
 backend/

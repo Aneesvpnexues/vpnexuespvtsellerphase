@@ -39,18 +39,29 @@ class ProductImageUploader {
       return await _cloudinary.upload(photo);
     } catch (cloudinaryError) {
       debugPrint(
-        '[product-image] Cloudinary upload failed ($cloudinaryError); '
-        'falling back to Supabase Storage.',
+        '[product-image] Edge Function upload failed ($cloudinaryError); '
+        'trying direct Cloudinary upload.',
       );
       try {
-        return await _supabase.upload(photo, userId: userId);
-      } catch (supabaseError) {
+        // No server secret needed: uses the unsigned preset from
+        // `assets/config/cloudinary.json`. Keeps uploads working when the
+        // `product-image` function has no Cloudinary secrets configured.
+        return await _cloudinary.uploadUnsigned(photo);
+      } catch (unsignedError) {
         debugPrint(
-          '[product-image] Supabase fallback failed too: $supabaseError',
+          '[product-image] direct Cloudinary upload failed ($unsignedError); '
+          'falling back to Supabase Storage.',
         );
-        // Surface the Cloudinary failure — that is the intended path, and
-        // its wording is the one written for the seller.
-        throw cloudinaryError;
+        try {
+          return await _supabase.upload(photo, userId: userId);
+        } catch (supabaseError) {
+          debugPrint(
+            '[product-image] Supabase fallback failed too: $supabaseError',
+          );
+          // Surface the Cloudinary failure — that is the intended path, and
+          // its wording is the one written for the seller.
+          throw cloudinaryError;
+        }
       }
     }
   }
